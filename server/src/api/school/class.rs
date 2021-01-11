@@ -1,0 +1,307 @@
+use tide::Request;
+use crate::AppState;
+
+use http_types::{StatusCode, Method, Body};
+use crate::model::class::{ClassTimetable, ClassTimetableActivity, Class, ClassActivity, UpdateClass};
+use crate::model::school::SchoolDetail;
+use crate::request::{Auth, SchoolAuth};
+use crate::model::timetable::{ClassAvailable, InsertClassAvailable};
+use crate::model::timetable::Day;
+use crate::model::activity::{Subject, NewActivity, Activity, ActivityTeacher};
+use crate::model::city::{City, Town};
+
+pub async fn activities(mut req: Request<AppState>) -> tide::Result {
+
+    let class_id: i32 = req.param("class_id")?.parse()?;
+    use sqlx_core::postgres::PgQueryAs;
+    use sqlx_core::cursor::Cursor;
+    use sqlx_core::row::Row;
+    match req.method() {
+        Method::Get => {
+            //let school_auth: &SchoolAuth = req.ext().unwrap();
+            let mut res = tide::Response::new(StatusCode::Ok);
+            let mut cursor = sqlx::query(r#"SELECT
+                        activities.id, subjects.id, subjects.name, users.id, users.first_name, users.last_name, activities.hour, activities.split, subjects.kademe,subjects.optional
+                        FROM activities inner join users on activities.teacher= users.id inner join subjects on activities.subject = subjects.id
+                        WHERE $1 = any(activities.classes)"#)
+                .bind(&class_id)
+                .fetch(&req.state().db_pool);
+            let mut acts: Vec<ClassActivity> = Vec::new();
+
+            while let Some(row) = cursor.next().await? {
+                //println!("{:?}", format!("{}",row.to_string()));
+                let act = ClassActivity {
+                    id: row.get(0),
+                    subject: Subject { name: row.get(2), id: row.get(1), kademe: row.get(8), optional: row.get(9) },
+                    teacher: ActivityTeacher {
+                        id: row.get(3),
+                        first_name: row.get(4),
+                        last_name: row.get(5)
+                    },
+                    hour: row.get(6),
+                    split: row.get(7)
+                };
+                acts.push(act);
+            }
+            res.set_body(Body::from_json(&acts)?);
+            Ok(res)
+        }
+        Method::Post => {
+            let act: NewActivity = req.body_json().await?;
+            let school_auth: &SchoolAuth = req.ext().unwrap();
+            let mut res = tide::Response::new(StatusCode::Ok);
+            let clss: Class = sqlx::query_as("Select * from classes where id = any($1)")
+                .bind(&act.classes)
+                .fetch_one(&req.state().db_pool).await?;
+            if clss.school == school_auth.school.id && school_auth.role < 4{
+                let mut acts: Vec<ClassActivity> = Vec::new();
+                for h in act.hour.split(" ").collect::<Vec<&str>>() {
+                    match h.parse::<i16>() {
+                        Ok(hour) => {
+                            let _insert: Activity = sqlx::query_as("insert into activities(teacher, subject, hour, split, classes) values($1, $2, $3, $4, $5) \
+                                            returning id, subject, teacher, hour, split, classes")
+                                //.bind(&act.class)
+                                .bind(&act.teacher)
+                                .bind(&act.subject)
+                                .bind(&hour)
+                                .bind(&act.split)
+                                .bind(&act.classes)
+                                .fetch_one(&req.state().db_pool).await?;
+                            let mut cursor = sqlx::query(r#"SELECT
+                                    activities.id, subjects.id, subjects.name, users.id, users.first_name, users.last_name, activities.hour, activities.split, subjects.kademe, subjects.optional
+                                    FROM activities inner join users on activities.teacher= users.id inner join subjects on activities.subject = subjects.id
+                                    WHERE activities.id = $1"#)
+                                .bind(&_insert.id)
+                                .fetch(&req.state().db_pool);
+
+                            while let Some(row) = cursor.next().await? {
+                                let act = ClassActivity {
+                                    id: row.get(0),
+                                    subject: Subject { name: row.get(2), id: row.get(1), kademe: row.get(8), optional: row.get(9) },
+                                    teacher: ActivityTeacher {
+                                        id: row.get(3),
+                                        first_name: row.get(4),
+                                        last_name: row.get(5)
+                                    },
+                                    hour: row.get(6),
+                                    split: row.get(7)
+                                };
+                                acts.push(act);
+                            }
+                        }
+                        Err(_) => {}
+                    }
+                }
+                res.set_body(Body::from_json(&acts)?);
+                Ok(res)
+            } else {
+                let res = tide::Response::new(StatusCode::Unauthorized);
+                Ok(res)
+            }
+        }
+        _ => {
+            let res = tide::Response::new(StatusCode::MethodNotAllowed);
+            Ok(res)
+        }
+    }
+}
+
+pub async fn class_detail(req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    let class_id = req.param("class_id")?;
+    use sqlx_core::postgres::PgQueryAs;
+    use sqlx_core::cursor::Cursor;
+    use sqlx_core::row::Row;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    let class: Class = sqlx::query_as(r#"SELECT * FROM classes WHERE school=$1 and id = $2"#)
+        .bind(&school_auth.school.id)
+        .bind(&class_id.parse::<i32>()?)
+        .fetch_one(&req.state().db_pool).await?;
+    res.set_body(Body::from_json(&class)?);
+    Ok(res)
+}
+
+pub async fn class_delete(req: Request<AppState>) -> tide::Result {
+    let class_id = req.param("class_id")?;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    if school_auth.role < 4 {
+        let mut res = tide::Response::new(StatusCode::Ok);
+        let _class_available = sqlx::query(r#"delete FROM class_available WHERE class_id = $1"#)
+            .bind(&class_id.parse::<i32>()?)
+            .execute(&req.state().db_pool).await?;
+        let _class_activities = sqlx::query(r#"delete FROM activities WHERE $1 = any(classes)"#)
+            .bind(&class_id.parse::<i32>()?)
+            .execute(&req.state().db_pool).await?;
+        let _class = sqlx::query(r#"delete FROM classes WHERE school=$1 and id = $2"#)
+            .bind(&school_auth.school.id)
+            .bind(&class_id.parse::<i32>()?)
+            .execute(&req.state().db_pool).await?;
+        res.set_body(Body::from_json(&class_id.parse::<i32>()?)?);
+        Ok(res)
+    } else {
+        let res = tide::Response::new(StatusCode::Unauthorized);
+        Ok(res)
+    }
+}
+
+pub async fn limitations(mut req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    //let school_id: i32 = req.param("school")?.parse()?;
+    let class_id: i32 = req.param("class_id")?.parse()?;
+    use sqlx_core::postgres::PgQueryAs;
+    use sqlx_core::cursor::Cursor;
+    use sqlx_core::row::Row;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    let _class: Class = sqlx::query_as("SELECT * FROM classes WHERE id = $1 and school = $2")
+        .bind(&class_id)
+        .bind(&school_auth.school.id)
+        .fetch_one(&req.state().db_pool).await?;
+    if school_auth.role < 4 {
+        match req.method() {
+            Method::Get => {
+                let mut class_availables = sqlx::query(r#"SELECT
+                        days.id, days.name, class_available.hours
+                        FROM class_available inner join days on class_available.day = days.id
+                        WHERE class_available.class_id = $1"#)
+                    .bind(&class_id)
+                    .fetch(&req.state().db_pool);
+                let mut availables: Vec<ClassAvailable> = Vec::new();
+                while let Some(row) = class_availables.next().await? {
+                    let available = ClassAvailable {
+                        day: Day {
+                            id: row.get(0),
+                            name: row.get(1)
+                        },
+                        hours: row.get(2)
+                    };
+                    availables.push(available);
+                }
+                availables.sort_by(|a, b| b.day.id.cmp(&a.day.id));
+                res.set_body(Body::from_json(&availables)?);
+                Ok(res)
+            }
+            Method::Post => {
+                let post = req.body_json::<Vec<ClassAvailable>>().await?;
+                for available in post {
+                    let update: sqlx::Result<InsertClassAvailable> = sqlx::query_as(r#"update class_available set hours = $3 where class_id= $1 and day = $2 returning class_id, hours, day"#)
+                        .bind(&class_id)
+                        .bind(&available.day.id)
+                        .bind(&available.hours)
+                        .fetch_one(&req.state().db_pool).await;
+                    match update {
+                        Ok(_s) => {}
+                        Err(_) => {
+                            let _insert: InsertClassAvailable = sqlx::query_as(r#"insert into class_available(class_id, day, hours) values($1, $2, $3) returning class_id, day, hours"#)
+                                .bind(&class_id)
+                                .bind(&available.day.id)
+                                .bind(&available.hours)
+                                .fetch_one(&req.state().db_pool).await?;
+                        }
+                    }
+                }
+                Ok(res)
+            }
+            _ => {
+                Ok(res)
+            }
+        }
+    } else {
+        Ok(res)
+    }
+}
+
+pub async fn timetables(req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    let class_id = req.param("class_id")?;
+    use sqlx_core::postgres::PgQueryAs;
+    use sqlx_core::cursor::Cursor;
+    use sqlx_core::row::Row;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    let class: Class = sqlx::query_as("SELECT * FROM classes WHERE id = $1 and school = $2")
+        .bind(&class_id.parse::<i32>()?)
+        .bind(&school_auth.school.id)
+        .fetch_one(&req.state().db_pool).await?;
+    if school_auth.role <= 8 {
+        let mut class = sqlx::query("SELECT class_timetable.id, class_timetable.class_id, class_timetable.day_id, class_timetable.hour,
+                            activities.id, users.id, users.first_name, users.last_name, subjects.name
+                            FROM class_timetable inner join activities on class_timetable.activities = activities.id
+                            inner join users on activities.teacher = users.id
+                            inner join subjects on activities.subject = subjects.id WHERE class_id = $1")
+            .bind(&class_id.parse::<i32>()?)
+            .fetch(&req.state().db_pool);
+        let mut class_timetables: Vec<ClassTimetable> = Vec::new();
+        while let Some(row) = class.next().await? {
+            let class_timetable = ClassTimetable {
+                id: row.get(0),
+                class_id: row.get(1),
+                day_id: row.get(2),
+                hour: row.get(3),
+                activity: ClassTimetableActivity {
+                    id: row.get(4),
+                    teacher: ActivityTeacher {
+                        id: row.get(5),
+                        first_name: row.get(6),
+                        last_name: row.get(7)
+                    }
+                },
+                subject: row.get(8)
+            };
+            class_timetables.push(class_timetable);
+        }
+        res.set_body(Body::from_json(&class_timetables)?);
+        Ok(res)
+    } else {
+        Ok(res)
+    }
+}
+
+pub async fn update_class(mut req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    let school_id: i32 = req.param("school")?.parse()?;
+    use sqlx_core::postgres::PgQueryAs;
+    let class = req.body_json::<UpdateClass>().await?;
+    use sqlx_core::cursor::Cursor;
+    use sqlx_core::row::Row;
+    let mut s = SchoolDetail::default();
+    let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
+            FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.id = $1")
+        .bind(&school_id)
+        .fetch(&req.state().db_pool);
+    while let Some(row) = query.next().await?{
+        s = SchoolDetail{
+            id: row.get(0),
+            name: row.get(1),
+            manager: row.get(2),
+            school_type: row.get(3),
+            tel: None,
+            location: None,
+            city: City{ pk: row.get(4), name: row.get(5) },
+            town: Town{
+                city: row.get(4),
+                pk: row.get(6),
+                name: row.get(7)
+            }
+        }
+    }
+    match req.user().await {
+        Some(u) => {
+            if s.manager == u.id || u.is_admin{
+                let c: Class = sqlx::query_as("update classes set sube = $1, kademe = $2, school = $3, group_id = $4 where id = $5 returning id, sube, kademe, group_id, school")
+                    .bind(&class.sube)
+                    .bind(&class.kademe)
+                    .bind(&school_id)
+                    .bind(&class.group_id)
+                    .bind(&class.id)
+                    .fetch_one(&req.state().db_pool).await?;
+                res.set_body(Body::from_json(&c)?);
+                Ok(res)
+            }
+            else{
+                Ok(res)
+            }
+        }
+        None=>{
+            Ok(res)
+        }
+    }
+}

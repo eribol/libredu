@@ -1,0 +1,12 @@
+pub mod timetable;
+pub mod user;
+pub mod class;
+pub mod school;
+pub mod activity;
+pub mod teacher;
+pub mod post;
+pub mod city;
+pub mod group;
+pub mod student;
+pub mod subject;
+pub mod class_room;

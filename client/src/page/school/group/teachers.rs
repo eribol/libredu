@@ -1,0 +1,275 @@
+use serde::*;
+use seed::{*, prelude::*};
+use crate::{Context};
+use crate::page::school::group::teacher::teacher;
+use crate::model::user::Teacher;
+use crate::page::school::detail;
+use crate::page::school::detail::{SchoolContext, GroupContext};
+use crate::model::school::SchoolDetail;
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct NewTeacher{
+    first_name: String,
+    last_name: String
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Model{
+    pages: Pages,
+    teachers: Vec<Teacher>,
+    school: SchoolDetail,
+    form: NewTeacher,
+    //school: SchoolDetail
+}
+
+#[derive(Debug, Clone)]
+pub enum Pages{
+    Teachers,
+    Teacher(teacher::Model)
+}
+impl Default for Pages{
+    fn default()->Self{
+        Self::Teachers
+    }
+}
+pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, ctx: &mut Context, ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext)-> Model {
+    let mut model = Model::default();
+    //log!("teachers:", ctx_school.school);
+    orders.perform_cmd({
+        let adres = format!("/api/schools/{}/teachers", ctx_school.school.id);
+        let request = Request::new(adres)
+            .method(Method::Get);
+        async { Msg::FetchTeachers(async {
+            request
+                .fetch()
+                .await?
+                .check_status()?
+                .json()
+                .await
+        }.await)}
+    });
+    match url.next_path_part(){
+        Some("") | None => {},
+        Some(id) => {
+            model.pages = Pages::Teacher(teacher::init(id.parse::<i32>().unwrap(), &mut orders.proxy(Msg::Teacher), ctx, ctx_school, url, ctx_group));
+        }
+    }
+    //if _url.path().len()>=4{
+    //
+    //}
+    model
+}
+
+#[derive(Debug)]
+pub enum Msg{
+    FetchTeachers(fetch::Result<Vec<Teacher>>),
+    AddTeacher,
+    DelTeacher(i32),
+    FetchDel(fetch::Result<Teacher>),
+    ChangeFirstName(String),
+    ChangeLastName(String),
+    FetchTeacher(fetch::Result<Teacher>),
+    Teacher(teacher::Msg)
+}
+
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx_school: &mut detail::SchoolContext, ctx_group: &mut GroupContext) {
+    match msg {
+        Msg::FetchTeachers(teachers) => {
+            match teachers{
+                Ok(t) => {
+                    model.teachers = t.clone();
+                    ctx_school.teachers = t
+                }
+                Err(_) => {}
+            }
+        }
+        Msg::Teacher(msg)=>{
+            if let Pages::Teacher(m) = &mut model.pages {
+                teacher::update(msg, m, &mut orders.proxy(Msg::Teacher), _ctx, ctx_school, ctx_group)
+            }
+        }
+        Msg::AddTeacher=> {
+            orders.perform_cmd({
+                let url = format!("/api/schools/{}/teachers", ctx_school.school.id);
+                let request = Request::new(url)
+                    .method(Method::Post)
+                    .json(&model.form);
+                async {
+                    Msg::FetchTeacher(async {
+                        request?
+                            .fetch()
+                            .await?
+                            .check_status()?
+                            .json()
+                            .await
+                    }.await)
+                }
+            });
+        }
+        Msg::DelTeacher(id)=> {
+            orders.perform_cmd({
+                let url = format!("/api/schools/{}/groups/{}/teachers/{}", ctx_school.school.id, ctx_group.group.id, id);
+                let request = Request::new(url)
+                    .method(Method::Delete);
+                async {
+                    Msg::FetchDel(async {
+                        request
+                            .fetch()
+                            .await?
+                            .check_status()?
+                            .json()
+                            .await
+                    }.await)
+                }
+            });
+        }
+        Msg::FetchDel(teacher)=>{
+            match teacher{
+                Ok(t) => {
+                    model.teachers.retain(|tt| tt.id != t.id);
+                    ctx_school.teachers.retain(|tt| tt.id != t.id);
+                }
+                Err(_) => {
+                }
+            }
+        }
+        Msg::ChangeFirstName(name)=>{
+            model.form.first_name = name;
+
+        }
+        Msg::ChangeLastName(name)=>{
+            model.form.last_name = name
+        }
+        Msg::FetchTeacher(t)=>{
+            match t{
+                Ok(_t)=>{
+                    ctx_school.teachers.insert(0, _t);
+                }
+                Err(_)=>{}
+            }
+        }
+    }
+}
+
+pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group: &GroupContext)-> Node<Msg>{
+    div![
+        C!{"column is-12"},
+            match &model.pages{
+                Pages::Teacher(m) => {
+                    teacher::view(m, ctx_school, ctx_group).map_msg(Msg::Teacher)
+                },
+                Pages::Teachers => {
+
+                    table![
+                        C!{"table table-hover"},
+                        thead![
+                            tr![
+                                th![
+                                    attrs!{At::Scope=>"col"},
+                                    "Adı"
+                                ],
+                                th![
+                                    attrs!{At::Scope=>"col"},
+                                    "Soyadı"
+                                ],
+                                th![
+                                    attrs!{At::Scope=>"col"},
+                                ]
+                            ]
+                        ],
+                        tbody![
+                            tr![
+                                C!{"table-light"},
+                                td![
+                                    input![
+                                        attrs!{
+                                            At::Type=>"text",
+                                            At::Placeholder=>"Adı",
+                                            At::Value=>&model.form.first_name,
+                                            At::Disabled => disabled(ctx, ctx_school).as_at_value()
+                                        },
+                                        input_ev(Ev::Input, Msg::ChangeFirstName)
+                                    ]
+                                ],
+                                td![
+                                    input![
+                                        attrs!{
+                                            At::Type=>"text",
+                                            At::Placeholder=>"Soyadı",
+                                            At::Value=>&model.form.last_name
+                                            At::Disabled => disabled(ctx, ctx_school).as_at_value()
+                                        },
+                                        input_ev(Ev::Input, Msg::ChangeLastName)
+                                    ]
+                                ],
+                                td![
+                                    input![C!{"button is-primary"},
+                                        attrs!{
+                                            At::Type=>"button",
+                                            At::Value=>"Ekle",
+                                            At::Id=>"login_button",
+                                            At::Disabled => disabled(ctx, ctx_school).as_at_value()
+                                        },
+                                        ev(Ev::Click, |event| {
+                                            event.prevent_default();
+                                            Msg::AddTeacher
+                                        })
+                                    ]
+                                ]
+                            ],
+                            ctx_school.teachers.iter().map(|t|
+                                tr![
+                                    C!{"table-light"},
+                                    td![
+                                        a![
+                                            &t.first_name,
+                                            attrs!{
+                                                At::Href=> format!("/schools/{}/groups/{}/teachers/{}", &ctx_school.school.id, &ctx_group.group.id, &t.id)
+                                            }
+                                        ]
+                                    ],
+                                    td![
+                                        a![
+                                            &t.last_name,
+                                            attrs!{
+                                                At::Href=> format!("/schools/{}/groups/{}/teachers/{}", &ctx_school.school.id, &ctx_group.group.id, &t.id)
+                                            }
+                                        ]
+                                    ],
+                                    td![
+                                        button![
+                                            C!{"button"},
+                                            attrs!{At::Value=>&t.id},
+                                            "Sil",
+                                            {
+                                                let id = t.id;
+                                                ev(Ev::Click, move |_event| {
+                                                    Msg::DelTeacher(id)
+                                                })
+                                            }
+                                        ]
+                                    ]
+                                ]
+                            )
+                        ]
+                    ]
+                }
+            }
+        //]
+    ]
+}
+
+fn disabled(ctx: &Context, ctx_school: &SchoolContext) -> bool {
+    if ctx.user.is_none(){
+        return true
+    }
+    else if ctx.user.as_ref().unwrap().is_admin {
+        return false
+    }
+    else if ctx.school.iter().any(|s| s.id == ctx_school.school.id) {
+        return false
+    }
+    else {
+        return true
+    }
+}
