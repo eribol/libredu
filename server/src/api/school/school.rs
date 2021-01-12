@@ -147,7 +147,7 @@ pub async fn add(mut req: Request<AppState>) -> tide::Result {
 pub async fn school_detail(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let school_auth: &SchoolAuth = req.ext().unwrap();
-    res.set_body(Body::from_json(&school_auth.school)?);
+    res.set_body(Body::from_json(&(&school_auth.role, &school_auth.school))?);
     Ok(res)
 }
 

@@ -16,6 +16,7 @@ pub struct Model{
     menu: Vec<SchoolMenu>,
     page: Pages,
     school: SchoolDetail,
+    //role: i16,
     groups: Vec<ClassGroups>,
     form: UpdateSchoolForm,
     group_form: GroupForm,
@@ -54,7 +55,7 @@ pub enum Msg{
     Students(students::Msg),
     Subjects(subjects::Msg),
     Classrooms(class_rooms::Msg),
-    FetchDetail(fetch::Result<SchoolDetail>),
+    FetchDetail(fetch::Result<(i16, SchoolDetail)>),
     FetchClassGroups(fetch::Result<Vec<ClassGroups>>),
     UpdateSubmit,
     UpdateFetch(fetch::Result<SchoolDetail>),
@@ -222,7 +223,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             }
         }
         Msg::FetchDetail(Ok(school))=> {
-            ctx_school.school = school.clone();
+            ctx_school.school = school.1.clone();
+            ctx_school.role = school.0;
             model.form = UpdateSchoolForm{
                 name: ctx_school.school.name.clone(),
                 tel: ctx_school.school.tel.clone(),
@@ -727,6 +729,7 @@ pub struct Town {
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct SchoolContext{
     pub teachers: Vec<Teacher>,
+    pub role: i16,
     //pub classes: Vec<Class>,
     pub groups: Vec<ClassGroups>,
     pub school: SchoolDetail
