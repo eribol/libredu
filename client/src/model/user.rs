@@ -15,6 +15,8 @@ pub struct Teacher{
     pub id: i32,
     pub first_name: String,
     pub last_name: String,
+    pub role_id: i32,
+    pub role_name: String
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]

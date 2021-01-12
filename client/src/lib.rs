@@ -475,13 +475,17 @@ fn view_navbar_brand(model: &Model, ctx: &Context) -> Node<Msg>{
                             )
                         ]
                     ],
+                    if ctx.user.as_ref().unwrap().is_admin{
                     a![
                         C!{"navbar-item"},
                         "Admin",
                         attrs!{
                             At::Href=> "/admin"
                         }
-                    ]
+                    ]}
+                    else {
+                        a![]
+                    }
                 ]
             }
             else {

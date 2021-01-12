@@ -10,7 +10,8 @@ use crate::model::school::SchoolDetail;
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct NewTeacher{
     first_name: String,
-    last_name: String
+    last_name: String,
+    role: i16
 }
 
 #[derive(Debug, Default, Clone)]
@@ -65,9 +66,10 @@ pub enum Msg{
     FetchTeachers(fetch::Result<Vec<Teacher>>),
     AddTeacher,
     DelTeacher(i32),
-    FetchDel(fetch::Result<Teacher>),
+    FetchDel(fetch::Result<i32>),
     ChangeFirstName(String),
     ChangeLastName(String),
+    ChangeRole(String),
     FetchTeacher(fetch::Result<Teacher>),
     Teacher(teacher::Msg)
 }
@@ -126,10 +128,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchDel(teacher)=>{
             match teacher{
                 Ok(t) => {
-                    model.teachers.retain(|tt| tt.id != t.id);
-                    ctx_school.teachers.retain(|tt| tt.id != t.id);
+                    model.teachers.retain(|tt| tt.id != t);
+                    ctx_school.teachers.retain(|tt| tt.id != t);
                 }
                 Err(_) => {
+                    //log!("aa");
                 }
             }
         }
@@ -139,6 +142,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         }
         Msg::ChangeLastName(name)=>{
             model.form.last_name = name
+        }
+        Msg::ChangeRole(r) =>{
+            model.form.role = r.parse::<i16>().unwrap()
         }
         Msg::FetchTeacher(t)=>{
             match t{
@@ -159,8 +165,85 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group:
                     teacher::view(m, ctx_school, ctx_group).map_msg(Msg::Teacher)
                 },
                 Pages::Teachers => {
-
-                    table![
+                    div![
+                        C!{"field"},
+                        p![
+                            label![C!{"label"}, "Adı:"],
+                            input![
+                                attrs!{
+                                    At::Type=>"text",
+                                    At::Placeholder=>"Adı",
+                                    At::Value=>&model.form.first_name,
+                                    At::Disabled => disabled(ctx, ctx_school).as_at_value()
+                                },
+                                input_ev(Ev::Input, Msg::ChangeFirstName)
+                            ]
+                        ],
+                        p![
+                            label![C!{"label"},"Soyadı:"],
+                            input![
+                                attrs!{
+                                    At::Type=>"text",
+                                    At::Placeholder=>"Soyadı",
+                                    At::Value=>&model.form.last_name
+                                    At::Disabled => disabled(ctx, ctx_school).as_at_value()
+                                },
+                                input_ev(Ev::Input, Msg::ChangeLastName)
+                            ]
+                        ],
+                        p![
+                            label![
+                                C!{"label"},"Rol:"
+                            ],
+                            select![
+                                C!{"select"},
+                                attrs!{
+                                    At::Name=>"type",
+                                    At::Id=>"type",
+                                    //At::Value => &model.form2.group,
+                                },
+                                option![
+                                    attrs!{
+                                        At::Value=> "2"
+                                    },
+                                    "Müdür Başyardımcısı"
+                                ],
+                                option![
+                                    attrs!{
+                                        At::Value=> "3"
+                                    },
+                                    "Müdür Yardımcısı"
+                                ],
+                                option![
+                                    attrs!{
+                                        At::Value=> "4"
+                                    },
+                                    "Rehber Öğretmen"
+                                ],
+                                option![
+                                    attrs!{
+                                        At::Value=> "5"
+                                    },
+                                    "Öğretmen"
+                                ],
+                                input_ev(Ev::Change, Msg::ChangeRole)
+                            ]
+                        ],
+                        p![
+                            input![C!{"button is-primary"},
+                                attrs!{
+                                    At::Type=>"button",
+                                    At::Value=>"Ekle",
+                                    At::Id=>"login_button",
+                                    At::Disabled => disabled(ctx, ctx_school).as_at_value()
+                                },
+                                ev(Ev::Click, |event| {
+                                    event.prevent_default();
+                                    Msg::AddTeacher
+                                })
+                            ]
+                        ],
+                        table![
                         C!{"table table-hover"},
                         thead![
                             tr![
@@ -174,49 +257,15 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group:
                                 ],
                                 th![
                                     attrs!{At::Scope=>"col"},
+                                    "Rolü"
+                                ],
+                                th![
+                                    attrs!{At::Scope=>"col"},
+                                    "İşlem"
                                 ]
                             ]
                         ],
                         tbody![
-                            tr![
-                                C!{"table-light"},
-                                td![
-                                    input![
-                                        attrs!{
-                                            At::Type=>"text",
-                                            At::Placeholder=>"Adı",
-                                            At::Value=>&model.form.first_name,
-                                            At::Disabled => disabled(ctx, ctx_school).as_at_value()
-                                        },
-                                        input_ev(Ev::Input, Msg::ChangeFirstName)
-                                    ]
-                                ],
-                                td![
-                                    input![
-                                        attrs!{
-                                            At::Type=>"text",
-                                            At::Placeholder=>"Soyadı",
-                                            At::Value=>&model.form.last_name
-                                            At::Disabled => disabled(ctx, ctx_school).as_at_value()
-                                        },
-                                        input_ev(Ev::Input, Msg::ChangeLastName)
-                                    ]
-                                ],
-                                td![
-                                    input![C!{"button is-primary"},
-                                        attrs!{
-                                            At::Type=>"button",
-                                            At::Value=>"Ekle",
-                                            At::Id=>"login_button",
-                                            At::Disabled => disabled(ctx, ctx_school).as_at_value()
-                                        },
-                                        ev(Ev::Click, |event| {
-                                            event.prevent_default();
-                                            Msg::AddTeacher
-                                        })
-                                    ]
-                                ]
-                            ],
                             ctx_school.teachers.iter().map(|t|
                                 tr![
                                     C!{"table-light"},
@@ -237,6 +286,51 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group:
                                         ]
                                     ],
                                     td![
+                                        select![
+                                            C!{"select"},
+                                            attrs!{
+                                                At::Disabled => true
+                                                //At::Value => &model.form2.group,
+                                            },
+                                            option![
+                                                attrs!{
+                                                    At::Value=> "1",
+                                                    At::Selected => (t.role_id == 1).as_at_value(),
+                                                    //At::Disabled => (t.role_id == 1).as_at_value()
+                                                },
+                                                "Müdür"
+                                            ],
+                                            option![
+                                                attrs!{
+                                                    At::Value=> "2",
+                                                    At::Selected => (t.role_id == 2).as_at_value()
+                                                },
+                                                "Müdür Başyardımcısı"
+                                            ],
+                                            option![
+                                                attrs!{
+                                                    At::Value=> "3",
+                                                    At::Selected => (t.role_id == 3).as_at_value()
+                                                },
+                                                "Müdür Yardımcısı"
+                                            ],
+                                            option![
+                                                attrs!{
+                                                    At::Value=> "4",
+                                                    At::Selected => (t.role_id == 4).as_at_value()
+                                                },
+                                                "Rehber Öğretmen"
+                                            ],
+                                            option![
+                                                attrs!{
+                                                    At::Value=> "5",
+                                                    At::Selected => (t.role_id == 5).as_at_value()
+                                                },
+                                                "Öğretmen"
+                                            ]
+                                        ]
+                                    ],
+                                    td![
                                         button![
                                             C!{"button"},
                                             attrs!{At::Value=>&t.id},
@@ -252,6 +346,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group:
                                 ]
                             )
                         ]
+                    ]
                     ]
                 }
             }

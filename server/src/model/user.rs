@@ -33,11 +33,28 @@ pub struct AuthUser{
     pub is_admin: bool,
 }
 
+#[derive(sqlx::FromRow,Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SimpleUser{
+    pub id: i32,
+    pub first_name: String,
+    pub last_name: String,
+}
+
 #[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize, Default)]
 pub struct Teacher{
     pub id: i32,
     pub first_name: String,
     pub last_name: String,
+    pub role_id: i32,
+    pub role_name: String
+}
+
+#[derive(sqlx::FromRow,Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SimpleTeacher{
+    pub id: i32,
+    pub first_name: String,
+    pub last_name: String,
+    pub is_active: bool
 }
 
 #[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize, Default)]

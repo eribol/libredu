@@ -14,6 +14,7 @@ use crate::model::teacher::TeacherTimetable;
 use serde::*;
 use crate::model::school::SchoolDetail;
 use crate::model::city::{City, Town};
+use crate::model::user::{SimpleUser, SimpleTeacher};
 
 #[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize, Default)]
 pub struct Teacher{
@@ -360,12 +361,13 @@ pub async fn del_teacher(req: Request<AppState>) -> tide::Result {
     use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role <= 2 {
-        let teacher: Teacher = sqlx::query_as(r#"SELECT users.id, users.first_name, users.last_name, users.is_active, users.email, users.tel
+        let teacher: SimpleTeacher = sqlx::query_as(r#"SELECT users.id, users.first_name, users.last_name, users.is_active, users.email, users.tel
                         FROM users inner join school_users on users.id = school_users.user_id
-                        WHERE school_users.school_id = $1 and school_users.user_id = $2"#)
+                        WHERE school_users.school_id = $1 and school_users.user_id = $2 and school_users.role > 1"#)
             .bind(&school_auth.school.id)
             .bind(&teacher_id)
             .fetch_one(&req.state().db_pool).await?;
+
         let _ = sqlx::query(r#"update classes set teacher = null WHERE teacher = $1"#)
             .bind(&teacher.id)
             .execute(&req.state().db_pool).await?;
@@ -382,9 +384,9 @@ pub async fn del_teacher(req: Request<AppState>) -> tide::Result {
                 .bind(&school_auth.school.id)
                 .execute(&req.state().db_pool).await?;
             let _ = sqlx::query(r#"delete from users WHERE id = $1"#)
-                .bind(&teacher_id)
+                .bind(&teacher.id)
                 .execute(&req.state().db_pool).await?;
-            res.set_body(Body::from_json(&teacher)?);
+            res.set_body(Body::from_json(&teacher_id)?);
             Ok(res)
         } else {
             let _ = sqlx::query(r#"delete from school_users WHERE user_id = $1 and school_id = $2"#)
@@ -398,7 +400,7 @@ pub async fn del_teacher(req: Request<AppState>) -> tide::Result {
                 .bind(&teacher_id)
                 .bind(classes.0.unwrap_or_default())
                 .execute(&req.state().db_pool).await?;
-            res.set_body(Body::from_json(&teacher)?);
+            res.set_body(Body::from_json(&teacher_id)?);
             Ok(res)
         }
     }

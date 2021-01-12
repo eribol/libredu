@@ -144,7 +144,7 @@ pub fn view(model: &Model) -> Node<Msg> {
                     "Ders Sınıf Kademesi:"
                 ],
                 input![
-                    C!{"select"},
+                    C!{"input"},
                     attrs!{
                         At::Value => &model.form.kademe.to_string()
                     },
