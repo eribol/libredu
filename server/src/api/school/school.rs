@@ -305,7 +305,7 @@ pub async fn teachers(mut req: Request<AppState>) -> tide::Result {
 
             match form {
                 Ok(f) => {
-                    if school_auth.role < 3{
+                    if school_auth.role < 3 && f.role != 1{
                         let add_user: user::SimpleUser = sqlx::query_as("INSERT into users(first_name, last_name) values($1, $2) returning id, first_name, last_name, email, is_admin, username")
                             .bind(&f.first_name)
                             .bind(&f.last_name)
