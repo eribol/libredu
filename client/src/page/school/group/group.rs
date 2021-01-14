@@ -79,7 +79,7 @@ pub fn init(url: Url, ctx_school: &mut SchoolContext, orders: &mut impl Orders<M
                 Menu{ link: "timetables".to_string(), title: "Ders Programı".to_string() },
             ];
             orders.perform_cmd({
-                let adres = format!("/api/schools/{}/classes", &ctx_school.school.id);
+                let adres = format!("/api/schools/{}/groups/{}/classes", &ctx_school.school.id, group_id);
                 let request = Request::new(adres)
                     .method(Method::Get);
                 async { Msg::FetchClasses(async {
