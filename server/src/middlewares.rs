@@ -10,25 +10,11 @@ pub fn school_auth<'a>(
 ) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>> {
     Box::pin(async {
         use crate::request::Auth;
-        if let Some(school) = request.get_school().await{
-            if let Some(user) = request.user().await{
-                if user.id == school.manager || user.is_admin{
-                    let school_auth = SchoolAuth{ school, role: 1};
-                    request.set_ext(school_auth.clone());
-                    Ok(next.run(request).await)
-                }
-                else {
-                    let role = request.get_school_auth().await;
-                    let school_auth = SchoolAuth{ school, role};
-                    request.set_ext(school_auth.clone());
-                    Ok(next.run(request).await)
-                }
-            }
-            else {
-                let school_auth = SchoolAuth{ school, role: 9 };
-                request.set_ext(school_auth.clone());
-                Ok(next.run(request).await)
-            }
+        if let Some(school) = request.get_school().await {
+            let role = request.get_school_auth().await;
+            let school_auth = SchoolAuth { school, role };
+            request.set_ext(school_auth.clone());
+            Ok(next.run(request).await)
         }
         else {
             Ok(Response::new(StatusCode::Unauthorized))
@@ -42,25 +28,8 @@ pub fn group_auth<'a>(
 ) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>> {
     Box::pin(async {
         use crate::request::Auth;
-        if let Some(school) = request.get_school().await{
-            if let Some(user) = request.user().await{
-                if user.id == school.manager || user.is_admin{
-                    let school_auth = SchoolAuth{ school, role: 1};
-                    request.set_ext(school_auth.clone());
-                    Ok(next.run(request).await)
-                }
-                else {
-                    let role = request.get_school_auth().await;
-                    let school_auth = SchoolAuth{ school, role};
-                    request.set_ext(school_auth.clone());
-                    Ok(next.run(request).await)
-                }
-            }
-            else {
-                let school_auth = SchoolAuth{ school, role: 9 };
-                request.set_ext(school_auth.clone());
-                Ok(next.run(request).await)
-            }
+        if let Some(_group) = request.get_group().await {
+            Ok(next.run(request).await)
         }
         else {
             Ok(Response::new(StatusCode::Unauthorized))

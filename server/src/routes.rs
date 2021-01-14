@@ -131,8 +131,9 @@ fn students_api(state: AppState)->tide::Server<AppState>{
 
 fn group_api(state: AppState)->tide::Server<AppState>{
     use crate::api::school::group;
+    use crate::middlewares::{group_auth};
     let mut group_api = tide::with_state(state.clone());
-    //group_api.with(group_auth);
+    group_api.with(group_auth);
     group_api.at("").patch(group::patch_group).delete(group::del_group).get(group::get_group);
     group_api.at("/schedules").get(group::group_schedules).patch(group::patch_group_schedules);
     group_api.at("/timetables").get(group::get_timetables);
@@ -152,6 +153,7 @@ fn class_api(state: AppState)->tide::Server<AppState>{
     class_api.at("/activities").all(class::activities);
     class_api.at("/limitations").all(class::limitations);
     class_api.at("/timetables").get(class::timetables);
+    class_api.at("/students").get(class::get_students);
     class_api
 }
 

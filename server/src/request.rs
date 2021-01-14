@@ -187,15 +187,15 @@ impl Auth for Request<AppState>{
         }
     }
     async fn get_group_auth(&self) -> i32 {
-        let path = &self.url().path()[1..];
-        let school = self.get_school().await;
+        //let path = &self.url().path()[1..];
+        let school = self.get_group().await;
         match school{
             Some(s) => {
                 use sqlx::prelude::PgQueryAs;
                 let user_id = self.cookie("libredu-user");
                 match user_id{
                     None => {
-                        8
+                        9
                     }
                     Some(id) => {
                         let auth: sqlx::Result<Role> = sqlx::query_as("SELECT *
@@ -205,13 +205,13 @@ impl Auth for Request<AppState>{
                             .fetch_one(&self.state().db_pool).await;
                         match auth{
                             Ok(a) => {a.role}
-                            Err(_) => {8}
+                            Err(_) => {9}
                         }
                     }
                 }
             }
             None => {
-                8
+                9
             }
         }
 
