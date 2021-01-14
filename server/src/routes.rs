@@ -93,11 +93,6 @@ fn school_api(state: AppState)->tide::Server<AppState>{
     api.at("/detail").get(school::school_detail);
     api.at("/unused_numbers").get(school::get_unused_numbers);
     api.at("/detail").patch(school::patch_school);
-    api.at("/classes").get(school::classes);
-    api.at("/add_class").post(school::add_class);
-    api.at("/classes/:class_id").nest({
-        class_api(state.clone())
-    });
     api.at("/groups").get(group::groups).post(group::add_groups);
     api.at("/groups/:group_id").nest({
         group_api(state.clone())
@@ -130,7 +125,7 @@ fn students_api(state: AppState)->tide::Server<AppState>{
 }
 
 fn group_api(state: AppState)->tide::Server<AppState>{
-    use crate::api::school::group;
+    use crate::api::school::{group, school};
     use crate::middlewares::{group_auth};
     let mut group_api = tide::with_state(state.clone());
     group_api.with(group_auth);
@@ -138,6 +133,11 @@ fn group_api(state: AppState)->tide::Server<AppState>{
     group_api.at("/schedules").get(group::group_schedules).patch(group::patch_group_schedules);
     group_api.at("/timetables").get(group::get_timetables);
     group_api.at("/timetables").post(group::timetables);
+    group_api.at("/classes").get(school::classes);
+    group_api.at("/add_class").post(school::add_class);
+    group_api.at("/classes/:class_id").nest({
+        class_api(state.clone())
+    });
     group_api.at("/teachers/:teacher_id").nest({
         teacher_api(state.clone())
     });
@@ -154,6 +154,7 @@ fn class_api(state: AppState)->tide::Server<AppState>{
     class_api.at("/limitations").all(class::limitations);
     class_api.at("/timetables").get(class::timetables);
     class_api.at("/students").get(class::get_students);
+    class_api.at("/all_students").get(class::get_all_students);
     class_api
 }
 

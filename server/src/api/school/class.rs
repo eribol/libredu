@@ -9,7 +9,7 @@ use crate::model::timetable::{ClassAvailable, InsertClassAvailable};
 use crate::model::timetable::Day;
 use crate::model::activity::{Subject, NewActivity, Activity, ActivityTeacher};
 use crate::model::city::{City, Town};
-use crate::model::student::Student;
+use crate::model::student::SimpleStudent;
 
 pub async fn activities(mut req: Request<AppState>) -> tide::Result {
 
@@ -313,10 +313,22 @@ pub async fn get_students(req: Request<AppState>) -> tide::Result{
     let group_id = req.param("group_id")?;
     use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
-    let students: Vec<Student> = sqlx::query_as(r#"SELECT students.id, students.first_name, students.last_name
+    let students: Vec<SimpleStudent> = sqlx::query_as(r#"SELECT students.id, students.first_name, students.last_name
          FROM students inner join class_student on students.id = class_student.student WHERE class_student.class_id = $1 and class_student.group_id = $2"#)
-        .bind(&class_id)
-        .bind(&group_id)
+        .bind(&class_id.parse::<i32>()?)
+        .bind(&group_id.parse::<i32>()?)
+        .fetch_all(&req.state().db_pool).await?;
+    res.set_body(Body::from_json(&students)?);
+    Ok(res)
+}
+pub async fn get_all_students(req: Request<AppState>) -> tide::Result{
+    let mut res = tide::Response::new(StatusCode::Ok);
+    let class_id = req.param("class_id")?;
+    let group_id = req.param("group_id")?;
+    use sqlx_core::postgres::PgQueryAs;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    let students: Vec<SimpleStudent> = sqlx::query_as(r#"SELECT * FROM students  WHERE school = $1"#)
+        .bind(&school_auth.school.id)
         .fetch_all(&req.state().db_pool).await?;
     res.set_body(Body::from_json(&students)?);
     Ok(res)
