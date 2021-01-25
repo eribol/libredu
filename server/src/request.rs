@@ -157,7 +157,7 @@ impl Auth for Request<AppState>{
                             Ok(a) => {a.role}
                             Err(_) => {
                                 let auth: sqlx::Result<SimpleUser> = sqlx::query_as("SELECT *
-                                        FROM users WHERE id = $1 && is_admin = true")
+                                        FROM users WHERE id = $1 and is_admin = true")
                                     .bind(&id.value().parse::<i32>().unwrap())
                                     .fetch_one(&self.state().db_pool).await;
                                 match auth{

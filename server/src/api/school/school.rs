@@ -227,6 +227,7 @@ pub async fn subjects(mut req: Request<AppState>) -> tide::Result {
     let _subject = req.body_json::<subject::NewSubject>().await?;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     use sqlx::prelude::PgQueryAs;
+    println!("{:?}", &school_auth.role);
     if school_auth.role < 3 && school_auth.school.id == _subject.school{
         let s: subject::Subject  = sqlx::query_as("insert into subjects(name, school, optional, kademe) values($1, $2, $3, $4) returning id, name, school, optional, kademe")
             .bind(&_subject.name)
