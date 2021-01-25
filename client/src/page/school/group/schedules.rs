@@ -12,7 +12,7 @@ pub struct Form{
     end_time: NaiveTime
 }
 
-pub fn init(url: Url, ctx_school: &mut SchoolContext, group: &ClassGroups, orders: &mut impl Orders<Msg>) -> Model{
+pub fn init(_url: Url, ctx_school: &mut SchoolContext, group: &ClassGroups, orders: &mut impl Orders<Msg>) -> Model{
     let mut model = Model::default();
     model.group = group.clone();
     orders.perform_cmd({

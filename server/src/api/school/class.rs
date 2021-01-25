@@ -111,8 +111,6 @@ pub async fn class_detail(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let class_id = req.param("class_id")?;
     use sqlx_core::postgres::PgQueryAs;
-    use sqlx_core::cursor::Cursor;
-    use sqlx_core::row::Row;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     let class: Class = sqlx::query_as(r#"SELECT * FROM classes WHERE school=$1 and id = $2"#)
         .bind(&school_auth.school.id)
@@ -346,7 +344,6 @@ pub async fn students(mut req: Request<AppState>) -> tide::Result{
         let student = req.body_json::<SimpleStudent>().await?;
         let class_id = req.param("class_id")?;
         let group_id = req.param("group_id")?;
-        use sqlx_core::postgres::PgQueryAs;
         let _ = sqlx::query(r#"insert into class_student(student, class_id, group_id) values($1, $2, $3)"#)
             .bind(&student.id)
             .bind(&class_id.parse::<i32>()?)
@@ -364,7 +361,6 @@ pub async fn del_student(req: Request<AppState>) -> tide::Result{
         let class_id = req.param("class_id")?;
         let group_id = req.param("group_id")?;
         let student_id = req.param("student_id")?;
-        use sqlx_core::postgres::PgQueryAs;
         let _ = sqlx::query(r#"delete from class_student where student = $1 and class_id = $2 and group_id = $3"#)
             .bind(&student_id.parse::<i32>()?)
             .bind(&class_id.parse::<i32>()?)

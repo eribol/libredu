@@ -7,16 +7,13 @@ use crate::model::user;
 use crate::model::class;
 use serde::*;
 use crate::model::class::{NewClass};
-use crate::model::timetable::{NewTimetable};
 use crate::model::school::{SchoolDetail, School};
 use crate::model::post::SchoolPost;
 use crate::model::city::{City, Town};
-use async_std::{fs::OpenOptions, io};
-use crate::model::student::{NewStudent, Student, SimpleStudent};
+use crate::model::student::{NewStudent, Student};
 use crate::model::subject;
 use crate::model::class_room;
 use multer::Multipart;
-use crate::middlewares::school_auth;
 use crate::model::user::SimpleUser;
 
 
@@ -34,6 +31,7 @@ pub async fn schools(req: Request<AppState>) -> tide::Result {
                 .bind(&u.id)
                 .fetch(&req.state().db_pool);
             while let Some(row) = query.next().await?{
+                //println!("okullar");
                 let school = SchoolDetail{
                     id: row.get(0),
                     name: row.get(1),
@@ -247,7 +245,6 @@ pub async fn subjects(mut req: Request<AppState>) -> tide::Result {
 pub async fn del_subject(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let school_auth: &SchoolAuth = req.ext().unwrap();
-    use sqlx::prelude::PgQueryAs;
     let subject_id: i32 = req.param("subject_id")?.parse()?;
     if school_auth.role < 3 {
         let _ = sqlx::query("delete from subjects where school = $1 and id = $2")
@@ -406,33 +403,14 @@ pub async fn students(mut req: Request<AppState>) -> tide::Result {
 }
 
 pub async fn students_with_file(req: Request<AppState>) -> tide::Result {
-    use async_std::io::BufReader;
-    use async_std::{fs::OpenOptions, io};
-
-    use futures::AsyncBufRead;
-
     // MultiPartFor------------
-    use bytes::Bytes;
-    use futures::stream::Stream;
-
-    // Import multer types.
-    //use multer::Multipart;
-    use std::convert::Infallible;
-    use futures::stream::once;
-
-    //stream
-    use futures::stream::poll_fn;
-    use futures::task::Poll;
-
-    //FileUpload;
     use futures_codec::{BytesCodec, FramedRead};
-    use futures::TryStreamExt;
     let content_type_string = req.header("Content-Type").unwrap().get(0).unwrap().as_str();
 
     //   multipart/form-data; N
     println!("Content-Type1={}", &content_type_string);
 
-    if (!content_type_string.contains("multipart/form-data;")) {
+    if !content_type_string.contains("multipart/form-data;") {
         //not 「multipart/form-data;」error
         //
         //
@@ -471,7 +449,7 @@ pub async fn students_with_file(req: Request<AppState>) -> tide::Result {
             None => {}
         }
     }
-    use calamine::{open_workbook, Error, Xlsx, Reader, RangeDeserializerBuilder};
+    use calamine::{open_workbook, Xlsx, Reader};
     let mut excel: Xlsx<_> = open_workbook("students/".to_owned() + &number.name+".xlsx").unwrap();
 
     if let Some(Ok(r)) = excel.worksheet_range("Sheet1") {

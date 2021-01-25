@@ -17,3 +17,4 @@ LICENCE
 .git/
 .pijul/
 .idea/
+.gradle/

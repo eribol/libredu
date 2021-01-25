@@ -124,7 +124,7 @@ pub fn view(model: &Model, ctx_school:&SchoolContext, ctx_group: &GroupContext)-
 pub fn context(model: &Model, ctx_school:&SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
     timetable(model, ctx_school, ctx_group)
 }
-fn timetable(model: &Model, ctx_school:&SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
+fn timetable(model: &Model, _ctx_school:&SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
     div![
         C!{"column"},
         table![

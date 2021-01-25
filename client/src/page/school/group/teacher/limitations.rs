@@ -209,7 +209,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             });
         }
         Msg::SubmitAllLimitation => {
-            for t in &ctx_school.teachers{
+            for _ in &ctx_school.teachers{
                 orders.perform_cmd({
                     let url = format!("/api/schools/{}/groups/{}/teachers/{}/limitations", ctx_school.school.id, ctx_group.group.id, model.teacher.id);
                     let request = Request::new(url)

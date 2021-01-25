@@ -1,8 +1,7 @@
 use serde::*;
 use seed::{*, prelude::*};
 use crate::{Context, print_class_rooms};
-use crate::page::school::detail::{ClassGroups, SchoolContext, GroupContext};
-use chrono::NaiveTime;
+use crate::page::school::detail::{SchoolContext, GroupContext};
 use crate::model::class_room::Classroom;
 use web_sys::{HtmlSelectElement, HtmlOptionElement};
 use crate::model::class::Class;
@@ -409,7 +408,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 }
             }
             for student in &model.group1_pool{
-                let placed = (find_desk(&design, &model.group1_pool));
+                let placed = find_desk(&design, &model.group1_pool);
                 //log!("placed1:", &placed);
                 if placed.0{
                     let student_class_id = model.students.iter().find(|s| s.1.iter().any(|s2| s2.id == student.id)).unwrap();
@@ -419,7 +418,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 }
             }
             for student in &model.group2_pool{
-                let placed = (find_desk(&design, &model.group2_pool));
+                let placed = find_desk(&design, &model.group2_pool);
                 //log!("placed2:", &placed);
                 if placed.0{
                     let student_class_id = model.students.iter().find(|s| s.1.iter().any(|s2| s2.id == student.id)).unwrap();
@@ -429,7 +428,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 }
             }
             for student in &model.group3_pool{
-                let placed = (find_desk(&design, &model.group3_pool));
+                let placed = find_desk(&design, &model.group3_pool);
                 //log!("placed2:", &placed);
                 if placed.0{
                     let student_class_id = model.students.iter().find(|s| s.1.iter().any(|s2| s2.id == student.id)).unwrap();
@@ -439,7 +438,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 }
             }
             for student in &model.group4_pool{
-                let placed = (find_desk(&design, &model.group4_pool));
+                let placed = find_desk(&design, &model.group4_pool);
                 //log!("placed2:", &placed);
                 if placed.0{
                     let student_class_id = model.students.iter().find(|s| s.1.iter().any(|s2| s2.id == student.id)).unwrap();

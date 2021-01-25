@@ -1,6 +1,4 @@
 use seed::{*, prelude::*};
-use crate::model::school::SchoolType;
-use serde::*;
 use crate::model::subject::{Subject, NewSubject};
 //use crate::{Context, Urls};
 use crate::page::school::detail::{SchoolContext};

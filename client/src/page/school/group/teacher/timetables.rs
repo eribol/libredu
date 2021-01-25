@@ -10,7 +10,7 @@ use crate::page::school::detail::{GroupContext};
 #[derive(Debug)]
 pub enum Msg{
     FetchDays(fetch::Result<Vec<timetable::Day>>),
-    FetchTeacher(fetch::Result<user::Teacher>),
+    FetchTeacher(fetch::Result<user::TeacherAct>),
     FetchTimetable(fetch::Result<Vec<teacher::TeacherTimetable>>),
     FetchActivities(fetch::Result<Vec<activity::TeacherActivity>>),
     FetchLimitation(fetch::Result<Vec<teacher::TeacherAvailable>>),
@@ -20,7 +20,7 @@ pub enum Msg{
 
 #[derive(Debug, Default, Clone)]
 pub struct Model{
-    pub teacher: user::Teacher,
+    pub teacher: user::TeacherAct,
     pub timetable: Vec<TeacherTimetable>,
     activities: Vec<activity::TeacherActivity>,
     limitation: Vec<teacher::TeacherAvailable>,
@@ -112,7 +112,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                         ctx_group.classes.iter().any(|c| a.classes.iter().any(|a2| a2.id == c.id))
                     ).collect()
                 }
-                Err(e) => {
+                Err(_) => {
                 }
             }
         }
@@ -272,7 +272,7 @@ fn timetable(model: &Model, ctx_group: &GroupContext)->Node<Msg>{
     ]
 }
 
-fn get_timetable_row(day: i32, hour: (usize, &bool), timetable: &Vec<TeacherTimetable>, model: &Model)->Node<Msg>{
+fn get_timetable_row(day: i32, hour: (usize, &bool), timetable: &Vec<TeacherTimetable>, _model: &Model)->Node<Msg>{
     let get_timetable = timetable.iter().find(|t| t.day_id == day && t.hour == hour.0 as i16);
     match get_timetable{
         Some(t)=>{

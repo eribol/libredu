@@ -14,7 +14,7 @@ use crate::model::teacher::TeacherTimetable;
 use serde::*;
 use crate::model::school::SchoolDetail;
 use crate::model::city::{City, Town};
-use crate::model::user::{SimpleUser, SimpleTeacher};
+use crate::model::user::{SimpleTeacher};
 
 #[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize, Default)]
 pub struct Teacher{
@@ -224,8 +224,6 @@ pub async fn limitations(mut req: Request<AppState>) -> tide::Result {
     let teacher_id: i32 = req.param("teacher_id")?.parse()?;
     let group_id: i32 = req.param("group_id")?.parse()?;
     use sqlx_core::postgres::PgQueryAs;
-    use sqlx_core::cursor::Cursor;
-    use sqlx_core::row::Row;
     let user = req.user().await.unwrap();
     let post = req.body_json::<Vec<teacher::TeacherAvailable>>().await?;
     let school_auth: &SchoolAuth = req.ext().unwrap();
@@ -424,8 +422,6 @@ pub async fn patch_teacher(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let teacher_id: i32 = req.param("teacher_id")?.parse()?;
     use sqlx_core::postgres::PgQueryAs;
-    use sqlx_core::cursor::Cursor;
-    use sqlx_core::row::Row;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role <= 2 {
         let teacher: sqlx::Result<Teacher> = sqlx::query_as(r#"SELECT * FROM users

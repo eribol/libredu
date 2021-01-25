@@ -29,7 +29,7 @@ pub struct ResetPasswordForm{
     pub password2: String,
 }
 
-pub fn init(_orders: &mut impl Orders<Msg>, ctx: &Context)->Model{
+pub fn init(_orders: &mut impl Orders<Msg>, _ctx: &Context)->Model{
     let model = Model::default();
     //model.form.email = ctx.user.as_ref().unwrap().email;
     model

@@ -7,9 +7,8 @@ use bcrypt::verify;
 use crate::model::school::SchoolDetail;
 use crate::model::city::{City, Town};
 use crate::model::group::ClassGroups;
-use http_types::Cookie;
 use crate::model::class::Class;
-use std::num::ParseIntError;
+use crate::model::user::SimpleUser;
 
 #[derive(Debug, Default, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct Role{
@@ -156,7 +155,20 @@ impl Auth for Request<AppState>{
                             .fetch_one(&self.state().db_pool).await;
                         match auth{
                             Ok(a) => {a.role}
-                            Err(_) => {9}
+                            Err(_) => {
+                                let auth: sqlx::Result<SimpleUser> = sqlx::query_as("SELECT *
+                                        FROM users WHERE id = $1 && is_admin = true")
+                                    .bind(&id.value().parse::<i32>().unwrap())
+                                    .fetch_one(&self.state().db_pool).await;
+                                match auth{
+                                    Ok(_) => {
+                                        1
+                                    }
+                                    Err(_) => {
+                                        9
+                                    }
+                                }
+                            }
                         }
                     }
                 }

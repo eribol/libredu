@@ -250,7 +250,6 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)->Node<Msg>
             Pages::CommonExam(m) => common_exam::view(&m, &model.ctx_group).map_msg(Msg::CommonExam),
             Pages::Timetables(m) => timetable::view(&m, ctx, ctx_school).map_msg(Msg::Timetables),
             Pages::NotFound => div!["Grup bulunamadı"],
-            _ => div!["diğer"]
         }
     ]
 }

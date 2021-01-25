@@ -264,7 +264,7 @@ fn home(class: &Class)->Node<Msg>{
     ]
 }
 
-pub fn tabs(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group: &GroupContext)->Node<Msg> {
+pub fn tabs(model: &Model, _ctx: &Context, ctx_school: &SchoolContext, ctx_group: &GroupContext)->Node<Msg> {
     ul![
         li![
             C!{"is-active"},

@@ -2,7 +2,7 @@ use std::pin::Pin;
 use tide::{Request, Next, Response, StatusCode, Result};
 use crate::AppState;
 use std::future::Future;
-use crate::request::SchoolAuth;
+use crate::request::{SchoolAuth, Auth};
 
 pub fn school_auth<'a>(
     mut request: Request<AppState>,

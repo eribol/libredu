@@ -1,8 +1,6 @@
-use crate::model::timetable::{Day};
-use serde::*;
 use seed::{*, prelude::*};
 use crate::{Context};
-use crate::model::class::{Class, ClassTimetable, ClassActivity};
+use crate::model::class::{Class};
 use crate::page::school::detail::{SchoolContext, GroupContext};
 use crate::model::student::SimpleStudent;
 
@@ -165,7 +163,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         }
     }
 }
-pub fn view(model: &Model, ctx_school:&SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
+pub fn view(model: &Model, _ctx_school:&SchoolContext, _ctx_group: &GroupContext)->Node<Msg>{
     div![
         div![
             C!{"tabs is-centered"},

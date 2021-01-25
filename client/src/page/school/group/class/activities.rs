@@ -168,7 +168,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                         model.act_form.teacher = ctx_school.teachers[0].id;
                     }
                 }
-                Err(e) => {
+                Err(_) => {
                     //log!(e);
                 }
             }
