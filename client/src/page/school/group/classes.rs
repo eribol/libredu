@@ -60,7 +60,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
 
         Msg::DeleteClass(id) => {
             orders.perform_cmd({
-                let url = format!("/api/schools/{}/classes/{}", ctx_school.school.id, id);
+                let url = format!("/api/schools/{}/groups/{}/classes/{}", ctx_school.school.id, ctx_group.group.id, id);
                 let request = Request::new(url)
                     .method(Method::Delete);
                 async {
@@ -91,7 +91,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         }
         Msg::AddClass=> {
             orders.perform_cmd({
-                let url = format!("/api/schools/{}/add_class", ctx_school.school.id);
+                let url = format!("/api/schools/{}/groups/{}/add_class", ctx_school.school.id, ctx_group.group.id);
                 let request = Request::new(url)
                     .method(Method::Post)
                     .json(&model.form);

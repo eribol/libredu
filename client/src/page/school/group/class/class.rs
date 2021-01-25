@@ -3,7 +3,7 @@ use seed::{*, prelude::*};
 use crate::{Context};
 use crate::model::class::{Class};
 use crate::page::school::detail::{SchoolContext, ClassGroups, GroupContext};
-use crate::page::school::group::class::{limitations, activities, timetables};
+use crate::page::school::group::class::{limitations, activities, timetables, students};
 
 //use crate::page::school::class::class::Pages::Limitations;
 
@@ -29,6 +29,7 @@ pub enum Msg{
     Home,
     Limitations(limitations::Msg),
     Activity(activities::Msg),
+    Students(students::Msg),
     Timetables(timetables::Msg),
     FetchGroup(fetch::Result<ClassGroups>),
 }
@@ -36,6 +37,7 @@ pub enum Msg{
 #[derive(Debug, Clone)]
 pub enum Pages{
     Home,
+    Students(students::Model),
     Activity(activities::Model),
     Limitations(limitations::Model),
     Timetables(timetables::Model),
@@ -96,6 +98,10 @@ pub fn init(mut url: Url, _orders: &mut impl Orders<Msg>, ctx_school: &mut Schoo
             model.page = Pages::Timetables(timetables::init(model.class.id,&mut _orders.proxy(Msg::Timetables), ctx_school, ctx_group));
             model.tab = "timetables".to_string();
         }
+        Some("students") => {
+            model.page = Pages::Students(students::init(model.class.id,&mut _orders.proxy(Msg::Students), ctx_school, ctx_group));
+            model.tab = "students".to_string();
+        }
         _ => {
             //model.page = Pages::Activity
         }
@@ -115,6 +121,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::Activity(msg) => {
             if let Pages::Activity(m)= &mut model.page{
                 activities::update(msg, m, &mut orders.proxy(Msg::Activity), _ctx, ctx_school, ctx_group)
+            }
+        }
+        Msg::Students(msg) => {
+            if let Pages::Students(m)= &mut model.page{
+                students::update(msg, m, &mut orders.proxy(Msg::Students), _ctx, ctx_school, ctx_group)
             }
         }
         Msg::Timetables(msg) => {
@@ -169,6 +180,21 @@ pub fn context(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_gro
                         ]
                     ],
                     activities::activities(m, ctx_school).map_msg(Msg::Activity)
+                ]
+            }
+            Pages::Students(m)=>{
+                div![
+                    div![
+                        C!{"columns"},
+                        div![
+                            C!{"column is-12"},
+                            div![
+                                C!{"tabs is-centered"},
+                                students::tabs(m, ctx_school, ctx_group).map_msg(Msg::Students),
+                            ]
+                        ]
+                    ],
+                    students::view(m, ctx_school, ctx_group).map_msg(Msg::Students)
                 ]
             }
             Pages::Limitations(m) => {
@@ -247,6 +273,15 @@ pub fn tabs(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group:
                     At::Href => format!("/schools/{}/groups/{}/classes/{}", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
                 },
                "Bilgiler"
+            ]
+        ],
+        li![
+            //C!{"is-active"},
+            a![
+                attrs!{
+                    At::Href => format!("/schools/{}/groups/{}/classes/{}/students", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
+                },
+               "Öğrenciler"
             ]
         ],
         li![

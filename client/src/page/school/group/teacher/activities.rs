@@ -279,8 +279,9 @@ pub fn view(model: &Model, ctx_group: &GroupContext)->Node<Msg>{
                         div![
                             //C!{"select"},
                             select![
+                                //C!{"select"},
                                 el_ref(&model.select),
-                                attrs!{At::Name=>"classes", At::Multiple => true.as_at_value(), At::Size => "8"},
+                                attrs!{At::Name=>"classes", At::Multiple => true.as_at_value(), At::Size => "10"},
                                 ctx_group.classes.iter().map(|c|
                                     option![
                                         attrs!{At::Value=>&c.id},

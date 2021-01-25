@@ -49,6 +49,13 @@ pub struct Teacher{
     pub role_name: String
 }
 
+#[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize, Default)]
+pub struct TeacherAct{
+    pub id: i32,
+    pub first_name: String,
+    pub last_name: String,
+}
+
 #[derive(sqlx::FromRow,Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SimpleTeacher{
     pub id: i32,

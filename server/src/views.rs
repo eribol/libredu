@@ -444,7 +444,7 @@ pub async fn posts(mut req: Request<AppState>) -> tide::Result {
 pub async fn del_post(req: Request<AppState>) -> tide::Result {
     use crate::model::post::{Post};
     let mut res = tide::Response::new(StatusCode::Ok);
-    let post_id: i32 = req.param("school")?.parse()?;
+    let post_id: i32 = req.param("post_id")?.parse()?;
     use sqlx_core::postgres::PgQueryAs;
     match req.user().await{
         Some(user)=>{
@@ -466,11 +466,6 @@ pub async fn del_post(req: Request<AppState>) -> tide::Result {
             Ok(res)
         }
     }
-}
-
-pub async fn add_students(req: Request<AppState>) -> tide::Result {
-    let res = tide::Response::new(StatusCode::Ok);
-    Ok(res)
 }
 
 

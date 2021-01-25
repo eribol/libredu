@@ -7,3 +7,4 @@ pub mod generate;
 mod test_generate;
 mod classes;
 mod teacher;
+pub mod common_exam;

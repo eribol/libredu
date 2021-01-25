@@ -48,7 +48,7 @@ pub struct Model{
 pub fn init(class: i32, orders: &mut impl Orders<Msg>, ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext)-> Model{
     let model = Model::default();
     orders.perform_cmd({
-        let url = format!("/api/schools/{}/classes/{}", ctx_school.school.id, class);
+        let url = format!("/api/schools/{}/groups/{}/classes/{}", ctx_school.school.id, &ctx_group.group.id, &class);
         let request = Request::new(url)
             .method(Method::Get);
         async {
@@ -135,7 +135,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         }
         Msg::Submit=>{
             orders.perform_cmd({
-                let url = format!("/api/schools/{}/classes/{}/limitations", ctx_school.school.id, model.class.id);
+                let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", ctx_school.school.id, &ctx_group.group.id, &model.class.id);
                 let request = Request::new(url)
                     .method(Method::Post)
                     .json(&model.limitation);
@@ -155,7 +155,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             for c in &ctx_group.classes{
                 if c.kademe == model.class.kademe{
                     orders.perform_cmd({
-                        let url = format!("/api/schools/{}/classes/{}/limitations", ctx_school.school.id, c.id);
+                        let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", ctx_school.school.id, &ctx_group.group.id, &c.id);
                         let request = Request::new(url)
                             .method(Method::Post)
                             .json(&model.limitation);
@@ -176,7 +176,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::SubmitAll => {
             for c in &ctx_group.classes{
                 orders.perform_cmd({
-                    let url = format!("/api/schools/{}/classes/{}/limitations", ctx_school.school.id, c.id);
+                    let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", ctx_school.school.id, &ctx_group.group.id, &c.id);
                     let request = Request::new(url)
                         .method(Method::Post)
                         .json(&model.limitation);
@@ -196,7 +196,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchDays(days)=>{
             model.days=days.unwrap();
             orders.perform_cmd({
-                let url = format!("/api/schools/{}/classes/{}/limitations", ctx_school.school.id, model.class.id);
+                let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", ctx_school.school.id, &ctx_group.group.id, model.class.id);
                 let request = Request::new(url)
                     .method(Method::Get);
                 async {
@@ -240,7 +240,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     }
                     if changed{
                         orders.perform_cmd({
-                            let url = format!("/api/schools/{}/classes/{}/limitations", ctx_school.school.id, model.class.id);
+                            let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", ctx_school.school.id, ctx_group.group.id ,model.class.id);
                             let request = Request::new(url)
                                 .method(Method::Post)
                                 .json(&model.limitation);
@@ -384,6 +384,15 @@ pub fn tabs(model: &Model, ctx_school: &SchoolContext, ctx_group: &GroupContext)
                 attrs!{
                     At::Href => format!("/schools/{}/groups/{}/classes/{}", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
                 }
+            ]
+        ],
+        li![
+            //C!{"is-active"},
+            a![
+                attrs!{
+                    At::Href => format!("/schools/{}/groups/{}/classes/{}/students", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
+                },
+                "Öğrenciler"
             ]
         ],
         li![

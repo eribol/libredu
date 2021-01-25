@@ -7,7 +7,7 @@ pub struct NewStudent{
     pub number: i32,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Student{
     pub id: i32,
     pub first_name: String,
@@ -16,7 +16,7 @@ pub struct Student{
     pub school_number: i32,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct SimpleStudent{
     pub id: i32,
     pub first_name: String,

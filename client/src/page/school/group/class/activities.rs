@@ -54,7 +54,7 @@ pub fn init(class: i32, orders: &mut impl Orders<Msg>, ctx_school: &mut SchoolCo
     let mut model = Model::default();
     model.group = ctx_group.group.clone();
     orders.perform_cmd({
-        let url = format!("/api/schools/{}/classes/{}", ctx_school.school.id, &class);
+        let url = format!("/api/schools/{}/groups/{}/classes/{}", ctx_school.school.id, &ctx_group.group.id, &class);
         let request = Request::new(url)
             .method(Method::Get);
         async {
@@ -69,7 +69,7 @@ pub fn init(class: i32, orders: &mut impl Orders<Msg>, ctx_school: &mut SchoolCo
         }
     });
     orders.perform_cmd({
-        let url = format!("/api/schools/{}/classes/{}/activities", ctx_school.school.id, class);
+        let url = format!("/api/schools/{}/groups/{}/classes/{}/activities", ctx_school.school.id, &ctx_group.group.id, &class);
         let request = Request::new(url)
             .method(Method::Get);
         async {
@@ -207,7 +207,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             model.act_form.split = false;
             if model.act_form.teacher != 0 && model.act_form.subject != 0 && model.act_form.hour !=""{
                 orders.perform_cmd({
-                    let url = format!("/api/schools/{}/classes/{}/activities", ctx_school.school.id, model.class.id);
+                    let url = format!("/api/schools/{}/groups/{}/classes/{}/activities", ctx_school.school.id, &ctx_group.group.id, &model.class.id);
                     let request = Request::new(url)
                         .method(Method::Post)
                         .json(&model.act_form);
@@ -331,6 +331,15 @@ pub fn tabs(model: &Model, ctx_school: &SchoolContext, ctx_group: &GroupContext)
                 attrs!{
                     At::Href => format!("/schools/{}/groups/{}/classes/{}", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
                 }
+            ]
+        ],
+        li![
+            //C!{"is-active"},
+            a![
+                attrs!{
+                    At::Href => format!("/schools/{}/groups/{}/classes/{}/students", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
+                },
+                "Öğrenciler"
             ]
         ],
         li![

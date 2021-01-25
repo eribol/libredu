@@ -1,7 +1,6 @@
 use tide::{Response, Request, Body, StatusCode};
 use crate::AppState;
 use tide::http::Cookie;
-use crate::request::Auth;
 use serde::*;
 use crate::model::user::{User, AuthUser, SignUser};
 use uuid::Uuid;
@@ -13,7 +12,7 @@ pub struct LoginForm{
     password: String
 }
 
-pub async fn get_login(req: Request<AppState>) -> tide::Result {
+/*pub async fn get_login(req: Request<AppState>) -> tide::Result {
     let user = req.user().await;
     match user {
         Some(u) => {
@@ -26,7 +25,7 @@ pub async fn get_login(req: Request<AppState>) -> tide::Result {
             Ok(res)
         }
     }
-}
+}*/
 
 pub async fn login(mut req: Request<AppState>) -> tide::Result {
     let mut res = Response::new(StatusCode::Ok);
@@ -62,7 +61,7 @@ pub async fn login(mut req: Request<AppState>) -> tide::Result {
                         use std::env;
                         let mut domain = "127.0.0.1".to_string();
                         match env::var("DOMAIN_NAME") {
-                            Ok(d) => domain = "libredu.org".to_string(),
+                            Ok(_) => domain = "libredu.org".to_string(),
                             Err(_) => {
                                 //domain = "127.0.0.1".to_string()
                             }

@@ -2,12 +2,13 @@ use serde::*;
 use tide::{Request, Response};
 use http_types::{StatusCode, Body};
 use crate::AppState;
-use crate::request::Auth;
+use crate::request::{Auth, SchoolAuth};
 use crate::model::school::{SchoolDetail, School};
 use crate::model::city::{City, Town};
 use chrono::NaiveTime;
 use crate::model::timetable;
 use crate::model::timetable::NewTimetable;
+use crate::model::student::SimpleStudent;
 
 
 pub async fn groups(req: Request<AppState>) -> tide::Result {
@@ -36,6 +37,46 @@ pub async fn get_group(req: Request<AppState>) -> tide::Result {
         .fetch_one(&req.state().db_pool).await?;
     res.set_body(Body::from_json(&s)?);
     res.insert_header("content-type", "application/json");
+    Ok(res)
+}
+
+pub async fn get_class_rooms(req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    let school_id: i32 = req.param("school")?.parse()?;
+    //let group_id: i32 = req.param("group_id")?.parse()?;
+    //let mut school: Vec<school::SchoolDetail> = Vec::new();
+    use crate::model::class_room;
+    use sqlx_core::postgres::PgQueryAs;
+    let s: Vec<class_room::Classroom> = sqlx::query_as("SELECT * FROM class_rooms WHERE school = $1")
+        .bind(&school_id)
+        .fetch_all(&req.state().db_pool).await?;
+    res.set_body(Body::from_json(&s)?);
+    res.insert_header("content-type", "application/json");
+    Ok(res)
+}
+
+pub async fn get_students(req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    let group_id = req.param("group_id")?;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    let mut group_common: Vec<(i32, Vec<SimpleStudent>)> = vec![];
+    if school_auth.role < 6 {
+        use sqlx::prelude::PgQueryAs;
+        let classes: (Option<Vec<i32>>, ) = sqlx::query_as(r#"SELECT array_agg(id) FROM classes where group_id = $1"#)
+            .bind(&group_id.parse::<i32>()?)
+            .fetch_one(&req.state().db_pool).await?;
+        for c in classes.0.unwrap_or_default(){
+            let students: Vec<SimpleStudent> = sqlx::query_as(r#"SELECT students.id, students.first_name, students.last_name, students.school_number
+                FROM class_student inner join students on class_student.student = students.id
+                WHERE class_id = $1 and group_id = $2 "#)
+                .bind(&c)
+                .bind(&group_id.parse::<i32>()?)
+                .fetch_all(&req.state().db_pool).await?;
+            group_common.push((c, students))
+        }
+
+        res.set_body(Body::from_json(&group_common)?);
+    }
     Ok(res)
 }
 

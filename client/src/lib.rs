@@ -768,3 +768,13 @@ extern "C" {
 extern "C" {
     fn class_print(cls: &str, days: &str, stop: i16, school: &str, schedules: &str);
 }
+
+#[wasm_bindgen(module = "/pkg/js/print_student_class.js")]
+extern "C" {
+    fn print_student_class(cls: &str, days: &str, stop: i16, school: &str, schedules: &str);
+}
+
+#[wasm_bindgen(module = "/pkg/js/print_class_rooms.js")]
+extern "C" {
+    fn print_class_rooms(cls: &str);
+}

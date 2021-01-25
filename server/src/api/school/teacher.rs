@@ -147,8 +147,9 @@ pub async fn activities(mut req: Request<AppState>) -> tide::Result {
             .bind(&group_id)
             .fetch_all(&req.state().db_pool).await?;
 
-        let teacher: user::Teacher = sqlx::query_as(r#"select users.id, users.first_name, users.last_name from school_users inner join users on school_users.user_id = users.id
-                        where user_id = $1 and school_id = $2"#)
+        let teacher: user::TeacherAct = sqlx::query_as(r#"select users.id, users.first_name, users.last_name, school_users.role, roles.name
+                from school_users inner join users on school_users.user_id = users.id inner join roles on school_users.role = roles.id
+                where user_id = $1 and school_id = $2"#)
             .bind(&act_form.teacher)
             .bind(&school_auth.school.id)
             .fetch_one(&req.state().db_pool).await?;

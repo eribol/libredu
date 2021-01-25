@@ -8,6 +8,8 @@ use crate::model::school::SchoolDetail;
 use crate::model::city::{City, Town};
 use crate::model::group::ClassGroups;
 use http_types::Cookie;
+use crate::model::class::Class;
+use std::num::ParseIntError;
 
 #[derive(Debug, Default, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct Role{
@@ -37,6 +39,7 @@ pub trait Auth{
     async fn get_school(&self)-> Option<SchoolDetail>;
     async fn get_school_auth(&self)-> i32;
     async fn get_group(&self)-> Option<ClassGroups>;
+    async fn get_class(&self)-> Option<Class>;
     async fn get_group_auth(&self)-> i32;
     //fn init<T: Response>(&self, item: &T, ids: Identity, tmpl: Data<tera::Tera>, session: Session)-> Result<HttpResponse, Error>;
     fn login(&self, uname: &String, pas: &String)->  bool;
@@ -181,6 +184,36 @@ impl Auth for Request<AppState>{
                     None
                 }
             }
+        }
+        else {
+            None
+        }
+    }
+    async fn get_class(&self)-> Option<Class> {
+        if let Some(group) = self.get_group().await {
+            use sqlx_core::postgres::PgQueryAs;
+            let class_id = self.param("class_id").ok()?.parse::<i32>();
+            match class_id{
+                Ok(c) => {
+                    let class: sqlx::Result<Class> = sqlx::query_as("SELECT *
+                            FROM classes WHERE group_id = $1 and id = $2")
+                        .bind(&group.id)
+                        .bind(&c)
+                        .fetch_one(&self.state().db_pool).await;
+                    match class {
+                        Ok(c) => {
+                            Some(c)
+                        }
+                        Err(_) =>{
+                            None
+                        }
+                    }
+                }
+                Err(_) => {
+                    None
+                }
+            }
+
         }
         else {
             None

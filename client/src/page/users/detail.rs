@@ -23,7 +23,7 @@ pub struct Menu{
 enum Pages{
     NotUser,
     Home,
-    Detail,
+    //Detail,
     Schools(page::users::schools::Model),
     Timetables(page::users::timetables::Model),
     Password(page::users::change_password::Model),

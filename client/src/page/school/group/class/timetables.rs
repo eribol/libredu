@@ -41,10 +41,10 @@ pub struct Model{
     days: Vec<Day>,
 }
 
-pub fn init(class: i32, orders: &mut impl Orders<Msg>, ctx_school: &mut SchoolContext, _ctx_group: &mut GroupContext)-> Model{
+pub fn init(class: i32, orders: &mut impl Orders<Msg>, ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext)-> Model{
     let model = Model::default();
     orders.perform_cmd({
-        let url = format!("/api/schools/{}/classes/{}", ctx_school.school.id, class);
+        let url = format!("/api/schools/{}/groups/{}/classes/{}", ctx_school.school.id, ctx_group.group.id,class);
         let request = Request::new(url)
             .method(Method::Get);
         async {
@@ -84,7 +84,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchClass(class)=>{
             model.class = class.unwrap();
             orders.perform_cmd({
-                let url = format!("/api/schools/{}/classes/{}/timetables", ctx_school.school.id, model.class.id);
+                let url = format!("/api/schools/{}/groups/{}/classes/{}/timetables", &ctx_school.school.id, &ctx_group.group.id, model.class.id);
                 let request = Request::new(url)
                     .method(Method::Get);
                 async {

@@ -12,9 +12,12 @@ use crate::model::school::{SchoolDetail, School};
 use crate::model::post::SchoolPost;
 use crate::model::city::{City, Town};
 use async_std::{fs::OpenOptions, io};
-use crate::model::student::{NewStudent, Student};
+use crate::model::student::{NewStudent, Student, SimpleStudent};
 use crate::model::subject;
 use crate::model::class_room;
+use multer::Multipart;
+use crate::middlewares::school_auth;
+use crate::model::user::SimpleUser;
 
 
 pub async fn schools(req: Request<AppState>) -> tide::Result {
@@ -241,7 +244,7 @@ pub async fn subjects(mut req: Request<AppState>) -> tide::Result {
     }
 }
 
-pub async fn del_subject(mut req: Request<AppState>) -> tide::Result {
+pub async fn del_subject(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let school_auth: &SchoolAuth = req.ext().unwrap();
     use sqlx::prelude::PgQueryAs;
@@ -266,7 +269,7 @@ pub async fn teachers(mut req: Request<AppState>) -> tide::Result {
     match req.method() {
         Method::Get => {
             let school_auth: &SchoolAuth = req.ext().unwrap();
-            if let Some(user) = req.user().await{
+            if let Some(_user) = req.user().await{
                 use sqlx::Cursor;
                 use sqlx::Row;
                 let mut tchrs = sqlx::query("SELECT users.id, users.first_name, users.last_name, roles.id, roles.name \
@@ -344,7 +347,7 @@ pub async fn teachers(mut req: Request<AppState>) -> tide::Result {
                         WHERE school_users.user_id = $1")
                             .bind(&add_user.id)
                             .fetch(&req.state().db_pool);
-                        let mut teacher: user::Teacher = user::Teacher::default();
+                        let mut teacher: user::Teacher;
                         while let Some(row) = tchrs.next().await?{
                             teacher = user::Teacher{
                                 id: row.get(0),
@@ -396,11 +399,116 @@ pub async fn students(mut req: Request<AppState>) -> tide::Result {
             .fetch_one(&req.state().db_pool).await?;
         res.set_body(Body::from_json(&s)?);
         Ok(res)
-    }
-    else {
+    } else {
         let res = tide::Response::new(StatusCode::Unauthorized);
         Ok(res)
     }
+}
+
+pub async fn students_with_file(req: Request<AppState>) -> tide::Result {
+    use async_std::io::BufReader;
+    use async_std::{fs::OpenOptions, io};
+
+    use futures::AsyncBufRead;
+
+    // MultiPartFor------------
+    use bytes::Bytes;
+    use futures::stream::Stream;
+
+    // Import multer types.
+    //use multer::Multipart;
+    use std::convert::Infallible;
+    use futures::stream::once;
+
+    //stream
+    use futures::stream::poll_fn;
+    use futures::task::Poll;
+
+    //FileUpload;
+    use futures_codec::{BytesCodec, FramedRead};
+    use futures::TryStreamExt;
+    let content_type_string = req.header("Content-Type").unwrap().get(0).unwrap().as_str();
+
+    //   multipart/form-data; N
+    println!("Content-Type1={}", &content_type_string);
+
+    if (!content_type_string.contains("multipart/form-data;")) {
+        //not 「multipart/form-data;」error
+        //
+        //
+    }
+    let boundary_key = "boundary=";
+    let skip_last_index = content_type_string.find(boundary_key).unwrap() + boundary_key.len();
+    let boundary: String = content_type_string.chars().skip(skip_last_index).take(content_type_string.len() - skip_last_index).collect();
+
+    println!("Content-Type2={}", boundary);
+    //println!("{:?}", &req.body_bytes().await?);
+    //req move ,
+    //let school_auth: &SchoolAuth = req.ext().clone().unwrap();
+    let number = req.get_school().await.unwrap();
+    let pool = &req.state().db_pool.clone();
+    let stream = FramedRead::new(req, BytesCodec);
+
+    // Create a `Multipart` instance from that byte stream and the boundary.
+    let mut multipart = Multipart::new(stream, boundary);
+    //println!("hata:{:?}", multipart.next_field().await?.unwrap());
+    // Iterate over the fields, use `next_field()` to get the next field.
+    while let Some(mut field) = multipart.next_field().await? {
+        // Get the field's filename if provided in "Content-Disposition" header.
+        let file_name = field.file_name();
+        match file_name {
+            Some(_file) => {
+                use async_std::fs::File;
+                use async_std::prelude::*;
+                //let school_auth: &SchoolAuth = req.ext().unwrap();
+
+                while let Some(chunk) = field.chunk().await? {
+                    // Do something with field chunk.
+                    let mut file = File::create("students/".to_owned()+&number.name+".xlsx").await?;
+                    file.write_all(&chunk).await?;
+                }
+            }
+            None => {}
+        }
+    }
+    use calamine::{open_workbook, Error, Xlsx, Reader, RangeDeserializerBuilder};
+    let mut excel: Xlsx<_> = open_workbook("students/".to_owned() + &number.name+".xlsx").unwrap();
+
+    if let Some(Ok(r)) = excel.worksheet_range("Sheet1") {
+        for row in r.rows() {
+            let title = row[1].get_float();
+            match title{
+                Some(t) => {
+                    let student = NewStudent{
+                        first_name: row[4].get_string().unwrap().to_string(),
+                        last_name: row[9].get_string().unwrap().to_string(),
+                        number: t as i32
+                    };
+                    use sqlx::prelude::PgQueryAs;
+                    let user: SimpleUser = sqlx::query_as(r#"insert into users(first_name, last_name) values($1, $2) returning id, first_name, last_name"#)
+                        .bind(&student.first_name)
+                        .bind(&student.last_name)
+                        .fetch_one(pool).await?;
+                    let _ = sqlx::query(r#"insert into school_users(user_id, school_id, role) values($1, $2, 8)"#)
+                        .bind(&user.id)
+                        .bind(&number.id)
+                        .execute(pool).await?;
+                    let _ = sqlx::query(r#"insert into students(first_name, last_name, school, school_number, user_id) values($1, $2, $3, $4, $5)"#)
+                        .bind(&student.first_name)
+                        .bind(&student.last_name)
+                        .bind(&number.id)
+                        .bind(&student.number)
+                        .bind(&user.id)
+                        .execute(pool).await?;
+                }
+                None => {}
+            }
+            //
+
+        }
+    }
+    let res = tide::Response::new(StatusCode::Ok);
+    Ok(res)
 }
 
 pub async fn class_rooms(mut req: Request<AppState>) -> tide::Result {
@@ -491,7 +599,7 @@ pub async fn get_students(req: Request<AppState>) -> tide::Result {
     let school_auth: &SchoolAuth = req.ext().unwrap();
     use sqlx::prelude::PgQueryAs;
     if school_auth.role < 8{
-        let students: Vec<Student> = sqlx::query_as("select * from students where school = $1")
+        let students: Vec<Student> = sqlx::query_as(r#"select id, LEFT(first_name, 3) as "first_name", last_name, school, school_number from students where school = $1"#)
             .bind(&school_auth.school.id)
             .fetch_all(&req.state().db_pool).await?;
         res.set_body(Body::from_json(&students)?);

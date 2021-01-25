@@ -218,7 +218,7 @@ pub async fn timetables(req: Request<AppState>) -> tide::Result {
     use sqlx_core::cursor::Cursor;
     use sqlx_core::row::Row;
     let school_auth: &SchoolAuth = req.ext().unwrap();
-    let class: Class = sqlx::query_as("SELECT * FROM classes WHERE id = $1 and school = $2")
+    let _class: Class = sqlx::query_as("SELECT * FROM classes WHERE id = $1 and school = $2")
         .bind(&class_id.parse::<i32>()?)
         .bind(&school_auth.school.id)
         .fetch_one(&req.state().db_pool).await?;
@@ -313,23 +313,64 @@ pub async fn get_students(req: Request<AppState>) -> tide::Result{
     let group_id = req.param("group_id")?;
     use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
-    let students: Vec<SimpleStudent> = sqlx::query_as(r#"SELECT students.id, students.first_name, students.last_name
+    if school_auth.role < 8 {
+        let students: Vec<SimpleStudent> = sqlx::query_as(r#"SELECT students.id, students.first_name, students.last_name, students.school_number
          FROM students inner join class_student on students.id = class_student.student WHERE class_student.class_id = $1 and class_student.group_id = $2"#)
-        .bind(&class_id.parse::<i32>()?)
-        .bind(&group_id.parse::<i32>()?)
-        .fetch_all(&req.state().db_pool).await?;
-    res.set_body(Body::from_json(&students)?);
+            .bind(&class_id.parse::<i32>()?)
+            .bind(&group_id.parse::<i32>()?)
+            .fetch_all(&req.state().db_pool).await?;
+        res.set_body(Body::from_json(&students)?);
+    }
     Ok(res)
 }
+
 pub async fn get_all_students(req: Request<AppState>) -> tide::Result{
     let mut res = tide::Response::new(StatusCode::Ok);
-    let class_id = req.param("class_id")?;
-    let group_id = req.param("group_id")?;
+    //let class_id = req.param("class_id")?;
+    //let group_id = req.param("group_id")?;
     use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
-    let students: Vec<SimpleStudent> = sqlx::query_as(r#"SELECT * FROM students  WHERE school = $1"#)
-        .bind(&school_auth.school.id)
-        .fetch_all(&req.state().db_pool).await?;
-    res.set_body(Body::from_json(&students)?);
+    if school_auth.role < 8 {
+        let students: Vec<SimpleStudent> = sqlx::query_as(r#"SELECT first_name, last_name, id, school_number FROM students WHERE school = $1 and id not in (select student from class_student)"#)
+            .bind(&school_auth.school.id)
+            .fetch_all(&req.state().db_pool).await?;
+        res.set_body(Body::from_json(&students)?);
+    }
+    Ok(res)
+}
+
+pub async fn students(mut req: Request<AppState>) -> tide::Result{
+    let mut res = tide::Response::new(StatusCode::Ok);
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    if school_auth.role < 6 {
+        let student = req.body_json::<SimpleStudent>().await?;
+        let class_id = req.param("class_id")?;
+        let group_id = req.param("group_id")?;
+        use sqlx_core::postgres::PgQueryAs;
+        let _ = sqlx::query(r#"insert into class_student(student, class_id, group_id) values($1, $2, $3)"#)
+            .bind(&student.id)
+            .bind(&class_id.parse::<i32>()?)
+            .bind(&group_id.parse::<i32>()?)
+            .execute(&req.state().db_pool).await?;
+        res.set_body(Body::from_json(&student)?);
+    }
+    Ok(res)
+}
+
+pub async fn del_student(req: Request<AppState>) -> tide::Result{
+    let mut res = tide::Response::new(StatusCode::Ok);
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    if school_auth.role < 6 {
+        let class_id = req.param("class_id")?;
+        let group_id = req.param("group_id")?;
+        let student_id = req.param("student_id")?;
+        use sqlx_core::postgres::PgQueryAs;
+        let _ = sqlx::query(r#"delete from class_student where student = $1 and class_id = $2 and group_id = $3"#)
+            .bind(&student_id.parse::<i32>()?)
+            .bind(&class_id.parse::<i32>()?)
+            .bind(&group_id.parse::<i32>()?)
+            .execute(&req.state().db_pool).await?;
+        res.set_body(Body::from_json(&student_id.parse::<i32>()?)?);
+    }
     Ok(res)
 }

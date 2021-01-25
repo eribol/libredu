@@ -9,6 +9,9 @@ pub async fn del_student(req: Request<AppState>) -> tide::Result {
     let school_auth: &SchoolAuth = req.ext().unwrap();
     //use sqlx::prelude::PgQueryAs;
     if school_auth.role < 5{
+        let _ = sqlx::query("delete from class_student where student = $1")
+            .bind(&number)
+            .execute(&req.state().db_pool).await?;
         let _ = sqlx::query("delete from students where id = $1 and school = $2")
             .bind(&number)
             .bind(&school_auth.school.id)

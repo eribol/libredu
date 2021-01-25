@@ -80,7 +80,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
 
     match msg{
         Msg::FetchStudents(ss) => {
-            model.students = ss.unwrap()
+            match ss{
+                Ok(s) => {
+                    model.students = s
+                }
+                Err(_) => {}
+            }
         }
         Msg::FetchStudent(student) => {
             //log!(&student);
@@ -138,12 +143,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
         },
         Msg::SubmitStudents=>{
             let form_data = web_sys::FormData::new().unwrap();
-            //form_data.append_with_str("group", 15).unwrap();
+            form_data.append_with_str("group", "15").unwrap();
             if let Some(file) = &model.form2.file {
                 form_data.append_with_blob("file", file).unwrap();
             }
             orders.perform_cmd({
-                let request = Request::new(format!("/api/schools/{}/students", school_ctx.school.id))
+                let request = Request::new(format!("/api/schools/{}/students_with_file", school_ctx.school.id))
                     .method(Method::Post)
                     .body(form_data.into());
                 async { Msg::FetchStudents(async {
@@ -158,8 +163,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
         },
         Msg::FileChanged(file) => {
             model.form2.file = file.clone();
-            //use calamine::{open_workbook, Error, Xlsx, Reader, RangeDeserializerBuilder};
-            //let mut excel: Xlsx<_> = open_workbook(file.clone()).unwrap();
         }
         Msg::GroupChanged(s) => {
             model.form2.group= s.parse::<i32>().unwrap();
@@ -176,31 +179,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
     }
 }
 
-fn add(model: &Model, ctx_school: &SchoolContext)-> Node<Msg>{
+fn add(model: &Model, _ctx_school: &SchoolContext)-> Node<Msg>{
     div![
         C!{"columns"},
         div![C!{"column is-6"},
-            label!["Dosyadan öğrencileri ekle"],
-            div![C!{"field"},
-                label![C!{"label"}, "Şu Gruba ekle"],
-                p![C!{"control"},
-                    select![C!{"select"},
-                        attrs!{
-                            At::Name=>"type",
-                            At::Id=>"type",
-                            At::Value => &model.form2.group,
-                        },
-                        ctx_school.groups.iter().map(|g|
-                            option![
-                                attrs!{
-                                    At::Value=> &g.id
-                                }, &g.name
-                            ]
-                        ),
-                        input_ev(Ev::Change, Msg::GroupChanged)
-                    ]
-                ]
-            ],
+            //label!["Dosyadan öğrencileri ekle"],
             label!["Dosyadan yükle:", attrs! {At::For => "form-file" }],
             div![
                 C!{"field"},
@@ -230,7 +213,7 @@ fn add(model: &Model, ctx_school: &SchoolContext)-> Node<Msg>{
                             At::Type=>"button",
                             At::Value=>"Yakında",
                             //At::Id=>"login_button",
-                            At::Disabled => true.as_at_value()
+                            //At::Disabled => true.as_at_value()
                         },
                         ev(Ev::Click, |event| {
                             event.prevent_default();

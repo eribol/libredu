@@ -74,8 +74,8 @@ fn home(_ctx: &Context, _model: &Model)->Node<Msg> {
     div!["Kullanıcı seçmediniz."]
 }
 
-fn not_found(_model: &Model, _ctx: &Context)->Node<Msg>{
+/*fn not_found(_model: &Model, _ctx: &Context)->Node<Msg>{
     div![
         "not found"
     ]
-}
+}*/

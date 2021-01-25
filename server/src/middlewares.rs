@@ -23,12 +23,27 @@ pub fn school_auth<'a>(
 }
 
 pub fn group_auth<'a>(
-    mut request: Request<AppState>,
+    request: Request<AppState>,
     next: Next<'a, AppState>,
 ) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>> {
     Box::pin(async {
         use crate::request::Auth;
         if let Some(_group) = request.get_group().await {
+            Ok(next.run(request).await)
+        }
+        else {
+            Ok(Response::new(StatusCode::Unauthorized))
+        }
+    })
+}
+
+pub fn class_auth<'a>(
+    request: Request<AppState>,
+    next: Next<'a, AppState>,
+) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>> {
+    Box::pin(async {
+        use crate::request::Auth;
+        if let Some(_class) = request.get_class().await {
             Ok(next.run(request).await)
         }
         else {

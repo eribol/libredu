@@ -2,7 +2,7 @@ use serde::*;
 use seed::{*, prelude::*};
 use crate::{Context};
 use crate::page::school::detail::{ClassGroups, SchoolContext, GroupContext};
-use crate::page::school::group::{schedules, timetable};
+use crate::page::school::group::{schedules, timetable, common_exam};
 use crate::page::school::group::classes;
 use crate::page::school::group::teachers;
 use crate::model::class::Class;
@@ -14,6 +14,7 @@ pub enum Pages{
     Classes(classes::Model),
     Teachers(teachers::Model),
     Schedules(schedules::Model),
+    CommonExam(common_exam::Model),
     Timetables(timetable::Model),
     NotFound
 }
@@ -55,6 +56,7 @@ pub enum Msg{
     DelGroup,
     FetchDelGroup(fetch::Result<ClassGroups>),
     Schedules(schedules::Msg),
+    CommonExam(common_exam::Msg),
     Classes(classes::Msg),
     Teachers(teachers::Msg),
     Timetables(timetable::Msg),
@@ -76,6 +78,7 @@ pub fn init(url: Url, ctx_school: &mut SchoolContext, orders: &mut impl Orders<M
                 Menu{ link: "schedules".to_string(), title: "Zaman Çizelgesi".to_string() },
                 Menu{ link: "classes".to_string(), title: "Sınıflar".to_string() },
                 Menu{ link: "teachers".to_string(), title: "Öğretmenler".to_string() },
+                Menu{ link: "common_exam".to_string(), title: "Ortak Sınav".to_string() },
                 Menu{ link: "timetables".to_string(), title: "Ders Programı".to_string() },
             ];
             orders.perform_cmd({
@@ -112,6 +115,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     match model.url.next_path_part(){
                         Some("") | None => model.page = Pages::Home,
                         Some("schedules") => model.page = Pages::Schedules(schedules::init(model.url.clone(),ctx_school, &ctx_group.group, &mut orders.proxy(Msg::Schedules))),
+                        Some("common_exam") => model.page = Pages::CommonExam(common_exam::init(model.url.clone(),ctx_school, &mut orders.proxy(Msg::CommonExam), ctx_group)),
                         Some("classes") => model.page = Pages::Classes(classes::init(model.url.clone(),&mut orders.proxy(Msg::Classes),ctx_school, ctx_group)),
                         Some("teachers") => model.page = Pages::Teachers(teachers::init(model.url.clone(),&mut orders.proxy(Msg::Teachers),_ctx, ctx_school, ctx_group)),
                         Some("timetables") => model.page = Pages::Timetables(timetable::init(&mut orders.proxy(Msg::Timetables), ctx_school, ctx_group)),
@@ -127,6 +131,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::Schedules(msg) => {
             if let Pages::Schedules(m)= &mut model.page{
                 schedules::update(msg, m, &mut orders.proxy(Msg::Schedules), _ctx, ctx_school)
+            }
+        }
+        Msg::CommonExam(msg) => {
+            if let Pages::CommonExam(m)= &mut model.page{
+                common_exam::update(msg, m, &mut orders.proxy(Msg::CommonExam), _ctx, ctx_school, ctx_group)
             }
         }
         Msg::ChangeName(name) => {
@@ -238,6 +247,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)->Node<Msg>
             Pages::Schedules(m) => schedules::view(&m).map_msg(Msg::Schedules),
             Pages::Classes(m) => classes::view(&m, ctx, ctx_school, &model.ctx_group).map_msg(Msg::Classes),
             Pages::Teachers(m) => teachers::view(&m, ctx, ctx_school, &model.ctx_group).map_msg(Msg::Teachers),
+            Pages::CommonExam(m) => common_exam::view(&m, &model.ctx_group).map_msg(Msg::CommonExam),
             Pages::Timetables(m) => timetable::view(&m, ctx, ctx_school).map_msg(Msg::Timetables),
             Pages::NotFound => div!["Grup bulunamadı"],
             _ => div!["diğer"]
@@ -308,7 +318,7 @@ fn home(model: &Model) -> Node<Msg>{
     ]
 }
 
-pub fn menus(menu: &Vec<Menu>, ctx: &Context, ctx_school: &SchoolContext, model: &Model) -> Node<Msg>{
+/*pub fn menus(menu: &Vec<Menu>, ctx: &Context, ctx_school: &SchoolContext, model: &Model) -> Node<Msg>{
     ul![
         C!{"menu-list"},
         menu.iter().map(|m|
@@ -365,5 +375,5 @@ fn active_menu (page: &Pages, menu: &Menu) -> bool{
             false
         }
     }
-}
+}*/
 

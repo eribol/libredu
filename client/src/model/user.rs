@@ -19,6 +19,13 @@ pub struct Teacher{
     pub role_name: String
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct TeacherAct{
+    pub id: i32,
+    pub first_name: String,
+    pub last_name: String,
+}
+
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct LoginForm{
     pub username: String,
