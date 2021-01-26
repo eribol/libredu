@@ -319,7 +319,7 @@ pub fn find_timeslot(
     _for_conflict: bool
 )
     -> Option<Vec<(i32, usize)>> {
-    //use rand::thread_rng;
+    use rand::thread_rng;
     let mut teacher_availables: Vec<(usize, TeacherAvailable)> = tat.iter().cloned()
         .enumerate()
         .filter(|t| t.1.user_id == act.teacher.unwrap() && t.1.hours.iter()
@@ -342,7 +342,7 @@ pub fn find_timeslot(
     if max_total_hour > 8 {
         max_day_hour = 4;
     }
-    //teacher_availables.shuffle(&mut thread_rng());
+    teacher_availables.shuffle(&mut thread_rng());
     for teacher_available in &teacher_availables {
         //let same_subject_acts: Vec<Activity> = teacher_acts.iter().cloned()
         //    .filter(|a| a.class == act.1.class && a.subject == act.1.subject ).collect();
