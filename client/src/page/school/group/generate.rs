@@ -15,7 +15,7 @@ pub(crate) fn generate(
     clean_tat: &Vec<TeacherAvailable>
 )
     -> bool {
-    use rand::thread_rng;
+    //use rand::thread_rng;
     let mut acts: Vec<Activity> = total_acts.iter().cloned()
         .filter(|a| a.teacher.is_some() && !timetables.iter().cloned()
             .any(|t| a.id == t.activities.unwrap())).collect();
@@ -26,7 +26,7 @@ pub(crate) fn generate(
         //fivea.sort_by(|a, b| b.hour.cmp(&a.hour));
         return false
     }
-    acts.shuffle(&mut thread_rng());
+    //acts.shuffle(&mut thread_rng());
     acts.sort_by(|a, b| b.hour.cmp(&a.hour));
     //log!(acts);
     let act2 = &acts[0].clone();
@@ -54,7 +54,7 @@ pub(crate) fn generate(
                     log!(&cat);
                     return false;
                 }
-                conflict_acts.shuffle(&mut thread_rng());
+                //conflict_acts.shuffle(&mut thread_rng());
                 let mut c_act = conflict_acts[0].clone();
                 for a in &c_act {
                     delete_activity(total_acts, a, tat, timetables, cat, true);
@@ -91,14 +91,14 @@ pub(crate) fn recursive_put(
     -> bool {
     let conflict_acts = find_conflict_activity(act, &_acts, &timetables, &clean_tat, &tat, &cat, max_day_hour, depth2);
     //let start = Instant::now();
-    use rand::thread_rng;
+    //use rand::thread_rng;
     let mut okey2 = false;
     let copy_tat = tat.clone();
     let copy_timetables = timetables.clone();
     let copy_cat = cat.clone();
     for conflict_act in &conflict_acts {
         let mut c_act = conflict_act.clone();
-        c_act.shuffle(&mut thread_rng());
+        //c_act.shuffle(&mut thread_rng());
         for a in &c_act {
             delete_activity(_acts, a, tat, timetables, cat, true);
         }
@@ -188,7 +188,7 @@ fn find_conflict_activity(
     depth: usize
 )->Vec<Vec<Activity>>
 {
-    use rand::thread_rng;
+    //use rand::thread_rng;
     //let class = act.class.unwrap();
     let mut total_act: Vec<Vec<Activity>> = Vec::new();
 
@@ -197,7 +197,7 @@ fn find_conflict_activity(
     let mut teacher_availables: Vec<TeacherAvailable> = clean_tat.iter().cloned()
         .filter(|t| t.user_id == act.teacher.unwrap() && t.hours.iter().any(|h| *h)).collect();
     //teacher_availables.sort_by(|a, b| a.hours.iter().fold(0, |acc, x| if *x{ acc+1} else{acc}).cmp(&b.hours.iter().fold(0, |acc, x| if *x{acc+1}else{acc})));
-    teacher_availables.shuffle(&mut thread_rng());
+    //teacher_availables.shuffle(&mut thread_rng());
     for teacher_available in &teacher_availables{
         for h in 0..teacher_available.hours.len(){
             if h + act.hour as usize <= teacher_available.hours.len() {
@@ -238,7 +238,7 @@ fn find_conflict_activity(
             }
         }
     }
-    total_act.shuffle(&mut thread_rng());
+    //total_act.shuffle(&mut thread_rng());
     total_act.sort_by(|a,b| a.len().cmp(&b.len()));
     for i in 0..total_act.len(){
         total_act[i].sort_by(|a,b| a.id.cmp(&b.id));
@@ -319,12 +319,12 @@ pub fn find_timeslot(
     _for_conflict: bool
 )
     -> Option<Vec<(i32, usize)>> {
-    use rand::thread_rng;
+    //use rand::thread_rng;
     let mut teacher_availables: Vec<(usize, TeacherAvailable)> = tat.iter().cloned()
         .enumerate()
         .filter(|t| t.1.user_id == act.teacher.unwrap() && t.1.hours.iter()
             .any(|h| *h)).collect();
-    teacher_availables.shuffle(&mut thread_rng());
+    //teacher_availables.shuffle(&mut thread_rng());
     let mut _teacher_total_day_availables: Vec<(usize, TeacherAvailable)> = clean_tat.iter().cloned()
         .enumerate()
         .filter(|t| t.1.user_id == act.teacher.unwrap() && t.1.hours.iter()
