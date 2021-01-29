@@ -21,58 +21,34 @@ const RESET: &str = "reset";
 const STORAGE_KEY: &str = "libredu-user";
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
-    orders.subscribe(Msg::UrlChanged);
     let mut ctx = Context {
         base_url: url.to_base_url(),
-        user: {
-            let store = LocalStorage::get(STORAGE_KEY);
+        user: None,
+            /*let store = LocalStorage::get(STORAGE_KEY);
             match store{
                 Ok(user)=> user,
                 Err(_)=> {
                     LocalStorage::remove(STORAGE_KEY).expect("remove saved user");
                     LocalStorage::remove("libredu-school").expect("remove saved user");
-                    orders.perform_cmd({
-                        let request = Request::new("/login")
-                            .method(Method::Get);
 
-                        async { Msg::GetUser(async {
-                            request
-                                .fetch()
-                                .await?
-                                .check_status()?
-                                .json()
-                                .await
-                        }.await)}
-                    });
                     None
                 }
-            }
-        },
-        school: {
-            let store = LocalStorage::get("libredu-school");
-            match store {
-                Ok(school) => school,
-                Err(_) => {
-                    LocalStorage::remove(STORAGE_KEY).expect("remove saved user");
-                    LocalStorage::remove("libredu-school").expect("remove saved user");
-                    orders.perform_cmd({
-                        let request = Request::new("/api/schools")
-                            .method(Method::Get);
-
-                        async { Msg::GetSchools(async {
-                            request
-                                .fetch()
-                                .await?
-                                .check_status()?
-                                .json()
-                                .await
-                        }.await)}
-                    });
-                    vec![]
-                }
-            }
-        },
+            }*/
+        school: vec![]
     };
+    orders.perform_cmd({
+        let request = Request::new("/api/login")
+            .method(Method::Get);
+
+        async { Msg::GetUser(async {
+            request
+                .fetch()
+                .await?
+                .check_status()?
+                .json()
+                .await
+        }.await)}
+    });
     orders.perform_cmd({
         let request = Request::new("/api/posts")
             .method(Method::Get);
@@ -87,7 +63,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
             }.await)
         }
     });
-    orders.send_msg(Msg::SSE);
+    //orders.send_msg(Msg::SSE);
     Model {
         page: Page::init(url, orders, &mut ctx),
         ctx: ctx,
@@ -227,11 +203,22 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             match user{
                 Ok(u)=>{
                     ctx.user = Some(u.clone());
-                    LocalStorage::insert(STORAGE_KEY, &u).expect("");
+                    orders.perform_cmd({
+                        let request = Request::new("/api/schools")
+                            .method(Method::Get);
 
+                        async { Msg::GetSchools(async {
+                            request
+                                .fetch()
+                                .await?
+                                .check_status()?
+                                .json()
+                                .await
+                        }.await)}
+                    });
                 }
                 Err(_)=>{
-
+                    orders.subscribe(Msg::UrlChanged);
                 }
             }
         }
@@ -239,18 +226,31 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             match schools{
                 Ok(s)=>{
                     ctx.school = s.clone();
-                    LocalStorage::insert("libredu-school", &s).expect("");
                 }
-                Err(_)=>{
-                    ctx.school = vec![];
+                Err(e)=>{
+                    log!(e);
+                }
+            }
+            orders.subscribe(Msg::UrlChanged);
+            //orders.subscribe(Msg::UrlChanged);
+        }
+        Msg::FetchPosts(post)=>{
+            match post{
+                Ok(p) => { model.posts = p.clone()}
+                Err(e) => {
+                    log!(e)
                 }
             }
         }
-        Msg::FetchPosts(p)=>{
-            model.posts = p.unwrap();
-        }
-        Msg::FetchPost(p)=>{
-            model.posts.insert(0, p.unwrap());
+        Msg::FetchPost(post)=>{
+            match post {
+                Ok(p) => {
+                    model.posts.insert(0, p);
+                }
+                Err(e) => {
+                    log!(e);
+                }
+            }
             model.form.body = "".to_string()
         }
         Msg::ChangeBody(b)=>{
@@ -286,7 +286,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     }.await)
                 }
             });
-            orders.skip();
+            //orders.skip();
         },
         Msg::FetchLogout(Ok(_s)) => {
             LocalStorage::remove(STORAGE_KEY).expect("remove saved user");

@@ -193,13 +193,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
         },
         Msg::Fetched(Ok(_auth)) => {
             orders.perform_cmd({
-                let login_form = LoginForm{ username: model.user.email.clone(), password: model.user.password1.clone() };
-                let request = Request::new("/login")
-                    .method(Method::Post)
-                    .json(&login_form);
+                let request = Request::new("/api/login")
+                    .method(Method::Get);
 
                 async { Msg::LoginFetch(async {
-                    request?
+                    request
                         .fetch()
                         .await?
                         .check_status()?

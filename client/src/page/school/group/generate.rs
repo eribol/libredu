@@ -51,7 +51,7 @@ pub(crate) fn generate(
                 *cat = cat_backup;
                 let mut conflict_acts = find_conflict_activity(&act2, &total_acts, &timetables, clean_tat, &tat, &cat, max_day_hour, 4);
                 if conflict_acts.len() == 0 {
-                    log!(&cat);
+                    log!("Çakışan aktivite yok");
                     return false;
                 }
                 conflict_acts.shuffle(&mut thread_rng());

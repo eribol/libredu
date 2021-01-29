@@ -4,11 +4,10 @@ use crate::AppState;
 use crate::views::AuthUser;
 use bcrypt::verify;
 //use async_trait::async_trait;
-use crate::model::school::SchoolDetail;
+use crate::model::school::{School, SchoolDetail};
 use crate::model::city::{City, Town};
 use crate::model::group::ClassGroups;
 use crate::model::class::Class;
-use crate::model::user::SimpleUser;
 
 #[derive(Debug, Default, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct Role{
@@ -40,13 +39,7 @@ pub trait Auth{
     async fn get_group(&self)-> Option<ClassGroups>;
     async fn get_class(&self)-> Option<Class>;
     async fn get_group_auth(&self)-> i32;
-    //fn init<T: Response>(&self, item: &T, ids: Identity, tmpl: Data<tera::Tera>, session: Session)-> Result<HttpResponse, Error>;
     fn login(&self, uname: &String, pas: &String)->  bool;
-    //fn schools(&self, session: &Session)->Result<Vec<School>,diesel::result::Error>;
-    //fn school(&self, id: i32)->Result<School, diesel::result::Error>;
-    //fn authorized(&self, session: &Session, school: i32, teacher: Option<i32>, class:Option<i32>)->SchoolAuth;
-    //fn context(&self, session: &Session)->tera::Context;
-    //fn teachers(&self, school: i32)->Vec<AuthUser>;
 }
 
 #[tide::utils::async_trait]
@@ -142,30 +135,38 @@ impl Auth for Request<AppState>{
         match school{
             Some(s) => {
                 use sqlx::prelude::PgQueryAs;
-                let user_id = self.cookie("libredu-user");
+                let user_id = self.user().await;
                 match user_id{
                     None => {
                         9
                     }
-                    Some(id) => {
-                        let auth: sqlx::Result<Role> = sqlx::query_as("SELECT *
+                    Some(user) => {
+                        if user.is_admin{
+                            1
+                        }
+                        else {
+                            let auth: sqlx::Result<Role> = sqlx::query_as("SELECT *
                                 FROM school_users WHERE school_id = $1 and user_id = $2")
-                            .bind(&s.id)
-                            .bind(&id.value().parse::<i32>().unwrap())
-                            .fetch_one(&self.state().db_pool).await;
-                        match auth{
-                            Ok(a) => {a.role}
-                            Err(_) => {
-                                let auth: sqlx::Result<SimpleUser> = sqlx::query_as("SELECT *
-                                        FROM users WHERE id = $1 and is_admin = true")
-                                    .bind(&id.value().parse::<i32>().unwrap())
-                                    .fetch_one(&self.state().db_pool).await;
-                                match auth{
-                                    Ok(_) => {
-                                        1
-                                    }
-                                    Err(_) => {
-                                        9
+                                .bind(&s.id)
+                                .bind(&user.id)
+                                .fetch_one(&self.state().db_pool).await;
+                            match auth{
+                                Ok(a) => {
+                                    a.role
+                                }
+                                Err(_) => {
+                                    let auth2: sqlx::Result<School> = sqlx::query_as("SELECT *
+                                            FROM school WHERE id = $1 and manager = $2")
+                                        .bind(&s.id)
+                                        .bind(&user.id)
+                                        .fetch_one(&self.state().db_pool).await;
+                                    match auth2{
+                                        Ok(_) => {
+                                            1
+                                        }
+                                        Err(_) => {
+                                            9
+                                        }
                                     }
                                 }
                             }

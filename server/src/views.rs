@@ -4,11 +4,11 @@ use serde::*;
 use crate::AppState;
 use sqlx::types::chrono::NaiveDateTime;
 use http_types::{Body, Cookie};
-use crate::request::Auth;
+use crate::request::{Auth, SchoolAuth};
 use crate::model::timetable::Day;
-use crate::model::class::Class;
-use crate::model::activity::Activity;
-use crate::model::school::{SchoolDetail, School};
+//use crate::model::class::Class;
+//use crate::model::activity::Activity;
+use crate::model::school::{SchoolDetail};
 use uuid::Uuid;
 use lettre::{Transport, ClientSecurity};
 use crate::model::post::SchoolPost;
@@ -277,7 +277,7 @@ pub async fn days(req: Request<AppState>) -> tide::Result{
     }
 }
 
-pub async fn activities(req: Request<AppState>) -> tide::Result{
+/*pub async fn activities(req: Request<AppState>) -> tide::Result{
     match req.user().await{
         Some(_user)=>{
             use sqlx_core::postgres::PgQueryAs;
@@ -310,7 +310,7 @@ pub async fn activities(req: Request<AppState>) -> tide::Result{
             Ok(res)
         }
     }
-}
+}*/
 
 pub async fn get_posts(req: Request<AppState>) -> tide::Result {
     use crate::model::post::Post;
@@ -372,72 +372,49 @@ pub async fn get_posts(req: Request<AppState>) -> tide::Result {
 
 pub async fn posts(mut req: Request<AppState>) -> tide::Result {
     use crate::model::post::{Post, NewPost};
-    let mut res = tide::Response::new(StatusCode::Ok);
     use sqlx_core::postgres::PgQueryAs;
-    match req.user().await{
-        Some(user)=>{
-            let mut form: NewPost = req.body_json().await?;
-            form.body = form.body.replace("\n","<br>");
-            if user.is_admin{
-                let post: Post = sqlx::query_as("insert into post(body, sender, pub_date) values($1, $2, $3) returning id, body, pub_date, school, sender")
-                    .bind(&form.body)
-                    .bind(&user.id)
-                    .bind(&chrono::Utc::now())
-                    .fetch_one(&req.state().db_pool).await?;
-                let send_post = SchoolPost{
-                    id: post.id,
-                    body: post.body,
-                    pub_date: post.pub_date,
-                    school: None,
-                    sender: post.sender
-                };
-                res.set_body(Body::from_json(&send_post)?);
-                Ok(res)
-            }
-            else{
-                use sqlx_core::cursor::Cursor;
-                use sqlx_core::row::Row;
-                let mut schl = SchoolDetail::default();
-                let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
-                        FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.manager = $1")
-                    .bind(&user.id)
-                    .fetch(&req.state().db_pool);
-                while let Some(row) = query.next().await?{
-                    schl = SchoolDetail{
-                        id: row.get(0),
-                        name: row.get(1),
-                        manager: row.get(2),
-                        school_type: row.get(3),
-                        tel: None,
-                        location: None,
-                        city: City{ pk: row.get(4), name: row.get(5) },
-                        town: Town{
-                            city: row.get(4),
-                            pk: row.get(6),
-                            name: row.get(7)
-                        }
-                    }
-                }
-                let post: Post = sqlx::query_as("insert into post(body, sender, pub_date, school) values($1, $2, $3, $4) returning id, body, pub_date, school, sender")
-                    .bind(&form.body)
-                    .bind(&user.id)
-                    .bind(&chrono::Utc::now())
-                    .bind(&schl.id)
-                    .fetch_one(&req.state().db_pool).await?;
-                let send_post = SchoolPost{
-                    id: post.id,
-                    body: post.body,
-                    pub_date: post.pub_date,
-                    school: Some(schl),
-                    sender: post.sender
-                };
-                res.set_body(Body::from_json(&send_post)?);
-                Ok(res)
-            }
-        }
-        None=>{
+    let mut form: NewPost = req.body_json().await?;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    if school_auth.role < 3 {
+        let mut res = tide::Response::new(StatusCode::Ok);
+        form.body = form.body.replace("\n", "<br>");
+        let user = req.user().await.unwrap();
+        if user.is_admin {
+            let post: Post = sqlx::query_as("insert into post(body, sender, pub_date) values($1, $2, $3) returning id, body, pub_date, school, sender")
+                .bind(&form.body)
+                .bind(&user.id)
+                .bind(&chrono::Utc::now())
+                .fetch_one(&req.state().db_pool).await?;
+            let send_post = SchoolPost {
+                id: post.id,
+                body: post.body,
+                pub_date: post.pub_date,
+                school: None,
+                sender: post.sender
+            };
+            res.set_body(Body::from_json(&send_post)?);
+            Ok(res)
+        } else {
+            let post: Post = sqlx::query_as("insert into post(body, sender, pub_date, school) values($1, $2, $3, $4) returning id, body, pub_date, school, sender")
+                .bind(&form.body)
+                .bind(&user.id)
+                .bind(&chrono::Utc::now())
+                .bind(&school_auth.school.id)
+                .fetch_one(&req.state().db_pool).await?;
+            let send_post = SchoolPost {
+                id: post.id,
+                body: post.body,
+                pub_date: post.pub_date,
+                school: Some(school_auth.school.clone()),
+                sender: post.sender
+            };
+            res.set_body(Body::from_json(&send_post)?);
             Ok(res)
         }
+    }
+    else {
+        let res = tide::Response::new(StatusCode::Unauthorized);
+        Ok(res)
     }
 }
 

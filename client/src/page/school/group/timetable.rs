@@ -493,7 +493,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 let _act = model.data.acts.iter().find(|a| a.id == tt.activities.unwrap());
                 match _act{
                     Some(_a) =>{
-                        log!(&_a);
+                        //log!(&_a);
                         let _teacher_lim = model.data.tat.iter().cloned().enumerate().find(|tl| tl.1.day == tt.day_id.unwrap() && _a.teacher.is_some() && tl.1.user_id == _a.teacher.unwrap());
                         match _teacher_lim{
                             Some(t) => {model.data.tat[t.0].hours[tt.hour.unwrap() as usize] = false;}

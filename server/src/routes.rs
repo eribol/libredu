@@ -28,6 +28,7 @@ pub fn routes(state: AppState)->tide::Server<AppState>{
 fn api_routes(state: AppState)->tide::Server<AppState>{
     let mut app = tide::with_state(state.clone());
     use crate::views;
+    //use crate::middlewares::{school_auth};
     app.at("/city").nest({
         let mut api = tide::with_state(state.clone());
         api.at("").get(views::city);
@@ -35,17 +36,17 @@ fn api_routes(state: AppState)->tide::Server<AppState>{
             .get(views::town);
         api
     });
-    app.at("login").post(api::views::login);
-    app.at("/api/signin").post(api::views::signin);
+    app.at("/login").post(api::views::login);
+    app.at("/login").get(api::views::get_user);
+    app.at("/signin").post(api::views::signin);
     app.at("/school_types").all(crate::api::school::school::school_type);
     app.at("/days").get(views::days);
     app.at("/reset").all(views::post_reset);
     app.at("/send_key").post(views::send_key);
-    app.at("/posts").get(views::get_posts);
-    app.at("/posts").post(views::posts);
+    app.at("/posts").get(views::get_posts).post(views::posts);
     app.at("/posts/:post_id").delete(views::del_post);
     //app.at("/add_cities").get(views::add_cities);
-    app.at("/activities/:act_id").delete(views::activities);
+    //app.at("/activities/:act_id").delete(views::activities);
     app.at("/schools").nest({
         schools_api(state.clone())
     });
@@ -103,14 +104,11 @@ fn school_api(state: AppState)->tide::Server<AppState>{
     api.at("/students").nest({
         students_api(state.clone())
     });
-    api.at("/subjects").get(school::get_subjects);
-    api.at("/subjects").post(school::subjects);
+    api.at("/subjects").get(school::get_subjects).post(school::subjects);
     api.at("/subjects/:subject_id").delete(school::del_subject);
-    api.at("/class_rooms").get(school::get_class_rooms);
-    api.at("/class_rooms").post(school::class_rooms);
+    api.at("/class_rooms").get(school::get_class_rooms).post(school::class_rooms);
     api.at("/class_rooms/:class_room_id").delete(school::del_class_room);
-    api.at("/teachers").with(school_auth).get(school::teachers);
-    api.at("/teachers").with(school_auth).post(school::teachers);
+    api.at("/teachers").with(school_auth).get(school::get_teachers).post(school::teachers);
     api
 }
 
@@ -118,10 +116,8 @@ fn students_api(state: AppState)->tide::Server<AppState>{
     use crate::api::school::student;
     use crate::api::school::school;
     let mut api = tide::with_state(state.clone());
-    api.at("").post(school::students);
-    api.at("").get(school::get_students);
-    api.at("/:student_id").get(get_timetables);
-    api.at("/:student_id").delete(student::del_student);
+    api.at("").post(school::students).get(school::get_students);
+    api.at("/:student_id").get(get_timetables).delete(student::del_student);
     api
 }
 
@@ -151,14 +147,11 @@ fn class_api(state: AppState)->tide::Server<AppState>{
     use crate::middlewares::{class_auth};
     let mut class_api = tide::with_state(state.clone());
     class_api.with(class_auth);
-    class_api.at("").get(class::class_detail);
-    class_api.at("").delete(class::class_delete);
-    class_api.at("").patch(class::update_class);
+    class_api.at("").get(class::class_detail).delete(class::class_delete).patch(class::update_class);
     class_api.at("/activities").all(class::activities);
     class_api.at("/limitations").all(class::limitations);
     class_api.at("/timetables").get(class::timetables);
-    class_api.at("/students").get(class::get_students);
-    class_api.at("/students").post(class::students);
+    class_api.at("/students").get(class::get_students).post(class::students);
     class_api.at("/students/:student_id").delete(class::del_student);
     class_api.at("/all_students").get(class::get_all_students);
     class_api
@@ -167,14 +160,10 @@ fn class_api(state: AppState)->tide::Server<AppState>{
 fn teacher_api(state: AppState)->tide::Server<AppState>{
     use crate::api::school::teacher;
     let mut teacher_api = tide::with_state(state.clone());
-    teacher_api.at("").get(teacher::teacher_detail);
-    teacher_api.at("").delete(teacher::del_teacher);
-    teacher_api.at("").patch(teacher::patch_teacher);
-    teacher_api.at("/activities").get(teacher::get_activities);
+    teacher_api.at("").get(teacher::teacher_detail).patch(teacher::patch_teacher).delete(teacher::del_teacher);
+    teacher_api.at("/activities").get(teacher::get_activities).post(teacher::activities);
     teacher_api.at("/activities/:act_id").patch(teacher::patch_activities);
-    teacher_api.at("/activities").post(teacher::activities);
-    teacher_api.at("/limitations").get(teacher::get_limitations);
-    teacher_api.at("/limitations").post(teacher::limitations);
+    teacher_api.at("/limitations").get(teacher::get_limitations).post(teacher::limitations);
     teacher_api.at("/timetables").get(teacher::timetables);
     teacher_api
 }
@@ -182,8 +171,7 @@ fn teacher_api(state: AppState)->tide::Server<AppState>{
 fn admin_api(state: AppState)->tide::Server<AppState>{
     let mut app = tide::with_state(state.clone());
     use crate::api::admin::views;
-    app.at("/school_types").post(views::add_school_type);
-    app.at("/school_types").get(crate::api::school::school::school_type);
+    app.at("/school_types").post(views::add_school_type).get(crate::api::school::school::school_type);
     app.at("/subjects").post(views::add_subject);
     app.at("/subjects/:school_type").get(views::get_subjects);
     app

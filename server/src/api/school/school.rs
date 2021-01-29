@@ -1,7 +1,7 @@
 use tide::Request;
 use crate::AppState;
 use crate::request::{Auth, SchoolAuth};
-use http_types::{StatusCode, Method, Body};
+use http_types::{StatusCode, Body};
 use crate::model::school;
 use crate::model::user;
 use crate::model::class;
@@ -260,115 +260,108 @@ pub async fn del_subject(req: Request<AppState>) -> tide::Result {
     }
 }
 
+pub async fn get_teachers(req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    if let Some(_user) = req.user().await {
+        use sqlx::Cursor;
+        use sqlx::Row;
+        let mut tchrs = sqlx::query("SELECT users.id, users.first_name, users.last_name, roles.id, roles.name \
+                        FROM school_users inner join users on school_users.user_id = users.id inner join roles on school_users.role = roles.id \
+                        WHERE school_users.school_id = $1 and school_users.role <= 5 order by roles.id, users.first_name")
+            .bind(&school_auth.school.id)
+            .fetch(&req.state().db_pool);
+        let mut teachers: Vec<user::Teacher> = vec![];
+        while let Some(row) = tchrs.next().await? {
+            let teacher = user::Teacher {
+                id: row.get(0),
+                first_name: row.get(1),
+                last_name: row.get(2),
+                role_id: row.get(3),
+                role_name: row.get(4)
+            };
+            teachers.push(teacher);
+        }
+        res.set_body(Body::from_json(&teachers)?);
+        Ok(res)
+    } else {
+        let res = tide::Response::new(StatusCode::Unauthorized);
+        Ok(res)
+    }
+}
 pub async fn teachers(mut req: Request<AppState>) -> tide::Result {
     //use crate::request::SchoolAuthExt;
     let mut res = tide::Response::new(StatusCode::Ok);
     use sqlx_core::postgres::PgQueryAs;
-    match req.method() {
-        Method::Get => {
-            let school_auth: &SchoolAuth = req.ext().unwrap();
-            if let Some(_user) = req.user().await{
+
+    #[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
+    struct NewTeacher {
+        first_name: String,
+        last_name: String,
+        role: i16
+    }
+    let form = req.body_json::<NewTeacher>().await;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+
+    match form {
+        Ok(f) => {
+            if school_auth.role < 3 {
+                let add_user: user::SimpleUser = sqlx::query_as("INSERT into users(first_name, last_name) values($1, $2) returning id, first_name, last_name, email, is_admin, username")
+                    .bind(&f.first_name)
+                    .bind(&f.last_name)
+                    .fetch_one(&req.state().db_pool).await?;
+                let _add_teacher = sqlx::query("INSERT into school_users(user_id, school_id, role) values($1, $2, $3)")
+                    .bind(&add_user.id)
+                    .bind(&school_auth.school.id)
+                    .bind(&f.role)
+                    .execute(&req.state().db_pool).await?;
+                let days: Vec<i32> = vec![1, 2, 3, 4, 5, 6, 7];
+
+                for d in days {
+                    let groups: Vec<ClassGroups> = sqlx::query_as("SELECT * FROM class_groups WHERE school = $1")
+                        .bind(&school_auth.school.id)
+                        .fetch_all(&req.state().db_pool).await?;
+                    for g in groups {
+                        let hours: Vec<bool>;
+                        if d > 5 {
+                            hours = vec![false; g.hour as usize];
+                        } else {
+                            hours = vec![true; g.hour as usize];
+                        }
+                        let _teacher_available = sqlx::query("INSERT into teacher_available(user_id, school_id, day, hours, group_id) values($1, $2, $3, $4, $5)")
+                            .bind(&add_user.id)
+                            .bind(&school_auth.school.id)
+                            .bind(d)
+                            .bind(hours)
+                            .bind(&g.id)
+                            .execute(&req.state().db_pool).await;
+                    }
+                }
                 use sqlx::Cursor;
                 use sqlx::Row;
                 let mut tchrs = sqlx::query("SELECT users.id, users.first_name, users.last_name, roles.id, roles.name \
                         FROM school_users inner join users on school_users.user_id = users.id inner join roles on school_users.role = roles.id \
-                        WHERE school_users.school_id = $1 and school_users.role <= 5 order by roles.id, users.first_name")
-                    .bind(&school_auth.school.id)
+                        WHERE school_users.user_id = $1")
+                    .bind(&add_user.id)
                     .fetch(&req.state().db_pool);
-                let mut teachers: Vec<user::Teacher> = vec![];
-                while let Some(row) = tchrs.next().await?{
-                    let teacher = user::Teacher{
+                let mut teacher: user::Teacher;
+                while let Some(row) = tchrs.next().await? {
+                    teacher = user::Teacher {
                         id: row.get(0),
                         first_name: row.get(1),
                         last_name: row.get(2),
                         role_id: row.get(3),
                         role_name: row.get(4)
                     };
-                    teachers.push(teacher);
+                    res.set_body(Body::from_json(&teacher)?);
                 }
-                res.set_body(Body::from_json(&teachers)?);
                 Ok(res)
-            }
-            else {
+            } else {
                 let res = tide::Response::new(StatusCode::Unauthorized);
                 Ok(res)
             }
         }
-        Method::Post => {
-            #[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
-            struct NewTeacher {
-                first_name: String,
-                last_name: String,
-                role: i16
-            }
-            let form = req.body_json::<NewTeacher>().await;
-            let school_auth: &SchoolAuth = req.ext().unwrap();
-
-            match form {
-                Ok(f) => {
-                    if school_auth.role < 3 && f.role != 1{
-                        let add_user: user::SimpleUser = sqlx::query_as("INSERT into users(first_name, last_name) values($1, $2) returning id, first_name, last_name, email, is_admin, username")
-                            .bind(&f.first_name)
-                            .bind(&f.last_name)
-                            .fetch_one(&req.state().db_pool).await?;
-                        let _add_teacher = sqlx::query("INSERT into school_users(user_id, school_id, role) values($1, $2, $3)")
-                            .bind(&add_user.id)
-                            .bind(&school_auth.school.id)
-                            .bind(&f.role)
-                            .execute(&req.state().db_pool).await?;
-                        let days: Vec<i32> = vec![1, 2, 3, 4, 5, 6, 7];
-
-                        for d in days {
-                            let groups: Vec<ClassGroups> = sqlx::query_as("SELECT * FROM class_groups WHERE school = $1")
-                                .bind(&school_auth.school.id)
-                                .fetch_all(&req.state().db_pool).await?;
-                            for g in groups {
-                                let hours: Vec<bool>;
-                                if d > 5 {
-                                    hours = vec![false; g.hour as usize];
-                                } else {
-                                    hours = vec![true; g.hour as usize];
-                                }
-                                let _teacher_available = sqlx::query("INSERT into teacher_available(user_id, school_id, day, hours, group_id) values($1, $2, $3, $4, $5)")
-                                    .bind(&add_user.id)
-                                    .bind(&school_auth.school.id)
-                                    .bind(d)
-                                    .bind(hours)
-                                    .bind(&g.id)
-                                    .execute(&req.state().db_pool).await;
-                            }
-                        }
-                        use sqlx::Cursor;
-                        use sqlx::Row;
-                        let mut tchrs = sqlx::query("SELECT users.id, users.first_name, users.last_name, roles.id, roles.name \
-                        FROM school_users inner join users on school_users.user_id = users.id inner join roles on school_users.role = roles.id \
-                        WHERE school_users.user_id = $1")
-                            .bind(&add_user.id)
-                            .fetch(&req.state().db_pool);
-                        let mut teacher: user::Teacher;
-                        while let Some(row) = tchrs.next().await?{
-                            teacher = user::Teacher{
-                                id: row.get(0),
-                                first_name: row.get(1),
-                                last_name: row.get(2),
-                                role_id: row.get(3),
-                                role_name: row.get(4)
-                            };
-                            res.set_body(Body::from_json(&teacher)?);
-                        }
-                        Ok(res)
-                    }
-                    else {
-                        let res = tide::Response::new(StatusCode::Unauthorized);
-                        Ok(res)
-                    }
-                }
-                Err(_) => {
-                    Ok(res)
-                }
-            }
-        }
-        _ => {
+        Err(_) => {
             Ok(res)
         }
     }

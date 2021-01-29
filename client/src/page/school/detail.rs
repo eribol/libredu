@@ -232,21 +232,27 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 city: ctx_school.school.city.clone(),
                 town: ctx_school.school.town.clone()
             };
-            orders.perform_cmd({
-                let adres = format!("/api/schools/{}/teachers", &ctx_school.school.id);
-                let request = Request::new(adres)
-                    .method(Method::Get);
-                async {
-                    Msg::FetchTeachers(async {
-                        request
-                            .fetch()
-                            .await?
-                            .check_status()?
-                            .json()
-                            .await
-                    }.await)
+            match _ctx.user{
+                Some(_) => {
+                    orders.perform_cmd({
+                        let adres = format!("/api/schools/{}/teachers", &ctx_school.school.id);
+                        let request = Request::new(adres)
+                            .method(Method::Get);
+                        async {
+                            Msg::FetchTeachers(async {
+                                request
+                                    .fetch()
+                                    .await?
+                                    .check_status()?
+                                    .json()
+                                    .await
+                            }.await)
+                        }
+                    });
                 }
-            });
+                None => {}
+            }
+
             orders.perform_cmd({
                 let adres = format!("/api/schools/{}/groups", model.ctx_school.school.id);
                 let request = Request::new(adres)

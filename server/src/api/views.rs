@@ -5,6 +5,8 @@ use serde::*;
 use crate::model::user::{User, AuthUser, SignUser};
 use uuid::Uuid;
 use lettre::{ClientSecurity, Transport};
+use http_types::cookies::SameSite;
+use crate::request::Auth;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct LoginForm{
@@ -66,11 +68,14 @@ pub async fn login(mut req: Request<AppState>) -> tide::Result {
                                 //domain = "127.0.0.1".to_string()
                             }
                         };
+                        use time::{Duration};
                         //println!("{:?}", env::var("DOMAIN_NAME").unwrap_or("127.0.0.1".to_string()));
                         let _cookie = Cookie::build("libredu-user", u.id.to_string())
                             .domain(domain.clone())
                             .path("/")
                             .secure(true)
+                            .same_site(SameSite::None)
+                            .max_age(Duration::days(180))
                             .http_only(true)
                             .finish();
                         res.insert_cookie(_cookie);
@@ -78,6 +83,8 @@ pub async fn login(mut req: Request<AppState>) -> tide::Result {
                             .domain(domain)
                             .path("/")
                             .secure(true)
+                            .same_site(SameSite::None)
+                            .max_age(Duration::days(180))
                             .http_only(true)
                             .finish();
                         res.insert_cookie(_cookie);
@@ -103,6 +110,17 @@ pub async fn login(mut req: Request<AppState>) -> tide::Result {
             Ok(res)
         }
     }
+}
+
+pub async fn get_user(req: Request<AppState>) -> tide::Result {
+    let mut res = Response::new(StatusCode::Ok);
+    match req.user().await{
+        Some(user) => {
+            res.set_body(Body::from_json(&user)?);
+        }
+        None => {}
+    }
+    Ok(res)
 }
 
 pub async fn signin(mut req: Request<AppState>) -> tide::Result {
