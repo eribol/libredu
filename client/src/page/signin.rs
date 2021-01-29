@@ -84,25 +84,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
                 model.form_error.email = "".to_string()
             }
         },
-        Msg::LoginFetch(user)=>{
-            match user{
-                Ok(u)=>{
-                    use crate::STORAGE_KEY;
-                    match LocalStorage::insert(STORAGE_KEY, &u){
-                        Ok(_)=>{
-                            ctx.user = Some(u);
-                        }
-                        Err(_)=>{
-                            log!("hata");
-                        }
-                    };
-                }
-                Err(_)=>{}
-            }
-            //orders.notify(
-            //    subs::UrlRequested::new(crate::Urls::new(&ctx.base_url).home())
-            //);
-        }
         Msg::Password1Changed(password) => {
             model.user.password1 = password;
             if model.user.password2 == model.user.password1{
@@ -191,25 +172,43 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
             }
 
         },
-        Msg::Fetched(Ok(_auth)) => {
-            orders.perform_cmd({
-                let request = Request::new("/api/login")
-                    .method(Method::Get);
-
-                async { Msg::LoginFetch(async {
-                    request
-                        .fetch()
-                        .await?
-                        .check_status()?
-                        .json()
-                        .await
-                }.await)}
-            });
-        }
-
-        Msg::Fetched(Err(_fetch_error)) => {
-            model.form_error.server_error = "Sunucu hatası".to_string();
-            //orders.skip();
+        Msg::LoginFetch(user)=>{
+            match user{
+                Ok(u)=>{
+                    use crate::STORAGE_KEY;
+                    match LocalStorage::insert(STORAGE_KEY, &u){
+                        Ok(_)=>{
+                            ctx.user = Some(u);
+                        }
+                        Err(_)=>{
+                            log!("hata");
+                        }
+                    };
+                }
+                Err(_)=>{}
+            }
+            //orders.notify(
+            //    subs::UrlRequested::new(crate::Urls::new(&ctx.base_url).home())
+            //);
+        },
+        Msg::Fetched(user) => {
+            match user{
+                Ok(u)=>{
+                    use crate::STORAGE_KEY;
+                    match LocalStorage::insert(STORAGE_KEY, &u){
+                        Ok(_)=>{
+                            ctx.user = Some(u);
+                            orders.notify(
+                                subs::UrlRequested::new(crate::Urls::new(&ctx.base_url).home())
+                            );
+                        }
+                        Err(_)=>{
+                            log!("hata");
+                        }
+                    };
+                }
+                Err(_)=>{}
+            }
         }
     }
 }
