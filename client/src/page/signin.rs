@@ -3,25 +3,13 @@ use seed::{*, prelude::*};
 use serde::*;
 use crate::{Context};
 use crate::model::user::UserDetail;
-use crate::page::login::LoginForm;
 
 // ------ ------
 //     Init
 // ------ ------
 pub struct Model{
     user: User,
-    form_error: Error
-}
-
-#[derive(Debug, Serialize, Deserialize, Default, PartialEq)]
-pub struct Error{
-    first_name: String,
-    last_name: String,
-    tel: String,
-    email: String,
-    gender: String,
-    password: String,
-    server_error: String
+    error: Option<String>
 }
 
 pub fn init() -> Model {
@@ -54,7 +42,7 @@ impl Default for Model{
                 password1: "".to_string(),
                 password2: "".to_string()
             },
-            form_error: Error::default()
+            error: None
         }
     }
 }
@@ -71,7 +59,6 @@ pub enum Msg{
     FirstNameChanged(String),
     LastNameChanged(String),
     GenderChanged(String),
-    LoginFetch(fetch::Result<UserDetail>),
     Submit,
     Fetched(fetch::Result<UserDetail>),
 }
@@ -81,25 +68,25 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
         Msg::EmailChanged(email) => {
             model.user.email = email;
             if model.user.email.contains("@"){
-                model.form_error.email = "".to_string()
+                //model.form_error.email = "".to_string()
             }
         },
         Msg::Password1Changed(password) => {
             model.user.password1 = password;
             if model.user.password2 == model.user.password1{
-                model.form_error.password = "".to_string()
+                //model.form_error.password = "".to_string()
             }
         },
         Msg::Password2Changed(password) => {
             model.user.password2 = password;
             if model.user.password2 == model.user.password1{
-                model.form_error.password = "".to_string()
+                //model.form_error.password = "".to_string()
             }
         },
         Msg::FirstNameChanged(name) => {
             model.user.first_name = name;
             if model.user.first_name != ""{
-                model.form_error.first_name = "".to_string()
+                //model.form_error.first_name = "".to_string()
             }
         },
         Msg::TelChanged(tel) => {
@@ -107,7 +94,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
                 Some(t)=>{
                     if t.is_digit(10) && tel.len() <= 10{
                         model.user.tel = tel;
-                        model.form_error.tel ="".to_string();
+                        model.error = None;
                     }
                 },
                 None=>{}
@@ -117,36 +104,39 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
         Msg::LastNameChanged(name) => {
             model.user.last_name = name;
             if model.user.last_name != ""{
-                model.form_error.last_name = "".to_string()
+                model.error = None
             }
-            model.form_error.last_name = "".to_string()
+            else {
+                model.error = Some("Soyadınızı giriniz".to_string())
+            }
+            //
         },
         Msg::GenderChanged(gender) => {
             model.user.gender = gender;
         },
         Msg::Submit => {
-            model.form_error.server_error = "".to_string();
+            model.error = None;
             if !model.user.email.contains("@"){
-                model.form_error.email = "Geçerli bir eposta adresi girin".to_string()
+                model.error = Some("Geçerli bir eposta adresi giriniz".to_string())
             }
             if model.user.password1 != model.user.password2{
-                model.form_error.password = "Şifreler uyumlu değil".to_string()
+                model.error = Some("Şifreler uyumlu değil".to_string())
             }
             if model.user.first_name == "" {
-                model.form_error.first_name = "Ad alanı boş geçilemez".to_string()
+                model.error = Some("Ad alanı boş geçilemez".to_string())
             }
             if model.user.last_name == ""{
-                model.form_error.last_name = "Soyad alanı boş geçilemez".to_string()
+                model.error = Some("Soyad alanı boş geçilemez".to_string())
             }
             if model.user.tel.len() != 10{
                 if !model.user.tel.parse::<f64>().is_ok(){
-                    model.form_error.tel = "Telefon numarası rakamlardan oluşmalı".to_string()
+                    model.error = Some("Telefon numarası rakamlardan oluşmalı".to_string())
                 }
                 else{
-                    model.form_error.tel = "Telefon numarası 10 haneli olmalı".to_string()
+                    model.error = Some("Telefon numarası 10 haneli olmalı".to_string())
                 }
             }
-            else if model.form_error == Error::default(){
+            else if model.error == None{
                 orders.perform_cmd({
                     // `request` has to be outside of the async function because we can't pass reference
                     // to the form (`&model.form`) into the async function (~= `Future`).
@@ -172,42 +162,17 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
             }
 
         },
-        Msg::LoginFetch(user)=>{
-            match user{
-                Ok(u)=>{
-                    use crate::STORAGE_KEY;
-                    match LocalStorage::insert(STORAGE_KEY, &u){
-                        Ok(_)=>{
-                            ctx.user = Some(u);
-                        }
-                        Err(_)=>{
-                            log!("hata");
-                        }
-                    };
-                }
-                Err(_)=>{}
-            }
-            //orders.notify(
-            //    subs::UrlRequested::new(crate::Urls::new(&ctx.base_url).home())
-            //);
-        },
         Msg::Fetched(user) => {
             match user{
-                Ok(u)=>{
-                    use crate::STORAGE_KEY;
-                    match LocalStorage::insert(STORAGE_KEY, &u){
-                        Ok(_)=>{
-                            ctx.user = Some(u);
-                            orders.notify(
-                                subs::UrlRequested::new(crate::Urls::new(&ctx.base_url).home())
-                            );
-                        }
-                        Err(_)=>{
-                            log!("hata");
-                        }
-                    };
+                Ok(u)=> {
+                    ctx.user = Some(u);
+                    orders.notify(
+                        subs::UrlRequested::new(crate::Urls::new(&ctx.base_url).home())
+                    );
                 }
-                Err(_)=>{}
+                Err(_)=>{
+                    model.error = Some("Sunucu hatası".to_string())
+                }
             }
         }
     }
@@ -239,7 +204,7 @@ pub fn view(model: &Model)-> Node<Msg>{
                         span![C!{"icon is-small is-left"}, i![C!{"fa fa-envelop"}]]
                     ],
                     p![
-                        C!{"help is-danger"}, &model.form_error.first_name
+                        C!{"help is-danger"} //&model.error.as_ref()
                     ]
                 ],
                 div![C!{"field"},
@@ -258,7 +223,7 @@ pub fn view(model: &Model)-> Node<Msg>{
                         span![C!{"icon is-small is-left"}, i![C!{"fa fa-envelop"}]]
                     ],
                     p![
-                        C!{"help is-danger"}, &model.form_error.last_name
+                        C!{"help is-danger"}, //&model.form_error.last_name
                     ]
                 ],
                 div![C!{"field"},
@@ -289,7 +254,7 @@ pub fn view(model: &Model)-> Node<Msg>{
                         ]
                     ],
                     p![
-                        C!{"help is-danger"}, &model.form_error.tel
+                        C!{"help is-danger"}, //&model.form_error.tel
                     ]
                 ],
                 div![C!{"field"},
@@ -308,7 +273,7 @@ pub fn view(model: &Model)-> Node<Msg>{
                         span![C!{"icon is-small is-left"}, i![C!{"fa fa-envelop"}]]
                     ],
                     p![
-                        C!{"help is-danger"}, &model.form_error.email
+                        C!{"help is-danger"},// &model.form_error.email
                     ]
                 ],
                 div![C!{"field"},
@@ -361,7 +326,8 @@ pub fn view(model: &Model)-> Node<Msg>{
                         ],
                         span![C!{"icon is-small is-left"}, i![C!{"fa fa-envelop"}]],
                     ],
-                    p![C!{"help is-danger"}, &model.form_error.password]
+                    p![C!{"help is-danger"}, //&model.form_error.password
+                    ]
                 ],
                 div![C!{"field"},
                     p![C!{"control has-icons-left"},
@@ -380,7 +346,16 @@ pub fn view(model: &Model)-> Node<Msg>{
                     ]
                 ],
                 p![
-                    C!{"help is-danger"}, &model.form_error.server_error
+                    C!{"help is-danger"},
+                    match &model.error{
+                        Some(e) => {
+                            e
+                        }
+                        None => {
+                            ""
+                        }
+                    }
+                    //&model.error.as_ref().unwrap()
                 ]
 
             ]

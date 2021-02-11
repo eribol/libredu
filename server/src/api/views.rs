@@ -131,7 +131,7 @@ pub async fn signin(mut req: Request<AppState>) -> tide::Result {
             use sqlx_core::postgres::PgQueryAs;
             let user2: Result<User, sqlx_core::error::Error> = sqlx::query_as("SELECT * FROM users WHERE email = $1 OR tel = $2")
                 .bind(&f.email)
-                .bind(bcrypt::hash(&f.tel,8).unwrap())
+                .bind(bcrypt::hash(&f.tel, 8).unwrap())
                 //.bind(hash(&f.password))
                 .fetch_one(&req.state().db_pool).await;
             match user2 {
@@ -177,6 +177,7 @@ pub async fn signin(mut req: Request<AppState>) -> tide::Result {
                             SmtpClient::new(("127.0.0.1", 25), ClientSecurity::None).unwrap().transport();
                         // Send the email
                         let result = mailer.send(email);
+                        use bcrypt::hash;
                         match result{
                             Ok(_r)=> {
                                 let add_user = sqlx::query!(r#"INSERT into users (first_name, last_name, email, password, tel, gender, key) values($1,$2, $3, $4, $5, $6, $7)"#,
@@ -185,11 +186,45 @@ pub async fn signin(mut req: Request<AppState>) -> tide::Result {
                                     .execute(&req.state().db_pool).await;
                                 match add_user {
                                     Ok(_user) => {
-                                        let user2: AuthUser = sqlx::query_as("SELECT * FROM users WHERE email = $1")
+
+                                        let user2: AuthUser = sqlx::query_as("SELECT * FROM users WHERE email = $1 or tel = $2")
                                             .bind(&f.email)
-                                            //.bind(&f.tel)
-                                            //.bind(hash(&f.password))
+                                            .bind(&hash(&f.email, 8).unwrap())
                                             .fetch_one(&req.state().db_pool).await?;
+                                        let u_id = Uuid::new_v4().to_string();
+                                        dotenv::dotenv().expect("Failed to read .env file");
+                                        use std::env;
+                                        let mut domain = "127.0.0.1".to_string();
+                                        match env::var("DOMAIN_NAME") {
+                                            Ok(_) => domain = "libredu.org".to_string(),
+                                            Err(_) => {
+                                                //domain = "127.0.0.1".to_string()
+                                            }
+                                        };
+                                        use time::{Duration};
+                                        let _cookie = Cookie::build("libredu-user", user2.id.to_string())
+                                            .domain(domain.clone())
+                                            .path("/")
+                                            .secure(true)
+                                            .same_site(SameSite::None)
+                                            .max_age(Duration::days(180))
+                                            .http_only(true)
+                                            .finish();
+                                        res.insert_cookie(_cookie);
+                                        let _session = sqlx::query(r#"INSERT into session (user_id, key) values($1, $2)"#)
+                                            .bind(&user2.id)
+                                            .bind(&u_id)
+                                            //.bind(hash(&f.password))
+                                            .execute(&req.state().db_pool).await?;
+                                        let _cookie = Cookie::build("libredu-uuid", u_id)
+                                            .domain(domain)
+                                            .path("/")
+                                            .secure(true)
+                                            .same_site(SameSite::None)
+                                            .max_age(Duration::days(180))
+                                            .http_only(true)
+                                            .finish();
+                                        res.insert_cookie(_cookie);
                                         res.set_body(Body::from_json(&user2)?);
                                         Ok(res)
                                     }
@@ -214,6 +249,40 @@ pub async fn signin(mut req: Request<AppState>) -> tide::Result {
                                                 //.bind(hash(&f.password))
                                                 .fetch_one(&req.state().db_pool).await?;
                                             let mut res = tide::Response::new(StatusCode::Ok);
+                                            let u_id = Uuid::new_v4().to_string();
+                                            dotenv::dotenv().expect("Failed to read .env file");
+                                            use std::env;
+                                            let mut domain = "127.0.0.1".to_string();
+                                            match env::var("DOMAIN_NAME") {
+                                                Ok(_) => domain = "libredu.org".to_string(),
+                                                Err(_) => {
+                                                    //domain = "127.0.0.1".to_string()
+                                                }
+                                            };
+                                            use time::{Duration};
+                                            let _cookie = Cookie::build("libredu-user", user2.id.to_string())
+                                                .domain(domain.clone())
+                                                .path("/")
+                                                .secure(true)
+                                                .same_site(SameSite::None)
+                                                .max_age(Duration::days(180))
+                                                .http_only(true)
+                                                .finish();
+                                            res.insert_cookie(_cookie);
+                                            let _session = sqlx::query(r#"INSERT into session (user_id, key) values($1, $2)"#)
+                                                .bind(&user2.id)
+                                                .bind(&u_id)
+                                                //.bind(hash(&f.password))
+                                                .execute(&req.state().db_pool).await?;
+                                            let _cookie = Cookie::build("libredu-uuid", u_id)
+                                                .domain(domain)
+                                                .path("/")
+                                                .secure(true)
+                                                .same_site(SameSite::None)
+                                                .max_age(Duration::days(180))
+                                                .http_only(true)
+                                                .finish();
+                                            res.insert_cookie(_cookie);
                                             res.set_body(Body::from_json(&user2)?);
                                             Ok(res)
                                         }
