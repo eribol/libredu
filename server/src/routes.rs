@@ -164,7 +164,8 @@ fn teacher_api(state: AppState)->tide::Server<AppState>{
     let mut teacher_api = tide::with_state(state.clone());
     teacher_api.at("").get(teacher::teacher_detail).patch(teacher::patch_teacher).delete(teacher::del_teacher);
     teacher_api.at("/activities").get(teacher::get_activities).post(teacher::activities);
-    teacher_api.at("/activities/:act_id").patch(teacher::patch_activities);
+    //teacher_api.at("/activities/:act_id").patch(teacher::patch_activities);
+    teacher_api.at("/activities/:act_id").delete(teacher::del_activities);
     teacher_api.at("/limitations").get(teacher::get_limitations).post(teacher::limitations);
     teacher_api.at("/timetables").get(teacher::timetables);
     teacher_api

@@ -79,7 +79,7 @@ pub async fn get_activities(req: Request<AppState>) -> tide::Result {
     }
 }
 
-pub async fn patch_activities(req: Request<AppState>) -> tide::Result {
+pub async fn del_activities(req: Request<AppState>) -> tide::Result {
     let school_id: i32 = req.param("school")?.parse()?;
     let teacher_id: i32 = req.param("teacher_id")?.parse()?;
     let act_id: i32 = req.param("act_id")?.parse()?;
@@ -110,10 +110,9 @@ pub async fn patch_activities(req: Request<AppState>) -> tide::Result {
         Some(user)=>{
             if school.manager == user.id{
                 let mut res = tide::Response::new(StatusCode::Ok);
-                let _update = sqlx::query(r#"update activities set teacher = $1 from classes where activities.class = classes.id and activities.id = $2 and classes.school = $3 "#)
+                let _update = sqlx::query(r#"delete from activities where teacher = $1 and id = $2"#)
                     .bind(&teacher_id)
                     .bind(&act_id)
-                    .bind(&school_id)
                     .execute(&req.state().db_pool).await?;
                 res.set_body(Body::from_json(&act_id)?);
                 Ok(res)

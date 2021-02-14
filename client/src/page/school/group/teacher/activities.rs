@@ -168,7 +168,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::DeleteActivity(id)=>{
             let i =id.parse::<i32>().unwrap();
             orders.perform_cmd({
-                let url = format!("/api/activities/{}", i);
+                let url = format!("/api/schools/{}/groups/{}/teachers/{}/activities/{}", ctx_school.school.id, ctx_group.group.id, model.teacher.id, i);
                 let request = Request::new(url)
                     .method(Method::Delete);
                 async {
