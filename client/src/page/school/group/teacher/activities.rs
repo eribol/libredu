@@ -39,7 +39,8 @@ pub struct Model{
     act_form: activity::NewActivity,
     activities: Vec<activity::TeacherActivity>,
     subjects: Vec<activity::Subject>,
-    select: ElRef<HtmlSelectElement>
+    select: ElRef<HtmlSelectElement>,
+    error: String
 }
 
 pub fn init(teacher: i32, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx_school: &mut SchoolContext, ctx_group: &GroupContext)-> Model{
@@ -124,8 +125,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchSubjects(subjects)=>{
             match subjects{
                 Ok(s) => {
-                    model.subjects = s;
-                    model.act_form.subject = model.subjects[0].id;
+                    model.subjects = s.clone();
+                    if s.len() > 0{
+                        model.act_form.subject = model.subjects[0].id;
+                    }
+                    else {
+                        model.error = "Ders ekleyin.".to_string()
+                    }
                 }
                 Err(_) => {
                 }
@@ -189,7 +195,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::SubmitActivity=>{
             model.act_form.teacher = model.teacher.id;
             model.act_form.split = false;
-            if model.act_form.classes.len() > 0{
+            if ctx_group.classes.len() > 0 && model.subjects.len() > 0{
                 if model.act_form.classes.len() != 0 && model.act_form.subject != 0 && model.act_form.hour != ""{
                     orders.perform_cmd({
                         let url = format!("/api/schools/{}/groups/{}/teachers/{}/activities", ctx_school.school.id, ctx_group.group.id, model.teacher.id);
@@ -323,6 +329,7 @@ pub fn view(model: &Model, ctx_group: &GroupContext)->Node<Msg>{
                         ]
                     ]
                 ],
+                &model.error,
                 model.activities.iter().map(|a|
                     tr![
                         match a.teacher{

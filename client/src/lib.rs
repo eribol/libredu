@@ -303,7 +303,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::SendPost=>{
             model.form.sender = ctx.user.as_ref().unwrap().id;
             orders.perform_cmd({
-                let request = Request::new("/api/posts")
+                let request = Request::new(format!("/api/schools/{}/posts", &ctx.school[0].id))
                     .method(Method::Post)
                     .json(&model.form);
                 async {

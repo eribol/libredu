@@ -474,6 +474,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             for act in &model.data.acts{
                 match act.teacher{
                     Some(_t) => {
+
                         model.total_hour += act.hour as i32;
                     }
                     None => {}
@@ -645,13 +646,13 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)-> Node<Msg
                     p![
                         " Test2:",br![],
                         model.test.teachers.iter().map(|t|
-                            div![&t.first_name, " ", &t.last_name, " adlı öğretmene atanan ders sayısı, boş saatlerinden daha fazla.", br![]]
+                            div![&t.first_name, " ", &t.last_name, " adlı öğretmene atanan ders sayısı, boş saatlerinden daha fazla. Öğretmenin kısıtlamasını kontrol edin.", br![]]
                         )
                     ],
                     p![
                         " Test3:",br![],
                         model.test.classes.iter().map(|c|
-                            div![&c.kademe.to_string(), "/", &c.sube, " sınıfına atanan ders sayısı, boş saatlerinden daha fazla.", br![]]
+                            div![&c.kademe.to_string(), "/", &c.sube, " sınıfına atanan ders sayısı, boş saatlerinden daha fazla. Sınıfın kısıtlamasını kontrol edin.", br![]]
                         )
                     ],
                     /*p![

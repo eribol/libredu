@@ -252,6 +252,9 @@ pub async fn del_subject(req: Request<AppState>) -> tide::Result {
             .bind(&school_auth.school.id)
             .bind(&subject_id)
             .execute(&req.state().db_pool).await?;
+        let _ = sqlx::query("delete from activities where id = $1")
+            .bind(&subject_id)
+            .execute(&req.state().db_pool).await?;
         res.set_body(Body::from_json(&subject_id)?);
         Ok(res)
     }

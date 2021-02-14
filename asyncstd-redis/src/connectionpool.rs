@@ -3,14 +3,15 @@ use std::sync::Arc;
 use async_std::sync::{Mutex, MutexGuard};
 //use crate::Result;
 use async_std::net::TcpStream;
+use async_std::io::Result;
 
 
 //pub use error::Error;
 
 ///Result type used in the whole crate.
-//pub type Result<T> = std::result::Result<T, Error>;
 
 ///A connection pool. Clones are cheap and is the expected way to send the pool around your application.
+//pub type Result<T> = async_std::io::Result<T, async_std::io::Error>;
 #[derive(Clone, Debug)]
 pub struct ConnectionPool {
     connections: Vec<Arc<Mutex<TcpStream>>>,
@@ -49,11 +50,11 @@ impl ConnectionPool {
             connections,
             name: Arc::new(name.to_string()),
             password: password.map(|s| Arc::new(s.to_string())),
-            address: Arc::new(address),
+            address: Arc::new(address.clone()),
         };
 
         for i in 0..connection_count {
-            let mut conn = if let Some(p) = password {
+            let mut conn: TcpStream = if let Some(p) = password {
                 TcpStream::connect(&address).await?
             } else {
                 TcpStream::connect(&address).await?
@@ -64,7 +65,18 @@ impl ConnectionPool {
 
         Ok(out)
     }
-
+    pub async fn get(&self) -> MutexGuard<'_, TcpStream> {
+        for conn in self.connections.iter() {
+            {
+                if let Some(lock) = conn.try_lock() {
+                    return lock;
+                }
+            }
+        }
+        let mut lockers: futures::stream::FuturesUnordered<_> =
+            self.connections.iter().map(|l| l.lock()).collect();
+        lockers.next().await.unwrap()
+    }
     //Get an available connection from the pool, or wait for one to become available if none are
     //available.
     /*pub async fn get(&self) -> MutexGuard<'_, Connection> {

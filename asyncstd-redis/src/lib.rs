@@ -1,4 +1,6 @@
-mod connectionpool;
+extern crate async_std;
+pub mod connectionpool;
+
 
 pub enum Value {
     ///A Redis `OK` response.

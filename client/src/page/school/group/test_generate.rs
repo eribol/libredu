@@ -74,7 +74,7 @@ pub fn tests(
                 }
             }
         }
-        if total_act_hour > total_available_hour{
+        if total_act_hour > total_available_hour || tat.len() == 0{
             tests.teachers.push(teacher.clone())
         }
     }
@@ -90,7 +90,7 @@ pub fn tests(
                 }
             }
         }
-        if total_act_hour > total_available_hour{
+        if total_act_hour > total_available_hour || cat.len() == 0{
             tests.classes.push(class.clone())
         }
     }

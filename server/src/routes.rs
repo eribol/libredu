@@ -43,7 +43,7 @@ fn api_routes(state: AppState)->tide::Server<AppState>{
     app.at("/days").get(views::days);
     app.at("/reset").all(views::post_reset);
     app.at("/send_key").post(views::send_key);
-    app.at("/posts").get(views::get_posts).post(views::posts);
+    app.at("/posts").get(views::get_posts);
     app.at("/posts/:post_id").delete(views::del_post);
     //app.at("/add_cities").get(views::add_cities);
     //app.at("/activities/:act_id").delete(views::activities);
@@ -87,10 +87,12 @@ fn schools_api(state: AppState)->tide::Server<AppState>{
 fn school_api(state: AppState)->tide::Server<AppState>{
     use crate::api::school::school;
     use crate::api::school::group;
+    use crate::views;
     use crate::middlewares::{school_auth};
     let mut api = tide::with_state(state.clone());
     api.with(school_auth);
     api.at("").get(school::get_posts);
+    api.at("/posts").post(views::posts);
     api.at("/detail").get(school::school_detail);
     api.at("/unused_numbers").get(school::get_unused_numbers);
     api.at("/detail").patch(school::patch_school);
