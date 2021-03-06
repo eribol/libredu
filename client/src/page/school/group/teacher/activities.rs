@@ -258,7 +258,7 @@ pub fn view(model: &Model, ctx_group: &GroupContext, ctx_school:&SchoolContext)-
     div![
         C!{"columns"},
         div![
-            C!{"column is-8"},
+            C!{"column is-4"},
             "Toplam Ders saati: ", &model.activities.iter().fold(0, |acc, a| acc+a.hour).to_string(),
             hr![],
             table![
@@ -392,11 +392,11 @@ pub fn view(model: &Model, ctx_group: &GroupContext, ctx_school:&SchoolContext)-
                 ]
             ]
         ],
-        div![
+        /*div![
             C!{"column is-2"},
             ctx_school.teachers.iter().map(|t|
                 &t.first_name
             )
-        ]
+        ]*/
     ]
 }
