@@ -453,7 +453,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
 
             match hour.parse::<i32>(){
                 Ok(h)=>{
-                    if h >= 2 && h < 7{
+                    if h >= 2 {
                         model.params.hour = h;
                     }
                 }
