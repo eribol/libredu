@@ -180,13 +180,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::Submit => {
             model.generating = true;
             model.data.acts.sort_by(|a, b| b.hour.cmp(&a.hour));
-            /*orders.perform_cmd({
-                async {
-                    test_async(model).await
-                }
-            });*/
-
-            orders.perform_cmd(cmds::timeout(1000, || Msg::Generate));
+            orders.perform_cmd(cmds::timeout(200, || Msg::Generate));
         }
         Msg::FetchSchedules(schedules) => {
             match schedules{
@@ -737,10 +731,3 @@ fn generate(model: &Model)->Node<Msg>{
         ]
     }
 }
-
-/*async fn test_async(model: &mut Model) {
-    loop {
-        log!("aaa");
-        model.test_async = model.test_async+1;
-    }
-}*/

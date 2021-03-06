@@ -49,7 +49,7 @@ pub async fn get_activities(req: Request<AppState>) -> tide::Result {
         //use sqlx_core::row::Row;
         let acts: Vec<SimpleAct> = sqlx::query_as(r#"SELECT activities.id, activities.teacher, activities.subject, activities.classes, activities.hour, activities.split
                         FROM activities inner join subjects on activities.subject = subjects.id
-                        WHERE activities.teacher = $1 order by activities.teacher"#)
+                        WHERE activities.teacher = $1 order by activities.subject, activities.classes"#)
             .bind(&teacher_id)
             .bind(&school_auth.school.id)
             .fetch_all(&req.state().db_pool).await?;

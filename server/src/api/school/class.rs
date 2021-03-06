@@ -24,7 +24,7 @@ pub async fn activities(mut req: Request<AppState>) -> tide::Result {
             let mut cursor = sqlx::query(r#"SELECT
                         activities.id, subjects.id, subjects.name, users.id, users.first_name, users.last_name, activities.hour, activities.split, subjects.kademe,subjects.optional
                         FROM activities inner join users on activities.teacher= users.id inner join subjects on activities.subject = subjects.id
-                        WHERE $1 = any(activities.classes)"#)
+                        WHERE $1 = any(activities.classes) order by activities.subject, activities.teacher"#)
                 .bind(&class_id)
                 .fetch(&req.state().db_pool);
             let mut acts: Vec<ClassActivity> = Vec::new();

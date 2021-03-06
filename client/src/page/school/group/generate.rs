@@ -1,9 +1,16 @@
 use rand::seq::SliceRandom;
 use seed::{*};
+use serde::*;
 use crate::model;
 use crate::page::school::group::timetable::{ClassAvailable, Activity, NewClassTimetable};
 //use async_std::prelude::*;
 //use async_std::task;
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DelActReplace{
+    pub act_id: i32,
+    pub day: i32,
+    pub hour: i16
+}
 
 pub(crate) fn generate(
     max_day_hour: i32,
@@ -89,20 +96,30 @@ pub(crate) fn recursive_put(
     max_day_hour: i32,
     depth: usize,
     depth2: usize,
-    max_depth: usize
+    max_depth: usize,
 )
     -> bool {
     let conflict_acts = find_conflict_activity(act, &_acts, &timetables, &clean_tat, &tat, &cat, max_day_hour, depth2);
     //let start = Instant::now();
+    let mut del_act_replace: Vec<DelActReplace> = vec![];
     use rand::thread_rng;
     let mut okey2 = false;
-    let copy_tat = tat.clone();
-    let copy_timetables = timetables.clone();
-    let copy_cat = cat.clone();
     for conflict_act in &conflict_acts {
         let mut c_act = conflict_act.clone();
         c_act.shuffle(&mut thread_rng());
         for a in &c_act {
+            let tt: Vec<(usize, NewClassTimetable)> = timetables.iter().cloned()
+                .enumerate()
+                .filter(|t| t.1.activities.unwrap() == a.id).collect();
+            for t in tt{
+                let new_del = DelActReplace{
+                    act_id: a.id,
+                    day: t.1.day_id.unwrap(),
+                    hour: t.1.hour.unwrap()
+                };
+                del_act_replace.push(new_del);
+            }
+
             delete_activity(_acts, a, tat, timetables, cat, true);
         }
         //let mut c_act2: Vec<Activity> = Vec::new();
@@ -140,9 +157,10 @@ pub(crate) fn recursive_put(
 
         //}
         else {
-            *tat = copy_tat.clone();
-            *timetables = copy_timetables.clone();
-            *cat = copy_cat.clone();
+            for d in &del_act_replace{
+                let act = _acts.iter().find(|a| a.id == d.act_id).unwrap();
+                put_activity(act, _acts, tat, timetables, cat, d.day, d.hour as usize);
+            }
             okey2 = false;
             //break;
         }

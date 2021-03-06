@@ -6,6 +6,8 @@ pub struct Day{
     pub name: String
 }
 
+
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ClassAvailable{
     pub hours: Vec<bool>,
