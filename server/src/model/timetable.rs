@@ -1,4 +1,5 @@
 use serde::*;
+use crate::model;
 
 #[derive(Clone, sqlx::FromRow, Debug, Serialize, Deserialize)]
 pub struct Day{
@@ -12,12 +13,6 @@ pub struct ClassAvailable{
     pub(crate) day: Day
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow)]
-pub struct ClassAvailable2{
-    pub(crate) class_id: i32,
-    pub(crate) day: i32,
-    pub(crate) hours: Vec<bool>
-}
 #[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct InsertClassAvailable{
     pub class_id: i32,
@@ -42,14 +37,6 @@ pub struct Timetable {
 }
 
 #[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize, Default)]
-pub struct TeacherAvailable{
-    user_id: i32,
-    school_id: i32,
-    pub(crate) day: i32,
-    pub(crate) hours: Vec<bool>
-}
-
-#[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize, Default)]
 pub struct Activity{
     id: i32,
     subject: i32,
@@ -70,11 +57,11 @@ pub struct Class{
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TimetableData{
-    pub tat: Vec<TeacherAvailable>,
-    pub cat: Vec<ClassAvailable2>,
+    pub tat: Vec<model::teacher::TeacherAvailableForTimetables>,
+    pub cat: Vec<model::class::ClassAvailableForTimetables>,
     pub acts: Vec<Activity>,
-    pub classes: Vec<Class>,
-    pub teachers: Vec<Teacher>,
+    pub classes: Vec<model::class::ClassForTimetables>,
+    pub teachers: Vec<model::teacher::Teacher>,
     pub timetables: Vec<NewTimetable>
 }
 

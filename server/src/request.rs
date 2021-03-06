@@ -39,7 +39,7 @@ pub trait Auth{
     async fn get_group(&self)-> Option<ClassGroups>;
     async fn get_class(&self)-> Option<Class>;
     async fn get_group_auth(&self)-> i32;
-    async fn login(&self, uname: &String, pas: &String)->  bool;
+    async fn login(&self, uname: &str, pas: &str)->  bool;
 }
 
 #[tide::utils::async_trait]
@@ -118,8 +118,7 @@ impl Auth for Request<AppState>{
                         pk: row.get(8),
                         name: row.get(9)
                     }
-                };
-                break;
+                }
             }
             if s.id > 0 {
                 Some(s)
@@ -262,15 +261,10 @@ impl Auth for Request<AppState>{
         }
 
     }
-    async fn login(&self, uname: &String, pas: &String)-> bool{
+    async fn login(&self, uname: &str, pas: &str)-> bool{
 
         let is_valid = verify(pas, uname).unwrap();
-        if is_valid{
-            true
-        }
-        else{
-            false
-        }
+        is_valid
     }
 
 }

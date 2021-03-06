@@ -110,7 +110,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 subs::UrlRequested::new(crate::Urls::new(&_ctx.base_url).school_detail(school.id))
             );
         },
-        Msg::FetchSchool(Err(_))=>{log!("Alınamadı")},
+        Msg::FetchSchool(Err(e))=>{log!(e)},
         Msg::FetchTown(Ok(t))=>{
             model.towns = t;
             model.form.town = model.towns[0].pk;

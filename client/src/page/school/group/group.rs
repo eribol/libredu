@@ -274,7 +274,7 @@ fn home(model: &Model) -> Node<Msg>{
             ],
             p![
                 C!{"control"},
-                label![C!{"label"}, "Grup Adı:"],
+                label![C!{"label"}, "Grup Günlük Ders Saati Sayısı:"],
                 input![
                     C!{"input"},
                     attrs!{

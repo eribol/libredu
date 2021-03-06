@@ -179,7 +179,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::DeleteActivity(id)=>{
             let i =id.parse::<i32>().unwrap();
             orders.perform_cmd({
-                let url = format!("/api/activities/{}", i);
+                let url = format!("/api/schools/{}/groups/{}/classes/{}/activities/{}", ctx_school.school.id, ctx_group.group.id, &model.class.id, i);
                 let request = Request::new(url)
                     .method(Method::Delete);
                 async {
@@ -228,7 +228,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
 }
 pub fn activities(model: &Model, ctx_school:&SchoolContext)->Node<Msg>{
     div![
-        C!{"column"},
+        C!{"columns"},
+    div![
+        C!{"column is-6"},
+        "Toplam Ders saati: ", &model.activities.iter().fold(0, |acc, a| acc+a.hour).to_string(),
+        hr![],
         table![
             C!{"table table-hover"},
             thead![
@@ -248,53 +252,6 @@ pub fn activities(model: &Model, ctx_school:&SchoolContext)->Node<Msg>{
                 ]
             ],
             tbody![
-                tr![
-                    td![
-                        div![
-                            C!{"select"},
-                            select![
-                                attrs!{At::Name=>"teacher"},
-                                ctx_school.teachers.iter().map(|t|
-                                    option![
-                                        attrs!{At::Value=>&t.id},
-                                        &t.first_name, " ", &t.last_name
-                                    ]
-                                ),
-                                input_ev(Ev::Change, Msg::ChangeActTeacher)
-                            ]
-                        ]
-                    ],
-                    td![
-                        div![
-                            C!{"select"},
-                            select![
-                                attrs!{At::Name=>"subject"},
-                                model.subjects.iter().map(|s|
-                                    option![
-                                        attrs!{At::Value=>&s.id},
-                                        &s.name, if s.optional {" Seçmeli"} else {""}
-                                    ]
-                                ),
-                                input_ev(Ev::Change, Msg::ChangeActSubject)
-                            ]
-                        ]
-                    ],
-                    td![
-                        input![
-                            attrs!{At::Type=>"text", At::Name=>"hour", At::Id=>"hour"},
-                            input_ev(Ev::Change, Msg::ChangeActHour)
-                        ]
-                    ],
-                    td![
-                        input![
-                            attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Ekle"},
-                            ev(Ev::Click, |event| {
-                                event.prevent_default();
-                                Msg::SubmitActivity
-                            })
-                        ]
-                    ]
-                ],
                 model.activities.iter().map(|a|
                     tr![
                         td![
@@ -307,8 +264,9 @@ pub fn activities(model: &Model, ctx_school:&SchoolContext)->Node<Msg>{
                             &a.hour.to_string()
                         ],
                         td![
-                            input![
-                                attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Sil"},
+                            a![
+                                "Sil",
+                                //attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Sil"},
                                 {
                                     let id = a.id;
                                     ev(Ev::Click, move |_event| {
@@ -320,6 +278,47 @@ pub fn activities(model: &Model, ctx_school:&SchoolContext)->Node<Msg>{
                     ]
                 )
             ]
+        ]
+    ],
+    div![
+        C!{"column"},
+        div![
+            C!{"select"},
+            select![
+                attrs!{At::Name=>"teacher"},
+                ctx_school.teachers.iter().map(|t|
+                    option![
+                        attrs!{At::Value=>&t.id},
+                        &t.first_name, " ", &t.last_name
+                    ]
+                ),
+                input_ev(Ev::Change, Msg::ChangeActTeacher)
+            ]
+        ],
+        div![
+            C!{"select"},
+            select![
+                attrs!{At::Name=>"subject"},
+                model.subjects.iter().map(|s|
+                    option![
+                        attrs!{At::Value=>&s.id},
+                        &s.name, if s.optional {" Seçmeli"} else {""}
+                    ]
+                ),
+                input_ev(Ev::Change, Msg::ChangeActSubject)
+            ]
+        ],
+        input![
+            attrs!{At::Type=>"text", At::Name=>"hour", At::Id=>"hour"},
+            input_ev(Ev::Change, Msg::ChangeActHour)
+        ],
+        input![
+            attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Ekle"},
+            ev(Ev::Click, |event| {
+                event.prevent_default();
+                Msg::SubmitActivity
+            })
+        ]
         ]
     ]
 }

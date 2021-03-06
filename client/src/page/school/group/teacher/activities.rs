@@ -254,140 +254,149 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
     }
 }
 
-pub fn view(model: &Model, ctx_group: &GroupContext)->Node<Msg>{
+pub fn view(model: &Model, ctx_group: &GroupContext, ctx_school:&SchoolContext)->Node<Msg>{
     div![
-
-        C!{"column is-12"},
-        table![
-            C!{"table table-hover"},
-            thead![
-                tr![
-                    th![
-                        attrs!{At::Scope=>"col"},
-                        "Sınıflar"
-                    ],
-                    th![
-                        attrs!{At::Scope=>"col"},
-                        "Ders"
-                    ],
-                    th![
-                        attrs!{At::Scope=>"col"},
-                        "Süre"
-                    ]
-                ]
-            ],
-            tbody![
-                tr![
-                    td![
-                        style!{
-                            //St::Width => "px;"
-                        },
-                        div![
-                            //C!{"select"},
-                            select![
-                                //C!{"select"},
-                                el_ref(&model.select),
-                                attrs!{At::Name=>"classes", At::Multiple => true.as_at_value(), At::Size => "10"},
-                                ctx_group.classes.iter().map(|c|
-                                    option![
-                                        attrs!{At::Value=>&c.id},
-                                        &c.kademe.to_string(), "/", &c.sube," Sınıfı"
-                                    ]
-                                ),
-                                input_ev(Ev::Change, Msg::ChangeActClass)
-                            ]
-                        ]
-                    ],
-                    td![
-                        div![
-                            C!{"select"},
-                            select![
-                                attrs!{At::Name=>"subject"},
-                                model.subjects.iter().map(|s|
-                                    option![
-                                        attrs!{At::Value=>&s.id},
-                                        &s.name, "(", &s.kademe.to_string(), ")", if s.optional{" Seçmeli"} else{""}
-                                    ]
-                                ),
-                                input_ev(Ev::Change, Msg::ChangeActSubject)
-                            ]
-                        ]
-                    ],
-                    td![
-                        input![
-                            attrs!{At::Type=>"text", At::Name=>"hour"},
-                            input_ev(Ev::Change, Msg::ChangeActHour)
-                        ]
-                    ],
-                    td![
-                        input![
-                            attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Ekle"},
-                            ev(Ev::Click, |event| {
-                                event.prevent_default();
-                                Msg::SubmitActivity
-                            })
+        C!{"columns"},
+        div![
+            C!{"column is-8"},
+            "Toplam Ders saati: ", &model.activities.iter().fold(0, |acc, a| acc+a.hour).to_string(),
+            hr![],
+            table![
+                C!{"table table-hover"},
+                thead![
+                    tr![
+                        th![
+                            attrs!{At::Scope=>"col"},
+                            "Sınıflar"
+                        ],
+                        th![
+                            attrs!{At::Scope=>"col"},
+                            "Ders"
+                        ],
+                        th![
+                            attrs!{At::Scope=>"col"},
+                            "Süre"
                         ]
                     ]
                 ],
-                &model.error,
-                model.activities.iter().map(|a|
-                    tr![
-                        match a.teacher{
-                            Some(_ab)=>{
-                                style!{
+                tbody![
+                    &model.error,
+                    model.activities.iter().map(|a|
+                        tr![
+                            match a.teacher{
+                                Some(_ab)=>{
+                                    style!{
+                                    }
+                                }
+                                None => {
+                                    style!{
+                                        St::BackgroundColor=>"gray"
+                                    }
+                                }
+                            },
+                            td![
+                                a.classes.iter().map(|c|
+                                    div![
+                                        c.kademe.to_string()+"/"+&c.sube
+                                    ]
+                                )
+                            ],
+                            td![
+                                &a.subject.name
+                            ],
+                            td![
+                                &a.hour.to_string()
+                            ],
+                            match a.teacher{
+                                Some(_ab) =>{
+                                    td![
+                                        a![
+                                            "Sil",
+                                            //attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Sil"},
+                                            {
+                                                let id = a.id;
+                                                ev(Ev::Click, move |_event| {
+                                                    Msg::DeleteActivity(id.to_string())
+                                                })
+                                            }
+                                        ]
+                                    ]
+                                }
+                                None => {
+                                    td![
+                                        input![
+                                            attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Aktar"},
+                                            {
+                                                let id = a.id;
+                                                ev(Ev::Click, move |_event| {
+                                                    Msg::PatchActivity(id.to_string())
+                                                })
+                                            }
+                                        ]
+                                    ]
                                 }
                             }
-                            None => {
-                                style!{
-                                    St::BackgroundColor=>"gray"
-                                }
-                            }
-                        },
-                        td![
-                            a.classes.iter().map(|c|
-                                div![
-                                    c.kademe.to_string()+"/"+&c.sube
-                                ]
-                            )
-                        ],
-                        td![
-                            &a.subject.name
-                        ],
-                        td![
-                            &a.hour.to_string()
-                        ],
-                        match a.teacher{
-                            Some(_ab) =>{
-                                td![
-                                    input![
-                                        attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Sil"},
-                                        {
-                                            let id = a.id;
-                                            ev(Ev::Click, move |_event| {
-                                                Msg::DeleteActivity(id.to_string())
-                                            })
-                                        }
-                                    ]
-                                ]
-                            }
-                            None => {
-                                td![
-                                    input![
-                                        attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Aktar"},
-                                        {
-                                            let id = a.id;
-                                            ev(Ev::Click, move |_event| {
-                                                Msg::PatchActivity(id.to_string())
-                                            })
-                                        }
-                                    ]
-                                ]
-                            }
-                        }
-
-                    ]
-                )
+                        ]
+                    )
+                ]
             ]
+        ],
+        div![
+            C!{"column is-2"},
+            style!{
+                            //St::Width => "px;"
+            },
+            div![
+                C!{"field"},
+                select![
+                    el_ref(&model.select),
+                    attrs!{At::Name=>"classes", At::Multiple => true.as_at_value(), At::Size => "10"},
+                    ctx_group.classes.iter().map(|c|
+                        option![
+                            attrs!{At::Value=>&c.id},
+                            &c.kademe.to_string(), "/", &c.sube," Sınıfı"
+                        ]
+                    ),
+                    input_ev(Ev::Change, Msg::ChangeActClass)
+                ]
+            ],
+            div![
+                C!{"field"},
+                select![
+                    C!{"select"},
+                    attrs!{At::Name=>"subject"},
+                    model.subjects.iter().map(|s|
+                        option![
+                            attrs!{At::Value=>&s.id},
+                            &s.name, "(", &s.kademe.to_string(), ")", if s.optional{" Seçmeli"} else{""}
+                        ]
+                    ),
+                    input_ev(Ev::Change, Msg::ChangeActSubject)
+                ]
+            ],
+            div![
+                C!{"field"},
+                input![
+                    attrs!{At::Type=>"text", At::Name=>"hour"},
+                    input_ev(Ev::Change, Msg::ChangeActHour)
+                ]
+            ],
+            div![
+                C!{"field"},
+                input![
+                    attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Ekle"},
+                    ev(Ev::Click, |event| {
+                        event.prevent_default();
+                            Msg::SubmitActivity
+                        })
+                ]
+            ]
+        ],
+        div![
+            C!{"column is-2"},
+            ctx_school.teachers.iter().map(|t|
+                &t.first_name
+            )
         ]
     ]
 }

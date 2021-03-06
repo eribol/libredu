@@ -17,3 +17,20 @@ pub struct TeacherTimetable{
     pub hour: i16,
     pub subject: String,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct TeacherAvailableForTimetables{
+    pub(crate) user_id: i32,
+    school_id: i32,
+    pub(crate) day: i32,
+    pub(crate) hours: Vec<bool>
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct Teacher{
+    pub id: i32,
+    pub first_name: String,
+    pub last_name: String,
+    pub role_id: i32,
+    pub role_name: String
+}

@@ -267,7 +267,7 @@ pub fn context(model: &Model, ctx_school: &detail::SchoolContext, ctx_group: &Gr
             home(&model)
         }
         Pages::Activity(m)=>{
-            activities::view(m, ctx_group).map_msg(Msg::Activities)
+            activities::view(m, ctx_group, ctx_school).map_msg(Msg::Activities)
         }
         Pages::Limitation(m) => {
             limitations::view(m, ctx_school, ctx_group).map_msg(Msg::Limitations)

@@ -10,3 +10,4 @@ pub mod group;
 pub mod student;
 pub mod subject;
 pub mod class_room;
+pub mod library;

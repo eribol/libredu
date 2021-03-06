@@ -1,6 +1,7 @@
 use rand::seq::SliceRandom;
 use seed::{*};
-use crate::page::school::group::timetable::{TeacherAvailable, ClassAvailable, Activity, NewClassTimetable};
+use crate::model;
+use crate::page::school::group::timetable::{ClassAvailable, Activity, NewClassTimetable};
 //use async_std::prelude::*;
 //use async_std::task;
 
@@ -8,11 +9,12 @@ pub(crate) fn generate(
     max_day_hour: i32,
     max_depth: usize,
     depth2: usize,
-    tat: &mut Vec<TeacherAvailable>,
+    tat: &mut Vec<model::teacher::TeacherAvailableForTimetables>,
     cat: &mut Vec<ClassAvailable>,
     total_acts: &Vec<Activity>,
     timetables: &mut Vec<NewClassTimetable>,
-    clean_tat: &Vec<TeacherAvailable>
+    clean_tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
+    error: &mut String
 )
     -> bool {
     use rand::thread_rng;
@@ -52,6 +54,7 @@ pub(crate) fn generate(
                 let mut conflict_acts = find_conflict_activity(&act2, &total_acts, &timetables, clean_tat, &tat, &cat, max_day_hour, 4);
                 if conflict_acts.len() == 0 {
                     log!("Çakışan aktivite yok");
+                    *error = "Sınıf ile öğretmenin uyumlu uygun saatleri mevcut değil. Kısıtlamaları kontrol edin.".to_string();
                     return false;
                 }
                 conflict_acts.shuffle(&mut thread_rng());
@@ -80,8 +83,8 @@ pub(crate) fn recursive_put(
     act: &Activity,
     _acts: &Vec<Activity>,
     timetables: &mut Vec<NewClassTimetable>,
-    clean_tat: &Vec<TeacherAvailable>,
-    tat: &mut Vec<TeacherAvailable>,
+    clean_tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
+    tat: &mut Vec<model::teacher::TeacherAvailableForTimetables>,
     cat: &mut Vec<ClassAvailable>,
     max_day_hour: i32,
     depth: usize,
@@ -148,7 +151,7 @@ pub(crate) fn recursive_put(
 }
 
 
-fn delete_activity(_acts: &Vec<Activity>,act: &Activity, tat: &mut Vec<TeacherAvailable>,
+fn delete_activity(_acts: &Vec<Activity>,act: &Activity, tat: &mut Vec<model::teacher::TeacherAvailableForTimetables>,
                    timetables: &mut Vec<NewClassTimetable>, cat: &mut Vec<ClassAvailable>, _a: bool)-> bool
 {
     let tt: Vec<(usize, NewClassTimetable)> = timetables.iter().cloned()
@@ -181,8 +184,8 @@ fn find_conflict_activity(
     act: &Activity,
     _acts: &Vec<Activity>,
     timetables: &Vec<NewClassTimetable>,
-    clean_tat: &Vec<TeacherAvailable>,
-    _tat: &Vec<TeacherAvailable>,
+    clean_tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
+    _tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
     cat: &Vec<ClassAvailable>,
     max_day_hour: i32,
     depth: usize
@@ -194,7 +197,7 @@ fn find_conflict_activity(
 
     let activities: Vec<Activity> = _acts.iter().cloned()
         .filter(|a| act.classes.iter().any(|c1| a.classes.iter().any(|c2| c1 == c2)) || a.teacher==act.teacher).collect();
-    let mut teacher_availables: Vec<TeacherAvailable> = clean_tat.iter().cloned()
+    let mut teacher_availables: Vec<model::teacher::TeacherAvailableForTimetables> = clean_tat.iter().cloned()
         .filter(|t| t.user_id == act.teacher.unwrap() && t.hours.iter().any(|h| *h)).collect();
     //teacher_availables.sort_by(|a, b| a.hours.iter().fold(0, |acc, x| if *x{ acc+1} else{acc}).cmp(&b.hours.iter().fold(0, |acc, x| if *x{acc+1}else{acc})));
     teacher_availables.shuffle(&mut thread_rng());
@@ -271,7 +274,7 @@ fn find_conflict_activity(
 pub fn put_activity(
     act: &Activity,
     _total_acts: &Vec<Activity>,
-    tat: &mut Vec<TeacherAvailable>,
+    tat: &mut Vec<model::teacher::TeacherAvailableForTimetables>,
     timetables: &mut Vec<NewClassTimetable>,
     cat: &mut Vec<ClassAvailable>,
     day:i32,
@@ -311,21 +314,21 @@ pub fn put_activity(
 pub fn find_timeslot(
     act: &Activity,
     total_acts2: &Vec<Activity>,
-    tat: &Vec<TeacherAvailable>,
+    tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
     timetables: &Vec<NewClassTimetable>,
     cat: &Vec<ClassAvailable>,
-    clean_tat: &Vec<TeacherAvailable>,
+    clean_tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
     mut max_day_hour: i32,
     _for_conflict: bool
 )
     -> Option<Vec<(i32, usize)>> {
     use rand::thread_rng;
-    let mut teacher_availables: Vec<(usize, TeacherAvailable)> = tat.iter().cloned()
+    let mut teacher_availables: Vec<(usize, model::teacher::TeacherAvailableForTimetables)> = tat.iter().cloned()
         .enumerate()
         .filter(|t| t.1.user_id == act.teacher.unwrap() && t.1.hours.iter()
             .any(|h| *h)).collect();
     teacher_availables.shuffle(&mut thread_rng());
-    let mut _teacher_total_day_availables: Vec<(usize, TeacherAvailable)> = clean_tat.iter().cloned()
+    let mut _teacher_total_day_availables: Vec<(usize, model::teacher::TeacherAvailableForTimetables)> = clean_tat.iter().cloned()
         .enumerate()
         .filter(|t| t.1.user_id == act.teacher.unwrap() && t.1.hours.iter()
             .any(|h| *h)).collect();

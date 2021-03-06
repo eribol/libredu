@@ -9,6 +9,14 @@ pub struct Class{
     pub school: i32,
     pub group_id: i32
 }
+#[derive(Deserialize, Serialize, sqlx::FromRow, Debug, PartialEq, Clone)]
+pub struct ClassForTimetables{
+    pub id: i32,
+    pub kademe: String,
+    pub sube: String,
+    pub school: i32,
+    pub teacher: Option<i32>,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow, Default)]
 pub struct ClassTimetable{
@@ -48,4 +56,11 @@ pub struct UpdateClass{
     pub kademe: String,
     pub sube: String,
     pub group_id: i32
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ClassAvailableForTimetables{
+    pub(crate) class_id: i32,
+    pub(crate) day: i32,
+    pub(crate) hours: Vec<bool>
 }

@@ -143,6 +143,36 @@ pub async fn class_delete(req: Request<AppState>) -> tide::Result {
     }
 }
 
+pub async fn del_act(req: Request<AppState>) -> tide::Result{
+    let act_id: i32 = req.param("act_id")?.parse()?;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    if school_auth.role < 4{
+        use sqlx_core::postgres::PgQueryAs;
+        let act: Activity = sqlx::query_as("SELECT * FROM activities where id = $1")
+            .bind(&act_id)
+            .fetch_one(&req.state().db_pool).await?;
+        let cls: Class = sqlx::query_as("SELECT * FROM classes where id = any($1)")
+            .bind(&act.classes)
+            .fetch_one(&req.state().db_pool).await?;
+        if cls.school == school_auth.school.id {
+            let mut res = tide::Response::new(StatusCode::Ok);
+            let _del = sqlx::query("delete FROM activities where id = $1")
+                .bind(&act_id)
+                .execute(&req.state().db_pool).await?;
+            res.set_body(Body::from_string(act_id.to_string()));
+            Ok(res)
+        }
+        else{
+            let res = tide::Response::new(StatusCode::NotAcceptable);
+            Ok(res)
+        }
+    }
+    else{
+        let res = tide::Response::new(StatusCode::NotAcceptable);
+        Ok(res)
+    }
+}
+
 pub async fn limitations(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     //let school_id: i32 = req.param("school")?.parse()?;

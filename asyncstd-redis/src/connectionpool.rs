@@ -4,6 +4,7 @@ use async_std::sync::{Mutex, MutexGuard};
 //use crate::Result;
 use async_std::net::TcpStream;
 use async_std::io::Result;
+use crate::connect::RedisClient;
 
 
 //pub use error::Error;
@@ -14,7 +15,7 @@ use async_std::io::Result;
 //pub type Result<T> = async_std::io::Result<T, async_std::io::Error>;
 #[derive(Clone, Debug)]
 pub struct ConnectionPool {
-    connections: Vec<Arc<Mutex<TcpStream>>>,
+    connections: Vec<Arc<Mutex<RedisClient>>>,
     address: Arc<String>,
     password: Option<Arc<String>>,
     name: Arc<String>,
@@ -54,18 +55,13 @@ impl ConnectionPool {
         };
 
         for i in 0..connection_count {
-            let mut conn: TcpStream = if let Some(p) = password {
-                TcpStream::connect(&address).await?
-            } else {
-                TcpStream::connect(&address).await?
-            };
-            //let client_name = format!("{}-{}", name, i + 1);
+            let mut conn: RedisClient = RedisClient::connect(&address).await?;
             out.connections.push(Arc::new(Mutex::new(conn)));
         }
 
         Ok(out)
     }
-    pub async fn get(&self) -> MutexGuard<'_, TcpStream> {
+    pub async fn get(&self) -> MutexGuard<'_, RedisClient> {
         for conn in self.connections.iter() {
             {
                 if let Some(lock) = conn.try_lock() {

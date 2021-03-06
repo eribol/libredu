@@ -159,7 +159,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
 
 pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group: &GroupContext)-> Node<Msg>{
     div![
-        C!{"column is-12"},
+        C!{"column is-full"},
             match &model.pages{
                 Pages::Teacher(m) => {
                     teacher::view(m, ctx_school, ctx_group).map_msg(Msg::Teacher)

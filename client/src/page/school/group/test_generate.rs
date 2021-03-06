@@ -1,6 +1,7 @@
 use serde::*;
+use crate::model;
 use crate::page::school::detail;
-use crate::page::school::group::timetable::{Activity, TeacherAvailable, ClassAvailable, NewClassTimetable};
+use crate::page::school::group::timetable::{Activity, ClassAvailable, NewClassTimetable};
 use crate::model::user::Teacher;
 use crate::model::class::Class;
 use crate::page::school::group::generate::put_activity;
@@ -39,7 +40,7 @@ pub fn tests(
     tests: &mut Tests,
     ctx_school: &mut detail::SchoolContext,
     ctx_group: &mut GroupContext,
-    tat: &Vec<TeacherAvailable>,
+    tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
     cat: &Vec<ClassAvailable>
 ){
     let _fail_acts: Vec<Activity> = acts.iter().cloned().filter(|a| a.hour > max_day_hour as i16).collect();

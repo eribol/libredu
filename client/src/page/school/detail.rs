@@ -7,7 +7,7 @@ use crate::model::user::Teacher;
 use crate::model::class::Class;
 use crate::model::post::SchoolPost;
 use crate::page::school::group::group;
-use crate::page::school::{students, subjects, class_rooms};
+use crate::page::school::{students, subjects, class_rooms, library};
 
 
 #[derive(Debug, Default)]
@@ -38,6 +38,7 @@ pub enum Pages{
     Students(students::Model),
     Subjects(subjects::Model),
     Classrooms(class_rooms::Model),
+    //Library(library::home::Model),
     NotFound,
 }
 impl Default for Pages{
@@ -55,6 +56,7 @@ pub enum Msg{
     Students(students::Msg),
     Subjects(subjects::Msg),
     Classrooms(class_rooms::Msg),
+    //Library(library::home::Msg),
     FetchDetail(fetch::Result<(i16, SchoolDetail)>),
     FetchClassGroups(fetch::Result<Vec<ClassGroups>>),
     UpdateSubmit,
@@ -193,6 +195,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                         Some("class_rooms") => {
                             model.page = Pages::Classrooms(class_rooms::init(&mut orders.proxy(Msg::Classrooms), ctx_school))
                         }
+                        //Some("library") => {
+                          //  model.page = Pages::Library(library::home::init(&mut model.url, &mut orders.proxy(Msg::Library), ctx_school))
+                        //}
                         _ => {
                             model.page = Pages::NotFound
                         }
@@ -222,6 +227,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 class_rooms::update(msg, m, &mut orders.proxy(Msg::Classrooms), ctx_school)
             }
         }
+        /*Msg::Library(msg)=>{
+            if let Pages::Library(m)= &mut model.page{
+                library::home::update(msg, m, &mut orders.proxy(Msg::Library), ctx_school)
+            }
+        }*/
         Msg::FetchDetail(Ok(school))=> {
             ctx_school.school = school.1.clone();
             ctx_school.role = school.0;
@@ -303,7 +313,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 SchoolMenu {
                     link: "class_rooms".to_string(),
                     name: "Derslikler".to_string()
-                }
+                },
+                //SchoolMenu {
+                //    link: "library".to_string(),
+                //    name: "Kütüphane".to_string()
+                //}
             ]
         }
         Msg::FetchDetail(Err(_))=>{
@@ -434,7 +448,10 @@ pub fn view(model: &Model, ctx: &Context)-> Node<Msg>{
             },
             Pages::Classrooms(m) => {
                 class_rooms::view(m).map_msg(Msg::Classrooms)
-            }
+            },
+            //Pages::Library(m) => {
+            //    library::home::view(m, ctx_school).map_msg(Msg::Library)
+            //}
         }
     ]
 }

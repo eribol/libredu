@@ -7,21 +7,27 @@ use async_std::{
 use async_std::sync::Mutex;
 use async_std::net::TcpStream;
 use async_std::io::Result;
-use std::sync::Arc;
-use std::io::Error;
-use lib::connectionpool;
+use std::sync::{Arc};
+use lib::{connectionpool, connect};
+use lib::connect::RedisClient;
+
 extern crate num_cpus;
 
-//#[async_std::main]
-fn main() -> Result<()> {
-	let fut = accept_loop("127.0.0.1:6379");
-    task::block_on(fut)
+#[async_std::main]
+async fn main() -> Result<()> {
+    use connect;
+	let pool = connectionpool::ConnectionPool::create("127.0.0.1:6379".to_string(), None, num_cpus::get()).await?;
+    let mut conn = pool.get().await;
+    //client.write(conn);
+    //println!("{:?}", client.write());
+    Ok(())
+    //task::block_on(conn)
 }
-
+/*
 async fn accept_loop(address: &str) -> Result<()>
     {
-        let poll = connectionpool::ConnectionPool::create("127.0.0.1:6379".to_string(), None, num_cpus::get()).await?;
-        let mut conn = poll.get().await;
+        let _poll = connectionpool::ConnectionPool::create("127.0.0.1:6379".to_string(), None, num_cpus::get()).await?;
+        /*let mut conn = poll.get().await;
         conn.write_all(b"get hello3\n").await?;
         let mut buffer = Vec::new();
         let mut buf = vec![0; 15];
@@ -39,10 +45,10 @@ async fn accept_loop(address: &str) -> Result<()>
         //buf.pop();
         //let mut buf2 = read_until(&mut conn, b'\n').await?;
         //conn.read(&mut buf2).await?;
-        //println!("{:?}", buf2);
+        //println!("{:?}", buf2);*/
         Ok(())
     }
-
+*/
 async fn read_until(r: &mut TcpStream, byte: u8) -> io::Result<Vec<u8>>{
     let mut buffer = Vec::new();
     let mut single = [0; 1];

@@ -4,24 +4,51 @@ use http_types::{StatusCode, Body};
 use crate::AppState;
 use crate::request::{Auth, SchoolAuth};
 use crate::model::school::{SchoolDetail, School};
+use crate::model::group::ClassGroups;
+use crate::model::group as grp;
 use crate::model::city::{City, Town};
 use chrono::NaiveTime;
 use crate::model::timetable;
-use crate::model::timetable::NewTimetable;
+use crate::model;
+use crate::model::class;
 use crate::model::student::SimpleStudent;
 
 
-pub async fn groups(req: Request<AppState>) -> tide::Result {
-    let mut res = tide::Response::new(StatusCode::Ok);
-    let school_id: i32 = req.param("school")?.parse()?;
-    //let mut school: Vec<school::SchoolDetail> = Vec::new();
-    use sqlx_core::postgres::PgQueryAs;
-    let s: Vec<ClassGroups> = sqlx::query_as("SELECT * FROM class_groups WHERE school = $1")
-        .bind(&school_id)
-        .fetch_all(&req.state().db_pool).await?;
-    res.set_body(Body::from_json(&s)?);
-    res.insert_header("content-type", "application/json");
-    Ok(res)
+pub async fn add_class(mut req: Request<AppState>) -> tide::Result {
+    let class = req.body_json::<class::NewClass>().await?;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    if school_auth.role < 6 {
+        use sqlx_core::postgres::PgQueryAs;
+        let mut res = tide::Response::new(StatusCode::Ok);
+        let c: class::Class = sqlx::query_as("insert into classes(sube, kademe, school, group_id) values($1, $2, $3, $4) returning id, sube, kademe, school, group_id ")
+            .bind(&class.sube)
+            .bind(&class.kademe)
+            .bind(&school_auth.school.id)
+            .bind(&class.group_id)
+            .fetch_one(&req.state().db_pool).await?;
+        let days: Vec<i32> = vec![1, 2, 3, 4, 5, 6, 7];
+        let group: ClassGroups = sqlx::query_as("SELECT * FROM class_groups WHERE id = $1")
+            .bind(&c.group_id)
+            .fetch_one(&req.state().db_pool).await?;
+        for d in days {
+            let hours: Vec<bool>;
+            if d > 5 {
+                hours = vec![false; group.hour as usize];
+            } else {
+                hours = vec![true; group.hour as usize];
+            }
+            let _class_available = sqlx::query("INSERT into class_available(class_id,  day, hours) values($1, $2, $3)")
+                .bind(&c.id)
+                .bind(d)
+                .bind(hours)
+                .execute(&req.state().db_pool).await?;
+        }
+        res.set_body(Body::from_json(&c)?);
+        Ok(res)
+    } else {
+        let res = tide::Response::new(StatusCode::Unauthorized);
+        Ok(res)
+    }
 }
 
 pub async fn get_group(req: Request<AppState>) -> tide::Result {
@@ -40,18 +67,13 @@ pub async fn get_group(req: Request<AppState>) -> tide::Result {
     Ok(res)
 }
 
-pub async fn get_class_rooms(req: Request<AppState>) -> tide::Result {
+pub async fn get_classes(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
-    let school_id: i32 = req.param("school")?.parse()?;
+    //let school_id: i32 = req.param("school")?.parse()?;
     //let group_id: i32 = req.param("group_id")?.parse()?;
-    //let mut school: Vec<school::SchoolDetail> = Vec::new();
-    use crate::model::class_room;
-    use sqlx_core::postgres::PgQueryAs;
-    let s: Vec<class_room::Classroom> = sqlx::query_as("SELECT * FROM class_rooms WHERE school = $1")
-        .bind(&school_id)
-        .fetch_all(&req.state().db_pool).await?;
-    res.set_body(Body::from_json(&s)?);
-    res.insert_header("content-type", "application/json");
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    let classes = school_auth.school.get_classes(&req).await?;
+    res.set_body(Body::from_json(&classes)?);
     Ok(res)
 }
 
@@ -62,10 +84,9 @@ pub async fn get_students(req: Request<AppState>) -> tide::Result {
     let mut group_common: Vec<(i32, Vec<SimpleStudent>)> = vec![];
     if school_auth.role < 6 {
         use sqlx::prelude::PgQueryAs;
-        let classes: (Option<Vec<i32>>, ) = sqlx::query_as(r#"SELECT array_agg(id) FROM classes where group_id = $1"#)
-            .bind(&group_id.parse::<i32>()?)
-            .fetch_one(&req.state().db_pool).await?;
-        for c in classes.0.unwrap_or_default(){
+        let group = model::group::get_group(school_auth.school.id, group_id.parse::<i32>()?, &req).await?;
+        let ids = group.get_classes_ids(&req).await?;
+        for c in ids{
             let students: Vec<SimpleStudent> = sqlx::query_as(r#"SELECT students.id, students.first_name, students.last_name, students.school_number
                 FROM class_student inner join students on class_student.student = students.id
                 WHERE class_id = $1 and group_id = $2 "#)
@@ -291,7 +312,7 @@ pub async fn group_schedules(req: Request<AppState>) -> tide::Result {
                         Some(_) => {}
                         None => {
                             let schdls = Schedules{
-                                group_id: group_id,
+                                group_id,
                                 hour: (s+1) as i32,
                                 start_time: NaiveTime::parse_from_str("00:00", "%H:%M").unwrap(),
                                 end_time: NaiveTime::parse_from_str("00:00", "%H:%M").unwrap()
@@ -352,68 +373,35 @@ pub async fn patch_group_schedules(mut req: Request<AppState>) -> tide::Result {
 
 pub async fn timetables(mut req: Request<AppState>) -> tide::Result {
     let res = tide::Response::new(StatusCode::Ok);
-    let school_id: i32 = req.param("school")?.parse()?;
     let group_id: i32 = req.param("group_id")?.parse()?;
-    use sqlx_core::postgres::PgQueryAs;
-    use sqlx_core::cursor::Cursor;
-    use sqlx_core::row::Row;
-    let mut school = SchoolDetail::default();
-    let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, school.tel, school.location, city.pk, city.name, town.pk, town.name \
-            FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.id = $1")
-        .bind(&school_id)
-        .fetch(&req.state().db_pool);
-    while let Some(row) = query.next().await?{
-        school = SchoolDetail{
-            id: row.get(0),
-            name: row.get(1),
-            manager: row.get(2),
-            school_type: row.get(3),
-            tel: row.get(4),
-            location: row.get(5),
-            city: City{ pk: row.get(6), name: row.get(7) },
-            town: Town{
-                city: row.get(6),
-                pk: row.get(8),
-                name: row.get(9)
-            }
+    let posts = req.body_json::<Vec<timetable::NewTimetable>>().await?;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    if school_auth.role < 3 {
+        use sqlx_core::postgres::PgQueryAs;
+        let group: ClassGroups = sqlx::query_as(r#"select * from  class_groups where school= $1 and id = $2"#)
+            .bind(&school_auth.school.id)
+            .bind(&group_id)
+            .fetch_one(&req.state().db_pool).await?;
+        //for p in &post{
+        let ids = group.get_classes_ids(&req).await?;
+        /*let classes: (Option<Vec<i32>>, ) = sqlx::query_as(r#"select array_agg(id) from  classes where school= $1 and group_id = $2"#)
+                    .bind(&school_auth.school.id)
+                    .bind(&group_id)
+                    .fetch_one(&req.state().db_pool).await?;*/
+        sqlx::query("delete from class_timetable using activities where array[$1::int[]] @> activities.classes ")
+            .bind(&ids)
+            .execute(&req.state().db_pool).await?;
+        for p in posts {
+            let _insert: timetable::NewTimetable = sqlx::query_as("insert into class_timetable(class_id, day_id, hour, activities) values($1, $2, $3, $4) returning class_id, day_id, hour, activities")
+                .bind(&p.class_id)
+                .bind(&p.day_id)
+                .bind(&p.hour)
+                .bind(&p.activities)
+                .fetch_one(&req.state().db_pool).await?;
         }
-    }
-    match req.user().await {
-        Some(user) => {
-            if user.id == school.manager || user.is_admin{
-                let posts = req.body_json::<Vec<timetable::NewTimetable>>();
-                match posts.await{
-                    Ok(post)=> {
-                        //for p in &post{
-                        let classes: (Option<Vec<i32>>, ) = sqlx::query_as(r#"select array_agg(id) from  classes where school= $1 and group_id = $2"#)
-                            .bind(&school_id)
-                            .bind(&group_id)
-                            .fetch_one(&req.state().db_pool).await?;
-                        sqlx::query("delete from class_timetable using activities where array[$1::int[]] @> activities.classes ")
-                            .bind(&classes.0.unwrap())
-                            .execute(&req.state().db_pool).await?;
-                        for p in post {
-                            let _insert: timetable::NewTimetable = sqlx::query_as("insert into class_timetable(class_id, day_id, hour, activities) values($1, $2, $3, $4) returning class_id, day_id, hour, activities")
-                                .bind(&p.class_id)
-                                .bind(&p.day_id)
-                                .bind(&p.hour)
-                                .bind(&p.activities)
-                                .fetch_one(&req.state().db_pool).await?;
-                        }
-                        Ok(res)
-                    }
-                    Err(_)=>{
-                        Ok(res)
-                    }
-                }
-            }
-            else{
-                Ok(res)
-            }
-        }
-        None => {
-            Ok(res)
-        }
+        Ok(res)
+    } else {
+        Ok(res)
     }
 }
 
@@ -422,91 +410,38 @@ pub async fn get_timetables(req: Request<AppState>) -> tide::Result {
     let group_id: i32 = req.param("group_id")?.parse()?;
     let school_id: i32 = req.param("school")?.parse()?;
     use sqlx_core::postgres::PgQueryAs;
-    use sqlx_core::cursor::Cursor;
-    use sqlx_core::row::Row;
-    let mut school = SchoolDetail::default();
-    let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, school.tel, school.location, city.pk, city.name, town.pk, town.name \
-            FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.id = $1")
-        .bind(&school_id)
-        .fetch(&req.state().db_pool);
-    while let Some(row) = query.next().await?{
-        school = SchoolDetail{
-            id: row.get(0),
-            name: row.get(1),
-            manager: row.get(2),
-            school_type: row.get(3),
-            tel: row.get(4),
-            location: row.get(5),
-            city: City{ pk: row.get(6), name: row.get(7) },
-            town: Town{
-                city: row.get(6),
-                pk: row.get(8),
-                name: row.get(9)
-            }
-        }
-    }
-    match req.user().await {
-        Some(user) => {
-            use crate::model::timetable::{TeacherAvailable, TimetableData, ClassAvailable2, Class, Activity, Teacher};
-            if user.id == school.manager || user.is_admin{
-                let tat: Vec<TeacherAvailable> = sqlx::query_as(r#"select * from teacher_available where school_id = $1 and group_id = $2"#)
-                    .bind(&school_id)
-                    .bind(&group_id)
-                    .fetch_all(&req.state().db_pool).await?;
-                let teachers: Vec<Teacher> = sqlx::query_as(r#"select * from users inner join school_users on users.id = school_users.user_id where school_users.school_id = $1"#)
-                    .bind(&school_id)
-                    .fetch_all(&req.state().db_pool).await?;
-                let cat: Vec<ClassAvailable2> = sqlx::query_as(r#"select * from class_available inner join classes on class_available.class_id = classes.id
-                        where classes.school = $1 and classes.group_id = $2"#)
-                    .bind(&school_id)
-                    .bind(&group_id)
-                    .fetch_all(&req.state().db_pool).await?;
-                let classes: Vec<Class> = sqlx::query_as(r#"select * from classes where school = $1 and group_id = $2"#)
-                    .bind(&school_id)
-                    .bind(&group_id)
-                    .fetch_all(&req.state().db_pool).await?;
-                let classes_id: (Vec<i32>,) = sqlx::query_as(r#"select array_agg(id) from classes where school = $1 and group_id = $2"#)
-                    .bind(&school_id)
-                    .bind(&group_id)
-                    .fetch_one(&req.state().db_pool).await?;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
 
-                let acts: Vec<Activity> = sqlx::query_as(r#"select activities.id, activities.subject, activities.hour, activities.teacher, activities.split, activities.classes
+
+    if school_auth.role < 3 {
+        let group = grp::get_group(school_id, group_id, &req).await?;
+        use crate::model::timetable::{TimetableData, Activity};
+        let tat = group.get_tat(&req).await?;
+        let teachers = school_auth.school.get_teachers(&req).await?;
+        let cat = group.get_cat(&req).await?;
+        let classes = group.get_classes(&req).await?;
+        let acts: Vec<Activity> = sqlx::query_as(r#"select activities.id, activities.subject, activities.hour, activities.teacher, activities.split, activities.classes
                         from activities where classes && $1::integer[]"#)
-                    //.bind(&school_id)
-                    .bind(&classes_id.0)
-                    .fetch_all(&req.state().db_pool).await?;
-                let timetables: Vec<NewTimetable> = sqlx::query_as("SELECT class_timetable.class_id, class_timetable.day_id, class_timetable.hour, class_timetable.activities
-                            FROM class_timetable inner join classes on class_timetable.class_id = classes.id
-                            WHERE class_timetable.class_id = any($1) and classes.group_id = $2")
-                    .bind(&classes_id.0)
-                    .bind(&group_id)
-                    .fetch_all(&req.state().db_pool).await?;
-                let timetable_data = TimetableData{
-                    tat,
-                    cat,
-                    acts,
-                    classes,
-                    teachers,
-                    timetables
-                };
-                res.set_body(Body::from_json(&timetable_data)?);
-                Ok(res)
-            } else {
-                Ok(res)
-            }
-        }
-        None => {
-            Ok(res)
-        }
+            //.bind(&school_id)
+            .bind(&group.get_classes_ids(&req).await?)
+            .fetch_all(&req.state().db_pool).await?;
+        let timetables = group.get_timetables(&req).await?;
+        let timetable_data = TimetableData {
+            tat,
+            cat,
+            acts,
+            classes,
+            teachers,
+            timetables
+        };
+        res.set_body(Body::from_json(&timetable_data)?);
+        Ok(res)
+    } else {
+        Ok(res)
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
-struct ClassGroups{
-    id: i32,
-    name: String,
-    hour: i32
-}
+
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 struct Schedules{

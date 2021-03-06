@@ -8,6 +8,7 @@ mod students;
 mod student;
 mod subjects;
 mod class_rooms;
+mod library;
 
 
 #[derive(Debug)]

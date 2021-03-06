@@ -30,15 +30,16 @@ pub struct Model{
     pub total_hour: i32,
     //pub test_async: i32,
     //pub stream_handler: Option<CmdHandle>,
-    pub clean_tat: Vec<TeacherAvailable>,
+    pub clean_tat: Vec<model::teacher::TeacherAvailableForTimetables>,
     pub clean_cat: Vec<ClassAvailable>,
-    pub teacher_available: TeacherAvailable,
+    pub teacher_available: model::teacher::TeacherAvailableForTimetables,
     pub teacher_timetables: Vec<TeacherTimetable>,
     pub class_timetables: Vec<ClassTimetable>,
     pub data: TimetableData,
     pub test: test_generate::Tests,
     subjects: Vec<Subject>,
     schedules: Vec<Vec<Schedule>>,
+    pub error: String
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
@@ -56,13 +57,7 @@ pub struct NewClassTimetable {
     pub activities: Option<i32>
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
-pub struct TeacherAvailable{
-    pub(crate) user_id: i32,
-    school_id: i32,
-    pub(crate) day: i32,
-    pub(crate) hours: Vec<bool>
-}
+
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct Activity{
@@ -84,11 +79,11 @@ pub struct Class{
 }
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct TimetableData{
-    pub(crate) tat: Vec<TeacherAvailable>,
+    pub(crate) tat: Vec<model::teacher::TeacherAvailableForTimetables>,
     pub(crate) cat: Vec<ClassAvailable>,
     pub(crate) acts: Vec<Activity>,
     classes: Vec<Class>,
-    teachers: Vec<AuthUser>,
+    teachers: Vec<model::teacher::Teacher>,
     timetables: Vec<NewClassTimetable>
 }
 
@@ -346,12 +341,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
 
             let cat = &mut model.data.cat;
             let tat = &mut model.data.tat;
+            let error = &mut model.error;
             //let timetables = &mut model.data.timetables;
             if model.params.hour < 2 {
                 model.params.hour = 2;
             }
 
-            let result = generate::generate(model.params.hour, model.params.depth, model.params.depth2, tat, cat, &acts, &mut timetables, &model.clean_tat);
+            let result = generate::generate(model.params.hour, model.params.depth, model.params.depth2, tat, cat, &acts, &mut timetables, &model.clean_tat, error);
             model.data.timetables = timetables.clone();
             if result{
                 let acts2: Vec<Activity> = acts.iter().cloned()

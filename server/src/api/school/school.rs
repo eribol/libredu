@@ -4,15 +4,13 @@ use crate::request::{Auth, SchoolAuth};
 use http_types::{StatusCode, Body};
 use crate::model::school;
 use crate::model::user;
-use crate::model::class;
+use crate::model::group;
 use serde::*;
-use crate::model::class::{NewClass};
-use crate::model::school::{SchoolDetail, School};
+use crate::model::school::{SchoolDetail};
 use crate::model::post::SchoolPost;
 use crate::model::city::{City, Town};
 use crate::model::student::{NewStudent, Student};
-use crate::model::subject;
-use crate::model::class_room;
+use crate::model::{subject, library, class_room};
 use multer::Multipart;
 use crate::model::user::SimpleUser;
 
@@ -89,9 +87,7 @@ pub async fn add(mut req: Request<AppState>) -> tide::Result {
                 }
                 Err(_) => {
                     let form = req.body_json::<school::NewSchool>().await?;
-                    let add_school: sqlx::Result<School> = sqlx::query_as(r#"INSERT into school (name, town, school_type, manager) values($1, $2, $3, $4) returning id, name, manager"#)
-                        .bind(&form.name).bind(&form.town).bind(&form.school_type).bind(&u.id)
-                        .fetch_one(&req.state().db_pool).await;
+                    let add_school = form.add(&mut req, u.id).await;
                     match add_school {
                         Ok(_school) => {
                             use sqlx_core::cursor::Cursor;
@@ -152,6 +148,15 @@ pub async fn school_detail(req: Request<AppState>) -> tide::Result {
     Ok(res)
 }
 
+pub async fn get_groups(req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    let groups: Vec<group::ClassGroups> = school_auth.school.get_groups(&req).await?;
+    res.set_body(Body::from_json(&groups)?);
+    res.insert_header("content-type", "application/json");
+    Ok(res)
+}
+
 pub async fn patch_school(mut req: Request<AppState>) -> tide::Result {
     let form: school::UpdateSchoolForm = req.body_json::<school::UpdateSchoolForm>().await?;
     let school: &SchoolDetail = req.ext().unwrap();
@@ -164,61 +169,11 @@ pub async fn patch_school(mut req: Request<AppState>) -> tide::Result {
         .execute(&req.state().db_pool).await?;
     Ok(res)
 }
-pub async fn classes(req: Request<AppState>) -> tide::Result {
-    let mut res = tide::Response::new(StatusCode::Ok);
-    //let school_id: i32 = req.param("school")?.parse()?;
-    use sqlx_core::postgres::PgQueryAs;
-    let school_auth: &SchoolAuth = req.ext().unwrap();
-    let classes: Vec<class::Class> = sqlx::query_as("SELECT * FROM classes WHERE school = $1 order by kademe, sube")
-        .bind(&school_auth.school.id)
-        .fetch_all(&req.state().db_pool).await?;
-    //println!("{:?}", &classes);
-    res.set_body(Body::from_json(&classes)?);
-    Ok(res)
-}
-pub async fn add_class(mut req: Request<AppState>) -> tide::Result {
-    let class = req.body_json::<NewClass>().await?;
-    let school_auth: &SchoolAuth = req.ext().unwrap();
-    if school_auth.role < 6 {
-        use sqlx_core::postgres::PgQueryAs;
-        let mut res = tide::Response::new(StatusCode::Ok);
-        let c: class::Class = sqlx::query_as("insert into classes(sube, kademe, school, group_id) values($1, $2, $3, $4) returning id, sube, kademe, school, group_id ")
-            .bind(&class.sube)
-            .bind(&class.kademe)
-            .bind(&school_auth.school.id)
-            .bind(&class.group_id)
-            .fetch_one(&req.state().db_pool).await?;
-        let days: Vec<i32> = vec![1, 2, 3, 4, 5, 6, 7];
-        let group: ClassGroups = sqlx::query_as("SELECT * FROM class_groups WHERE id = $1")
-            .bind(&c.group_id)
-            .fetch_one(&req.state().db_pool).await?;
-        for d in days {
-            let hours: Vec<bool>;
-            if d > 5 {
-                hours = vec![false; group.hour as usize];
-            } else {
-                hours = vec![true; group.hour as usize];
-            }
-            let _class_available = sqlx::query("INSERT into class_available(class_id,  day, hours) values($1, $2, $3)")
-                .bind(&c.id)
-                .bind(d)
-                .bind(hours)
-                .execute(&req.state().db_pool).await?;
-        }
-        res.set_body(Body::from_json(&c)?);
-        Ok(res)
-    } else {
-        let res = tide::Response::new(StatusCode::Unauthorized);
-        Ok(res)
-    }
-}
+
 pub async fn get_subjects(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let school_auth: &SchoolAuth = req.ext().unwrap();
-    use sqlx::prelude::PgQueryAs;
-    let subjects: Vec<subject::Subject> = sqlx::query_as("SELECT * FROM subjects WHERE school = $1 order by optional, name, kademe")
-        .bind(&school_auth.school.id)
-        .fetch_all(&req.state().db_pool).await?;
+    let subjects = school_auth.school.get_subjects(&req).await?;
     res.set_body(Body::from_json(&subjects)?);
     Ok(res)
 }
@@ -227,7 +182,6 @@ pub async fn subjects(mut req: Request<AppState>) -> tide::Result {
     let _subject = req.body_json::<subject::NewSubject>().await?;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     use sqlx::prelude::PgQueryAs;
-    println!("{:?}", &school_auth.role);
     if school_auth.role < 3 && school_auth.school.id == _subject.school{
         let s: subject::Subject  = sqlx::query_as("insert into subjects(name, school, optional, kademe) values($1, $2, $3, $4) returning id, name, school, optional, kademe")
             .bind(&_subject.name)
@@ -242,7 +196,6 @@ pub async fn subjects(mut req: Request<AppState>) -> tide::Result {
         Ok(res)
     }
 }
-
 pub async fn del_subject(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let school_auth: &SchoolAuth = req.ext().unwrap();
@@ -262,29 +215,11 @@ pub async fn del_subject(req: Request<AppState>) -> tide::Result {
         Ok(res)
     }
 }
-
 pub async fn get_teachers(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let school_auth: &SchoolAuth = req.ext().unwrap();
-    if let Some(_user) = req.user().await {
-        use sqlx::Cursor;
-        use sqlx::Row;
-        let mut tchrs = sqlx::query("SELECT users.id, users.first_name, users.last_name, roles.id, roles.name \
-                        FROM school_users inner join users on school_users.user_id = users.id inner join roles on school_users.role = roles.id \
-                        WHERE school_users.school_id = $1 and school_users.role <= 5 order by roles.id, users.first_name")
-            .bind(&school_auth.school.id)
-            .fetch(&req.state().db_pool);
-        let mut teachers: Vec<user::Teacher> = vec![];
-        while let Some(row) = tchrs.next().await? {
-            let teacher = user::Teacher {
-                id: row.get(0),
-                first_name: row.get(1),
-                last_name: row.get(2),
-                role_id: row.get(3),
-                role_name: row.get(4)
-            };
-            teachers.push(teacher);
-        }
+    if school_auth.role < 6 {
+        let teachers = school_auth.school.get_teachers(&req).await?;
         res.set_body(Body::from_json(&teachers)?);
         Ok(res)
     } else {
@@ -369,7 +304,6 @@ pub async fn teachers(mut req: Request<AppState>) -> tide::Result {
         }
     }
 }
-
 pub async fn students(mut req: Request<AppState>) -> tide::Result {
     let student = req.body_json::<NewStudent>().await?;
     let school_auth: &SchoolAuth = req.ext().unwrap();
@@ -398,7 +332,6 @@ pub async fn students(mut req: Request<AppState>) -> tide::Result {
         Ok(res)
     }
 }
-
 pub async fn students_with_file(req: Request<AppState>) -> tide::Result {
     // MultiPartFor------------
     use futures_codec::{BytesCodec, FramedRead};
@@ -485,7 +418,6 @@ pub async fn students_with_file(req: Request<AppState>) -> tide::Result {
     let res = tide::Response::new(StatusCode::Ok);
     Ok(res)
 }
-
 pub async fn class_rooms(mut req: Request<AppState>) -> tide::Result {
     let class_room = req.body_json::<class_room::NewClassroom>().await?;
     let school_auth: &SchoolAuth = req.ext().unwrap();
@@ -507,24 +439,17 @@ pub async fn class_rooms(mut req: Request<AppState>) -> tide::Result {
         Ok(res)
     }
 }
-
 pub async fn get_class_rooms(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     //let student = req.body_json::<NewStudent>().await?;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     use sqlx::prelude::PgQueryAs;
-    if school_auth.role < 8{
-        let students: Vec<class_room::Classroom> = sqlx::query_as("select * from class_rooms where school = $1")
-            .bind(&school_auth.school.id)
-            .fetch_all(&req.state().db_pool).await?;
-        res.set_body(Body::from_json(&students)?);
-        Ok(res)
-    }
-    else {
-        Ok(res)
-    }
+    let class_rooms: Vec<class_room::Classroom> = sqlx::query_as("select * from class_rooms where school = $1")
+        .bind(&school_auth.school.id)
+        .fetch_all(&req.state().db_pool).await?;
+    res.set_body(Body::from_json(&class_rooms)?);
+    Ok(res)
 }
-
 pub async fn del_class_room(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let number = req.param("class_room_id").unwrap().parse::<i32>().unwrap();
@@ -540,7 +465,6 @@ pub async fn del_class_room(req: Request<AppState>) -> tide::Result {
 
     Ok(res)
 }
-
 pub async fn get_unused_numbers(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let school_auth: &SchoolAuth = req.ext().unwrap();
@@ -582,6 +506,148 @@ pub async fn get_students(req: Request<AppState>) -> tide::Result {
     }
     else {
         Ok(res)
+    }
+}
+pub async fn get_library(req: Request<AppState>) -> tide::Result{
+    let mut res = tide::Response::new(StatusCode::Ok);
+    use sqlx::prelude::PgQueryAs;
+    let user = req.user().await;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    match user{
+        Some(u) => {
+            let l = school_auth.school.get_library(&req).await?;
+            if school_auth.role < 3 || u.id == l.manager{
+                res.set_body(Body::from_json(&l)?);
+                Ok(res)
+            }
+            else {
+                Ok(res)
+            }
+        }
+        None => {
+            Ok(res)
+        }
+    }
+}
+pub async fn get_books(req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    let library_id = req.param("library_id").unwrap().parse::<i32>().unwrap();
+    use sqlx::prelude::PgQueryAs;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    if school_auth.role < 7 {
+        let books: Vec<library::Book> = sqlx::query_as(r#"select * from books inner join libraries on books.library = libraries.id where libraries.school = $1 and libraries.id = $2"#)
+            .bind(&school_auth.school.id)
+            .bind(&library_id)
+            .fetch_all(&req.state().db_pool).await?;
+        res.set_body(Body::from_json(&books)?);
+        Ok(res)
+    } else {
+        Ok(res)
+    }
+}
+pub async fn books(mut req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    let library_id = req.param("library_id").unwrap().parse::<i32>().unwrap();
+    let book = req.body_json::<library::NewBook>().await?;
+    use sqlx::prelude::PgQueryAs;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+
+    if school_auth.role < 7 {
+        let user = req.user().await.unwrap();
+        let lb: library::Library = sqlx::query_as(r#"select * from libraries where school = $1 and manager = $2"#)
+            .bind(&school_auth.school.id)
+            .bind(&user.id)
+            .fetch_one(&req.state().db_pool).await?;
+        if book.barkod >= lb.barkod_min && book.barkod <= lb.barkod_max{
+            let b: library::Book = sqlx::query_as(r#"insert into books(library, name, writer, piece, barkod) values($1, $2, $3, $4, $5)
+                    returning id, library, name, writer, piece, barkod"#)
+                .bind(&lb.id)
+                .bind(&book.name).bind(&book.writer).bind(&book.piece).bind(&book.barkod).bind(&lb.barkod_min).bind(&lb.barkod_max)
+                .fetch_one(&req.state().db_pool).await?;
+            res.set_body(Body::from_json(&b)?);
+        }
+        Ok(res)
+    } else {
+        Ok(res)
+    }
+}
+pub async fn library(mut req: Request<AppState>) -> tide::Result{
+    let mut res = tide::Response::new(StatusCode::Ok);
+    use sqlx::prelude::PgQueryAs;
+    let lbrry = req.body_json::<library::NewLibrary>().await?;
+    let user = req.user().await;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    match user{
+        Some(_) => {
+            let l = school_auth.school.get_library(&req).await;
+            match l{
+                Ok(_) => {
+                    Ok(res)
+                }
+                Err(_) => {
+                    if school_auth.role < 3 {
+                        let _ = sqlx::query(r#"select * from school_users where school_id = $1 and user_id = $2) "#)
+                            .bind(&school_auth.school.id)
+                            .bind(&lbrry.manager)
+                            .execute(&req.state().db_pool).await?;
+                        let l2: library::NewLibrary = sqlx::query_as(r#"insert into libraries(school, manager, barkod_min, barkod_max, student)
+                                values($1, $2, $3, $4, $5) returning id, manager, school, barkod_min, barkod_max, student"#)
+                            .bind(&school_auth.school.id)
+                            .bind(&lbrry.manager).bind(lbrry.barkod_min).bind(lbrry.barkod_max).bind(lbrry.student)
+                            .fetch_one(&req.state().db_pool).await?;
+                        res.set_body(Body::from_json(&l2)?);
+                        Ok(res)
+                    }
+                    else {
+                        Ok(res)
+                    }
+                }
+            }
+        }
+        None => {
+            Ok(res)
+        }
+    }
+}
+
+pub async fn patch_library(mut req: Request<AppState>) -> tide::Result{
+    let mut res = tide::Response::new(StatusCode::Ok);
+    use sqlx::prelude::PgQueryAs;
+    let lbrry = req.body_json::<library::NewLibrary>().await?;
+    let user = req.user().await;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    match user{
+        Some(_) => {
+            let l: sqlx::Result<library::Library> = sqlx::query_as(r#"select * from libraries where school = $1"#)
+                .bind(&school_auth.school.id)
+                .fetch_one(&req.state().db_pool).await;
+            match l{
+                Ok(_) => {
+                    if school_auth.role < 3 {
+                        let _ = sqlx::query(r#"select * from school_users where school_id = $1 and user_id = $2 "#)
+                            .bind(&school_auth.school.id)
+                            .bind(&lbrry.manager)
+                            .execute(&req.state().db_pool).await?;
+                        let l2: library::NewLibrary = sqlx::query_as(r#"update libraries set manager= $1, barkod_min = $2, barkod_max = $3, student = $4 where school = $5
+                                returning id, manager, school, barkod_min, barkod_max, student"#)
+                            .bind(&lbrry.manager).bind(lbrry.barkod_min).bind(lbrry.barkod_max).bind(lbrry.student).bind(&school_auth.school.id)
+                            .fetch_one(&req.state().db_pool).await?;
+                        res.set_body(Body::from_json(&l2)?);
+                        Ok(res)
+                    }
+                    else {
+                        Ok(res)
+                    }
+
+                }
+                Err(_) => {
+                    Ok(res)
+                }
+            }
+        }
+        None => {
+            Ok(res)
+        }
     }
 }
 
