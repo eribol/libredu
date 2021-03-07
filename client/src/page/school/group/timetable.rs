@@ -171,8 +171,8 @@ pub fn init(orders: &mut impl Orders<Msg>, ctx_school: &detail::SchoolContext, c
     let mut model = Model::default();
     model.generating = false;
     model.params.hour = 2;
-    model.params.depth2 = 2;
-    model.params.depth = 7;
+    model.params.depth2 = 3;
+    model.params.depth = 10;
     model
 }
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, _ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext) {
@@ -191,87 +191,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 Err(_) => {}
             }
         }
-        /*Msg::FetchGroups(groups) => {
-            //log!(groups)
-            model.class_groups = groups.unwrap();
-            if model.class_groups.len() > 0 {
-                model.selected_group = model.class_groups[0].clone();
-            }
-
-            for group in &model.class_groups {
-                orders.perform_cmd({
-                    let url = format!("/api/schools/{}/groups/{}/schedules", _ctx_school.school.id, group.id);
-                    let request = Request::new(url)
-                        .method(Method::Get);
-                    async {
-                        Msg::FetchSchedules(async {
-                            request
-                                .fetch()
-                                .await?
-                                .check_status()?
-                                .json()
-                                .await
-                        }.await)
-                    }
-                });
-            }
-            orders.perform_cmd({
-                let adres = format!("/api/schools/{}/timetables/{}", _ctx_school.school.id, model.selected_group.id);
-                let request = Request::new(adres)
-                    .method(Method::Get);
-                async { Msg::FetchData(async {
-                    request
-                        .fetch()
-                        .await?
-                        .check_status()?
-                        .json()
-                        .await
-                }.await)}
-            });
-
-        }*/
-        /*Msg::GroupChanged(id) => {
-            //model.total_hour = 0;
-            match id.parse::<i32>(){
-                Ok(i) => {
-                    let group = model.class_groups.clone().into_iter().find(|g| g.id == i).unwrap();
-                    model.selected_group = group.clone();
-                    orders.perform_cmd({
-                        let adres = format!("/api/schools/{}/timetables/{}", _ctx_school.school.id, model.selected_group.id);
-                        let request = Request::new(adres)
-                            .method(Method::Get);
-                        async { Msg::FetchData(async {
-                            request
-                                .fetch()
-                                .await?
-                                .check_status()?
-                                .json()
-                                .await
-                        }.await)}
-                    });
-                    //let classes: Vec<models::class::Class> = _ctx_school.classes.clone().into_iter().filter(|c| c.group_id.as_ref().unwrap() == &model.selected_group.id).collect();
-                    //log!(&model.data.acts.len());
-                    //let acts: Vec<Activity> = model.data.acts.clone().into_iter().filter(|a| classes.iter().any(|c| a.classes.iter().any(|cc| cc == &c.id) || a.class == c.id)).collect();
-                    //log!(acts.len());
-
-                    //let timetables: Vec<NewClassTimetable> = model.data.timetables.clone().into_iter().filter(|tt| acts.iter().any(|a| a.id == tt.activities.unwrap())).collect();
-
-                }
-                Err(_) => {
-                    //model.selected_group = None;
-                    let classes: Vec<model::class::Class> = _ctx_school.classes.clone().into_iter().filter(|c| c.group_id == model.selected_group.id).collect();
-                    let acts: Vec<Activity> = model.data.acts.clone().into_iter().filter(|a| classes.iter().any(|c| a.class == c.id)).collect();
-                    for act in &acts{
-                        match act.teacher{
-                            Some(_t) => {
-                                model.total_hour += act.hour as i32;
-                            }
-                            None => {}
-                        }
-                    }
-                }
-            }
-        }*/
         Msg::DeleteSubmit => {
             model.data.tat = model.clean_tat.clone();
             model.data.cat = model.clean_cat.clone();
@@ -337,6 +256,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             let tat = &mut model.data.tat;
             let error = &mut model.error;
             //let timetables = &mut model.data.timetables;
+            if model.params.hour >= ctx_group.group.hour {
+                model.params.hour = ctx_group.group.hour-1  ;
+            }
             if model.params.hour < 2 {
                 model.params.hour = 2;
             }

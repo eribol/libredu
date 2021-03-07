@@ -110,7 +110,7 @@ pub fn tests(
                     put_activity(&a, acts, &mut tat2, &mut timetables, &mut cat2, slots[0].0, slots[0].1);
                 },
                 None => {
-                    let rec_result = recursive_put(&a, acts, &mut timetables, tat, &mut tat2, &mut cat2, max_day_hour, 0, 2, 7);
+                    let rec_result = recursive_put(&a, acts, &mut timetables, tat, &mut tat2, &mut cat2, max_day_hour, 0, 7);
                     if rec_result {
                     }
                     else {
@@ -135,7 +135,7 @@ pub fn tests(
                     put_activity(&a, acts, &mut tat2, &mut timetables, &mut cat2, slots[0].0, slots[0].1);
                 },
                 None => {
-                    let rec_result = recursive_put(&a, acts, &mut timetables, tat, &mut tat2, &mut cat2, max_day_hour, 0, 2, 8);
+                    let rec_result = recursive_put(&a, acts, &mut timetables, tat, &mut tat2, &mut cat2, max_day_hour, 0, 8);
                     if rec_result {
                     }
                     else {

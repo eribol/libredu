@@ -160,7 +160,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 Ok(sbjcts) => {
                     //log!(&sbjcts);
                     model.subjects = sbjcts.clone().into_iter().filter(|s| s.kademe == model.class.kademe).collect();
-                    log!(&model.subjects);
                     if model.subjects.len() > 0 {
                         model.act_form.subject = model.subjects[0].id;
                     }

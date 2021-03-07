@@ -7,7 +7,7 @@ use crate::page::school::group::timetable::{ClassAvailable, Activity, NewClassTi
 //use async_std::task;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DelActReplace{
-    pub act_id: i32,
+    pub act_id: Activity,
     pub day: i32,
     pub hour: i16
 }
@@ -46,18 +46,15 @@ pub(crate) fn generate(
             return true
         },
         None => {
-            let timetables_backup = timetables.clone();
-            let tat_backup = tat.clone();
-            let cat_backup = cat.clone();
-            let rec_result = recursive_put(&act2, total_acts, timetables, clean_tat, tat, cat, max_day_hour, 0, depth2, max_depth);
+
+            let rec_result = recursive_put(&act2, total_acts, timetables, clean_tat, tat, cat, max_day_hour, 0, max_depth);
             if rec_result {
+                assert_eq!(act2.hour as usize, timetables.iter().cloned()
+                    .enumerate()
+                    .filter(|t| t.1.activities.unwrap() == act2.id).collect::<Vec<(usize, NewClassTimetable)>>().len());
                 return true;
             }
             else {
-
-                *timetables = timetables_backup;
-                *tat = tat_backup;
-                *cat = cat_backup;
                 let mut conflict_acts = find_conflict_activity(&act2, &total_acts, &timetables, clean_tat, &tat, &cat, max_day_hour, 4);
                 if conflict_acts.len() == 0 {
                     log!("Çakışan aktivite yok");
@@ -69,11 +66,14 @@ pub(crate) fn generate(
                 for a in &c_act {
                     delete_activity(total_acts, a, tat, timetables, cat, true);
                 }
-                c_act.insert(0, act2.clone());
+                //c_act.insert(0, act2.clone());
                 let available2 = find_timeslot(act2, &total_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, false);
                 match available2 {
                     Some(slots2) => {
                         put_activity(act2, total_acts, tat, timetables, cat, slots2[0].0, slots2[0].1);
+                        assert_eq!(act2.hour as usize, timetables.iter().cloned()
+                            .enumerate()
+                            .filter(|t| t.1.activities.unwrap() == act2.id).collect::<Vec<(usize, NewClassTimetable)>>().len());
                         return true
                     },
                     None => {
@@ -83,6 +83,7 @@ pub(crate) fn generate(
             }
         }
     }
+
 }
 //Add all timetables array to database
 
@@ -95,11 +96,11 @@ pub(crate) fn recursive_put(
     cat: &mut Vec<ClassAvailable>,
     max_day_hour: i32,
     depth: usize,
-    depth2: usize,
+    //depth2: usize,
     max_depth: usize,
 )
     -> bool {
-    let conflict_acts = find_conflict_activity(act, &_acts, &timetables, &clean_tat, &tat, &cat, max_day_hour, depth2);
+    let conflict_acts = find_conflict_activity(act, &_acts, &timetables, &clean_tat, &tat, &cat, max_day_hour, max_depth);
     //let start = Instant::now();
     let mut del_act_replace: Vec<DelActReplace> = vec![];
     use rand::thread_rng;
@@ -108,17 +109,17 @@ pub(crate) fn recursive_put(
         let mut c_act = conflict_act.clone();
         c_act.shuffle(&mut thread_rng());
         for a in &c_act {
-            let tt: Vec<(usize, NewClassTimetable)> = timetables.iter().cloned()
+            let tt = timetables.iter().cloned()
                 .enumerate()
-                .filter(|t| t.1.activities.unwrap() == a.id).collect();
-            for t in tt{
+                .find(|t| t.1.activities.unwrap() == a.id).unwrap();
+
                 let new_del = DelActReplace{
-                    act_id: a.id,
-                    day: t.1.day_id.unwrap(),
-                    hour: t.1.hour.unwrap()
+                    act_id: a.clone(),
+                    day: tt.1.day_id.unwrap(),
+                    hour: tt.1.hour.unwrap()
                 };
                 del_act_replace.push(new_del);
-            }
+
 
             delete_activity(_acts, a, tat, timetables, cat, true);
         }
@@ -135,7 +136,7 @@ pub(crate) fn recursive_put(
                 },
                 None => {
                     if depth < max_depth {
-                        let rec_result = recursive_put(a, _acts, timetables, &clean_tat, tat, cat, max_day_hour, depth + 1, depth2, max_depth);
+                        let rec_result = recursive_put(a, _acts, timetables, &clean_tat, tat, cat, max_day_hour, depth + 1, max_depth);
                         if !rec_result {
                             okey = false;
                             break;
@@ -157,9 +158,13 @@ pub(crate) fn recursive_put(
 
         //}
         else {
-            for d in &del_act_replace{
-                let act = _acts.iter().find(|a| a.id == d.act_id).unwrap();
-                put_activity(act, _acts, tat, timetables, cat, d.day, d.hour as usize);
+            //let act = _acts.iter().find(|a| a.id == d.act_id).unwrap();
+            //for a in &c_act {
+            delete_activity(_acts, act, tat, timetables, cat, true);
+            //};
+            for d in &del_act_replace {
+                delete_activity(_acts, &d.act_id, tat, timetables, cat, true);
+                put_activity(&d.act_id, _acts, tat, timetables, cat, d.day, d.hour as usize);
             }
             okey2 = false;
             //break;

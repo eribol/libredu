@@ -209,9 +209,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             });
         }
         Msg::SubmitAllLimitation => {
-            for _ in &ctx_school.teachers{
+            for t in &ctx_school.teachers{
                 orders.perform_cmd({
-                    let url = format!("/api/schools/{}/groups/{}/teachers/{}/limitations", ctx_school.school.id, ctx_group.group.id, model.teacher.id);
+                    let url = format!("/api/schools/{}/groups/{}/teachers/{}/limitations", ctx_school.school.id, ctx_group.group.id, t.id);
                     let request = Request::new(url)
                         .method(Method::Post)
                         .json(&model.limitation);

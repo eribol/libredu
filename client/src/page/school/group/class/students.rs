@@ -70,7 +70,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchAllStudents(st)=>{
             model.all_students = st.unwrap();
             model.all_students.sort_by(|a, b| a.school_number.cmp(&b.school_number));
-            log!(&model.all_students);
             orders.perform_cmd({
                 let url = format!("/api/schools/{}/groups/{}/classes/{}/students", &ctx_school.school.id, &ctx_group.group.id, model.class.id);
                 let request = Request::new(url)
