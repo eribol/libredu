@@ -171,8 +171,8 @@ pub fn init(orders: &mut impl Orders<Msg>, ctx_school: &detail::SchoolContext, c
     let mut model = Model::default();
     model.generating = false;
     model.params.hour = 2;
-    model.params.depth2 = 4;
-    model.params.depth = 8;
+    //model.params.depth2 = 2;
+    model.params.depth = 10;
     model
 }
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, _ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext) {
@@ -257,7 +257,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             let error = &mut model.error;
             //let timetables = &mut model.data.timetables;
             if model.params.hour >= ctx_group.group.hour {
-                model.params.hour = ctx_group.group.hour-1  ;
+                model.params.hour = ctx_group.group.hour  ;
             }
             if model.params.hour < 2 {
                 model.params.hour = 2;
@@ -488,7 +488,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)-> Node<Msg
                         ],
                     ]
                 ],
-                div![C!{"field"},
+                /*div![C!{"field"},
                     label![C!{"label"}, "Derinlik"],
                     p![C!{"control has-icons-left"},
                         input![C!{"input"},
@@ -503,7 +503,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)-> Node<Msg
                             input_ev(Ev::Input, Msg::DepthChanged2),
                         ],
                     ]
-                ],
+                ],*/
                 div![C!{"field"},
                     p![C!{"control has-icons-left"},
                         generate(model)

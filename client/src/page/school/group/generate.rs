@@ -66,20 +66,23 @@ pub(crate) fn generate(
                 for a in &c_act {
                     delete_activity(total_acts, a, tat, timetables, cat, true);
                 }
-                //c_act.insert(0, act2.clone());
-                let available2 = find_timeslot(act2, &total_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, false);
-                match available2 {
-                    Some(slots2) => {
-                        put_activity(act2, total_acts, tat, timetables, cat, slots2[0].0, slots2[0].1);
-                        assert_eq!(act2.hour as usize, timetables.iter().cloned()
-                            .enumerate()
-                            .filter(|t| t.1.activities.unwrap() == act2.id).collect::<Vec<(usize, NewClassTimetable)>>().len());
-                        return true
-                    },
-                    None => {
-                        return false
+                c_act.insert(0, act2.clone());
+                for a in &c_act{
+                    let available2 = find_timeslot(&a, &total_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, false);
+                    match available2 {
+                        Some(slots2) => {
+                            put_activity(&a, total_acts, tat, timetables, cat, slots2[0].0, slots2[0].1);
+                            assert_eq!(act2.hour as usize, timetables.iter().cloned()
+                                .enumerate()
+                                .filter(|t| t.1.activities.unwrap() == act2.id).collect::<Vec<(usize, NewClassTimetable)>>().len());
+                            return true
+                        },
+                        None => {
+                            return true
+                        }
                     }
                 }
+                return true
             }
         }
     }
@@ -105,6 +108,11 @@ pub(crate) fn recursive_put(
     let mut del_act_replace: Vec<DelActReplace> = vec![];
     use rand::thread_rng;
     let mut okey2 = false;
+    for i in 0..2{
+        for j in i..conflict_acts.len()-1{
+
+        }
+    }
     for conflict_act in &conflict_acts {
         let mut c_act = conflict_act.clone();
         c_act.shuffle(&mut thread_rng());
@@ -135,7 +143,7 @@ pub(crate) fn recursive_put(
                     put_activity(a, _acts, tat, timetables, cat, slots[0].0, slots[0].1);
                 },
                 None => {
-                    if depth < max_depth {
+                    if depth < 2 {
                         let rec_result = recursive_put(a, _acts, timetables, &clean_tat, tat, cat, max_day_hour, depth + 1, max_depth);
                         if !rec_result {
                             okey = false;
