@@ -282,8 +282,11 @@ pub fn activities(model: &Model, ctx_school:&SchoolContext)->Node<Msg>{
     div![
         C!{"column"},
         div![
-            C!{"select"},
+            C!{"field"},
+            label!["Aktivite Öğretmenini Seçin:"],
+            //C!{"select"},
             select![
+                C!{"select"},
                 attrs!{At::Name=>"teacher"},
                 ctx_school.teachers.iter().map(|t|
                     option![
@@ -295,8 +298,10 @@ pub fn activities(model: &Model, ctx_school:&SchoolContext)->Node<Msg>{
             ]
         ],
         div![
-            C!{"select"},
+            C!{"field"},
+            label!["Aktivite Dersini Seçin:"],
             select![
+                C!{"select"},
                 attrs!{At::Name=>"subject"},
                 model.subjects.iter().map(|s|
                     option![
@@ -307,16 +312,25 @@ pub fn activities(model: &Model, ctx_school:&SchoolContext)->Node<Msg>{
                 input_ev(Ev::Change, Msg::ChangeActSubject)
             ]
         ],
-        input![
-            attrs!{At::Type=>"text", At::Name=>"hour", At::Id=>"hour"},
-            input_ev(Ev::Change, Msg::ChangeActHour)
+        div![
+            C!{"field"},
+            label!["Aktivite Saat Sayısını Seçin:"],
+            input![
+                C!["input"],
+                attrs!{At::Type=>"text", At::Name=>"hour", At::Id=>"hour"},
+                input_ev(Ev::Change, Msg::ChangeActHour)
+            ]
         ],
-        input![
-            attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Ekle"},
-            ev(Ev::Click, |event| {
-                event.prevent_default();
-                Msg::SubmitActivity
-            })
+        div![
+            C!{"field"},
+            input![
+                //C!{"butt"},
+                attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Ekle"},
+                ev(Ev::Click, |event| {
+                    event.prevent_default();
+                    Msg::SubmitActivity
+                })
+            ]
         ]
         ]
     ]

@@ -232,7 +232,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)->Node<Msg>
                             li![
                                 a![
                                     attrs!{
-                                        At::Href => format!("/schools/{}/groups/{}/{}", &ctx_school.school.id, &model.ctx_group.group.id, &m.link)
+                                        At::Href => crate::Urls::new(&ctx.base_url).group_detail(ctx_school.school.id, model.ctx_group.group.id).add_path_part(&m.link)
                                     },
                                     &m.title
                                 ]

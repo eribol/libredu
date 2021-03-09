@@ -143,7 +143,7 @@ pub(crate) fn recursive_put(
                     put_activity(a, _acts, tat, timetables, cat, slots[0].0, slots[0].1);
                 },
                 None => {
-                    if depth < 2 {
+                    if depth < 4 {
                         let rec_result = recursive_put(a, _acts, timetables, &clean_tat, tat, cat, max_day_hour, depth + 1, max_depth);
                         if !rec_result {
                             okey = false;

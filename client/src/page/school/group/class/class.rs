@@ -150,20 +150,26 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group:
 }
 pub fn context(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
     div![
-        C!{"column"},
+        C!{"columns"},
+        div![
+            C!{"column"},
+            ctx_group.classes.iter().map(|c|
+                div![
+                    &c.sube, hr![]
+                ]
+            )
+        ],
         match &model.page{
             Pages::Home=>{
                 div![
-                    div![
-                        C!{"columns"},
+                    //C!["column"],
                         div![
                             C!{"column is-12"},
                             div![
                                 C!{"tabs is-centered"},
                                 tabs(model, ctx, ctx_school, ctx_group),
                             ]
-                        ]
-                    ],
+                        ],
                     home(&model.class)
                 ]
             }
