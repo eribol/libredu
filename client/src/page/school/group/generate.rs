@@ -109,17 +109,17 @@ pub(crate) fn recursive_put(
         //let mut c_act2: Vec<Activity> = Vec::new();
         c_act.sort_by(|a, b| b.hour.cmp(&a.hour));
         c_act.insert(0, act.clone());
-        //ignore_list.append(&mut c_act.clone());
+        ignore_list.append(&mut c_act.clone());
         let mut okey = true;
         for a in &c_act {
             let available = find_timeslot(a, &_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, true);
             match available {
                 Some(slots) => {
                     put_activity(a, _acts, tat, timetables, cat, slots[0].0, slots[0].1);
-                    ignore_list.push(a.clone());
+                    //ignore_list.retain(|a3| a3.id != a.id);
                 },
                 None => {
-                    if depth < 2 {
+                    if depth < 4 {
                         let rec_result = recursive_put(a, _acts, timetables, &clean_tat, tat, cat, max_day_hour, depth + 1, max_depth, ignore_list);
                         if !rec_result {
                             okey = false;

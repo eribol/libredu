@@ -10,6 +10,8 @@ use crate::model::activity::{ActivityTeacher, Subject};
 use crate::page::school::detail::{SchoolContext, GroupContext};
 use crate::model::group::Schedule;
 use crate::page::school::group::generate;
+use rand::prelude::SliceRandom;
+use rand::thread_rng;
 
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -179,6 +181,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
     match msg{
         Msg::Submit => {
             model.generating = true;
+            model.data.acts.shuffle(&mut thread_rng());
             model.data.acts.sort_by(|a, b| b.hour.cmp(&a.hour));
             orders.perform_cmd(cmds::timeout(200, || Msg::Generate));
         }
