@@ -119,7 +119,7 @@ pub(crate) fn recursive_put(
                     //ignore_list.retain(|a3| a3.id != a.id);
                 },
                 None => {
-                    if depth < 4 {
+                    if depth < 3 {
                         let rec_result = recursive_put(a, _acts, timetables, &clean_tat, tat, cat, max_day_hour, depth + 1, max_depth, ignore_list);
                         if !rec_result {
                             okey = false;
