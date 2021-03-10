@@ -1,16 +1,9 @@
 use rand::seq::SliceRandom;
 use seed::{*};
-use serde::*;
 use crate::model;
 use crate::page::school::group::timetable::{ClassAvailable, Activity, NewClassTimetable};
 //use async_std::prelude::*;
 //use async_std::task;
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DelActReplace{
-    pub act_id: Activity,
-    pub day: i32,
-    pub hour: i16
-}
 
 pub(crate) fn generate(
     max_day_hour: i32,
@@ -46,16 +39,19 @@ pub(crate) fn generate(
             return true
         },
         None => {
-
+            let timetables_backup = timetables.clone();
+            let tat_backup = tat.clone();
+            let cat_backup = cat.clone();
             let rec_result = recursive_put(&act2, total_acts, timetables, clean_tat, tat, cat, max_day_hour, 0, max_depth);
             if rec_result {
-                assert_eq!(act2.hour as usize, timetables.iter().cloned()
-                    .enumerate()
-                    .filter(|t| t.1.activities.unwrap() == act2.id).collect::<Vec<(usize, NewClassTimetable)>>().len());
                 return true;
             }
             else {
-                let mut conflict_acts = find_conflict_activity(&act2, &total_acts, &timetables, clean_tat, &tat, &cat, max_day_hour, 4);
+
+                *timetables = timetables_backup;
+                *tat = tat_backup;
+                *cat = cat_backup;
+                let mut conflict_acts = find_conflict_activity(&act2, &total_acts, &timetables, clean_tat, &tat, &cat, max_day_hour, max_depth);
                 if conflict_acts.len() == 0 {
                     log!("Çakışan aktivite yok");
                     *error = "Sınıf ile öğretmenin uyumlu uygun saatleri mevcut değil. Kısıtlamaları kontrol edin.".to_string();
@@ -67,26 +63,19 @@ pub(crate) fn generate(
                     delete_activity(total_acts, a, tat, timetables, cat, true);
                 }
                 c_act.insert(0, act2.clone());
-                for a in &c_act{
-                    let available2 = find_timeslot(&a, &total_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, false);
-                    match available2 {
-                        Some(slots2) => {
-                            put_activity(&a, total_acts, tat, timetables, cat, slots2[0].0, slots2[0].1);
-                            assert_eq!(act2.hour as usize, timetables.iter().cloned()
-                                .enumerate()
-                                .filter(|t| t.1.activities.unwrap() == act2.id).collect::<Vec<(usize, NewClassTimetable)>>().len());
-                            return true
-                        },
-                        None => {
-                            return true
-                        }
+                let available2 = find_timeslot(act2, &total_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, false);
+                match available2 {
+                    Some(slots2) => {
+                        put_activity(act2, total_acts, tat, timetables, cat, slots2[0].0, slots2[0].1);
+                        return true
+                    },
+                    None => {
+                        return false
                     }
                 }
-                return true
             }
         }
     }
-
 }
 //Add all timetables array to database
 
@@ -100,35 +89,20 @@ pub(crate) fn recursive_put(
     max_day_hour: i32,
     depth: usize,
     //depth2: usize,
-    max_depth: usize,
+    max_depth: usize
 )
     -> bool {
     let conflict_acts = find_conflict_activity(act, &_acts, &timetables, &clean_tat, &tat, &cat, max_day_hour, max_depth);
     //let start = Instant::now();
-    let mut del_act_replace: Vec<DelActReplace> = vec![];
     use rand::thread_rng;
     let mut okey2 = false;
-    for i in 0..2{
-        for j in i..conflict_acts.len()-1{
-
-        }
-    }
+    let copy_tat = tat.clone();
+    let copy_timetables = timetables.clone();
+    let copy_cat = cat.clone();
     for conflict_act in &conflict_acts {
         let mut c_act = conflict_act.clone();
         c_act.shuffle(&mut thread_rng());
         for a in &c_act {
-            let tt = timetables.iter().cloned()
-                .enumerate()
-                .find(|t| t.1.activities.unwrap() == a.id).unwrap();
-
-                let new_del = DelActReplace{
-                    act_id: a.clone(),
-                    day: tt.1.day_id.unwrap(),
-                    hour: tt.1.hour.unwrap()
-                };
-                del_act_replace.push(new_del);
-
-
             delete_activity(_acts, a, tat, timetables, cat, true);
         }
         //let mut c_act2: Vec<Activity> = Vec::new();
@@ -166,14 +140,9 @@ pub(crate) fn recursive_put(
 
         //}
         else {
-            //let act = _acts.iter().find(|a| a.id == d.act_id).unwrap();
-            //for a in &c_act {
-            delete_activity(_acts, act, tat, timetables, cat, true);
-            //};
-            for d in &del_act_replace {
-                delete_activity(_acts, &d.act_id, tat, timetables, cat, true);
-                put_activity(&d.act_id, _acts, tat, timetables, cat, d.day, d.hour as usize);
-            }
+            *tat = copy_tat.clone();
+            *timetables = copy_timetables.clone();
+            *cat = copy_cat.clone();
             okey2 = false;
             //break;
         }
@@ -403,14 +372,13 @@ pub fn find_timeslot(
                         .filter(|t| t.day_id.unwrap() == day
                             && teacher_acts.iter().cloned()
                             .any(|a| a.id == t.activities.unwrap() && a.subject == act.subject)).collect();
-                    if _other_same_subject.len() == 0{
+                    if _other_same_subject.len() == 0 {
                         slots.push((day, hour));
                         return Some(slots)
-                    }
-                    else{
+                    } else {
                         let hours = _other_same_subject.iter().cloned()
-                            .find(|t| t.hour.unwrap() == (hour - 1) as i16 || t.hour.unwrap() == hour as i16+act.hour);
-                        match hours{
+                            .find(|t| t.hour.unwrap() == (hour - 1) as i16 || t.hour.unwrap() == hour as i16 + act.hour);
+                        match hours {
                             Some(_) => {
                                 slots.push((day, hour));
                                 return Some(slots)
@@ -418,9 +386,7 @@ pub fn find_timeslot(
                             None => {}
                         }
                     }
-
                 }
-
             }
         }
         //if for_conflict && slots.len() >= 1 || slots.len()>=25{
