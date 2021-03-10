@@ -273,16 +273,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 for a in acts2{
                     not_placed += a.hour;
                 }
-                if (timetables.len()+(not_placed as usize)) != model.total_hour as usize{
-                    orders.send_msg(Msg::Stop);
-                }
-                else if model.generating{
+                if model.generating {
                     let mut second = 0;
-                    if (model.total_hour as usize - timetables.len()) < 50 && model.data.acts.len() > 100{
+                    if (model.total_hour as usize - timetables.len()) < 50 && model.data.acts.len() > 100 {
                         second = 80;
                     }
                     orders.perform_cmd(cmds::timeout(second, || Msg::Generate));
-
                 }
             }
             else {
