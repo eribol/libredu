@@ -181,9 +181,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
     match msg{
         Msg::Submit => {
             model.generating = true;
-            model.data.acts.shuffle(&mut thread_rng());
-            model.data.acts.sort_by(|a, b| b.hour.cmp(&a.hour));
-            orders.perform_cmd(cmds::timeout(200, || Msg::Generate));
+            //model.data.acts.shuffle(&mut thread_rng());
+            //model.data.acts.sort_by(|a, b| b.hour.cmp(&a.hour));
+            orders.perform_cmd(cmds::timeout(100, || Msg::Generate));
         }
         Msg::FetchSchedules(schedules) => {
             match schedules{
@@ -281,7 +281,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     if (model.total_hour as usize - timetables.len()) < 50 && model.data.acts.len() > 100 {
                         second = 80;
                     }
-                    orders.perform_cmd(cmds::timeout(second, || Msg::Generate));
+                    orders.perform_cmd(cmds::timeout(10, || Msg::Generate));
                 }
             }
             else {

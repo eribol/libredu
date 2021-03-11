@@ -28,8 +28,8 @@ pub(crate) fn generate(
         //fivea.sort_by(|a, b| b.hour.cmp(&a.hour));
         return false
     }
-    //acts.shuffle(&mut thread_rng());
-    //acts.sort_by(|a, b| b.hour.cmp(&a.hour));
+    acts.shuffle(&mut thread_rng());
+    acts.sort_by(|a, b| b.hour.cmp(&a.hour));
     //log!(acts);
     let act2 = &acts[0].clone();
     let available = find_timeslot(act2, &total_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, false);
