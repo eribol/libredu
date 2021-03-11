@@ -108,7 +108,18 @@ pub(crate) fn recursive_put(
         }
         //let mut c_act2: Vec<Activity> = Vec::new();
         c_act.sort_by(|a, b| b.hour.cmp(&a.hour));
-        c_act.insert(0, act.clone());
+        //c_act.insert(0, act.clone());
+        let available = find_timeslot(act, &_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, true);
+        match available {
+            Some(slots) => {
+                put_activity(act, _acts, tat, timetables, cat, slots[0].0, slots[0].1);
+                ignore_list.push(act.clone());
+            },
+            None => {
+                okey2 = false;
+                break;
+            }
+        }
         ignore_list.append(&mut c_act.clone());
         let mut okey = true;
         for a in &c_act {

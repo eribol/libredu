@@ -152,19 +152,43 @@ pub fn context(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_gro
     div![
         C!{"columns"},
         div![
-            C!{"column"},
-            ctx_group.classes.iter().map(|c|
+            C!{"column is-2"},
+
                 div![
-                    &c.sube, hr![]
-                ]
-            )
+                    table![
+                        C!{"table table-hover"},
+                        thead![
+                            tr![
+                                th![
+                                    attrs!{At::Scope=>"col"},
+                                    "Sınıf"
+                                ]
+                            ]
+                        ],
+                        tbody![
+                            ctx_group.classes.iter().enumerate().map(|c|
+                                //log!(&c),
+                                tr![
+                                    C!{"table-light"},
+                                    td![
+                                        a![
+                                            &c.1.kademe.to_string(), "/", &c.1.sube, " Sınıfı",
+                                            attrs!{
+                                                At::Href=> format!("/schools/{}/groups/{}/classes/{}/{}", &ctx_school.school.id, &ctx_group.group.id, c.1.id, &model.tab)
+                                            }
+                                        ]
+                                    ]
+                                ]
+                            )
+                            ]]]
+
         ],
         match &model.page{
             Pages::Home=>{
                 div![
                     //C!["column"],
                         div![
-                            C!{"column is-12"},
+                            C!{"column"},
                             div![
                                 C!{"tabs is-centered"},
                                 tabs(model, ctx, ctx_school, ctx_group),
@@ -238,7 +262,7 @@ pub fn context(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_gro
 }
 fn home(class: &Class)->Node<Msg>{
     div![
-        C!{"column is-half"},
+        C!{"column is-full"},
         div![C!{"field"},
             label![C!{"label"}, "Kademe"],
             p![C!{"control has-icons-left"},

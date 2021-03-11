@@ -168,11 +168,15 @@ fn timetable(model: &Model, _ctx_school:&SchoolContext, ctx_group: &GroupContext
 
 fn get_timetable_row(day: i32, hour: i16, timetable: &Vec<ClassTimetable>)->Node<Msg>{
     let get_timetable = timetable.iter().find(|t| t.day_id == day && t.hour == hour);
+
     match get_timetable{
         Some(t)=>{
+            let name = &t.activity.teacher.first_name.chars().collect::<Vec<_>>();
+            let lastname = &t.activity.teacher.last_name.chars().collect::<Vec<_>>();
+            let subject = &t.subject.chars().collect::<Vec<_>>();
             td![
-                &t.activity.teacher.first_name[..3],".", " ", &t.activity.teacher.last_name[..3],".",br![],
-                &t.subject[..3],"."
+                &name[..3].iter().cloned().collect::<String>(),".", " ", &lastname[..3].iter().cloned().collect::<String>(), ".",br![],
+                &subject[..3].iter().cloned().collect::<String>(),"."
             ]
         }
         None=>{
