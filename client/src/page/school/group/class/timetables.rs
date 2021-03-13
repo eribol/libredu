@@ -173,10 +173,21 @@ fn get_timetable_row(day: i32, hour: i16, timetable: &Vec<ClassTimetable>)->Node
         Some(t)=>{
             let name = &t.activity.teacher.first_name.chars().collect::<Vec<_>>();
             let lastname = &t.activity.teacher.last_name.chars().collect::<Vec<_>>();
-            let subject = &t.subject.chars().collect::<Vec<_>>();
+            let mut subject = String::new();
+            let split_subject = &t.subject.split(' ').collect::<Vec<&str>>();
+            if split_subject.len() == 1{
+                subject = subject + &split_subject[0].chars().collect::<Vec<_>>()[..3].iter().cloned().collect::<String>();
+                subject.push_str(".");
+            }
+            else {
+                for s in split_subject{
+                    subject.push(s.chars().nth(0).unwrap());
+                    subject.push_str(".");
+                }
+            }
             td![
-                &name[..3].iter().cloned().collect::<String>(),".", " ", &lastname[..3].iter().cloned().collect::<String>(), ".",br![],
-                &subject[..3].iter().cloned().collect::<String>(),"."
+                &name[..3].iter().cloned().collect::<String>().to_uppercase(),".", " ", &lastname[..3].iter().cloned().collect::<String>().to_uppercase(), ".",br![],
+                &subject
             ]
         }
         None=>{

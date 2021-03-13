@@ -276,6 +276,21 @@ fn get_timetable_row(day: i32, hour: (usize, &bool), timetable: &Vec<TeacherTime
     let get_timetable = timetable.iter().find(|t| t.day_id == day && t.hour == hour.0 as i16);
     match get_timetable{
         Some(t)=>{
+            //let name = &t.activity.teacher.first_name.chars().collect::<Vec<_>>();
+            //let lastname = &t.activity.teacher.last_name.chars().collect::<Vec<_>>();
+            let mut subject = String::new();
+            let split_subject = &t.subject.split(' ').collect::<Vec<&str>>();
+            if split_subject.len() == 1{
+                subject = subject + &split_subject[0].chars().collect::<Vec<_>>()[..3].iter().cloned().collect::<String>();
+                subject.push_str(".");
+            }
+            else {
+                for s in split_subject{
+                    subject.push(s.chars().nth(0).unwrap());
+                    subject.push_str(".");
+                }
+            }
+
             td![
                 if *hour.1 {
                     style!{
@@ -293,7 +308,7 @@ fn get_timetable_row(day: i32, hour: (usize, &bool), timetable: &Vec<TeacherTime
                         &tc.kademe.to_string(), "/", &tc.sube
                     ]
                 ),
-                &t.subject[0..3]
+                &subject.to_uppercase()
             ]
         }
         None=>{
