@@ -262,20 +262,46 @@ pub fn breadcrumb(model: &Model, ctx_school: &detail::SchoolContext, ctx_group: 
 }
 
 pub fn context(model: &Model, ctx_school: &detail::SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
-    match &model.page{
-        Pages::Home=>{
-            home(&model)
+    div![
+        C!{"columns"},
+        div![
+            C!{"column is-2"},
+            div![
+                table![
+                    C!{"table table-hover"},
+                    tbody![
+                        ctx_school.teachers.iter().map(|t|
+                            tr![
+                                C!{"table-light"},
+                                td![
+                                    a![
+                                        &t.first_name, " ", &t.last_name,
+                                        attrs!{
+                                            At::Href=> format!("/schools/{}/groups/{}/teachers/{}/{}", &ctx_school.school.id, &ctx_group.group.id, t.id, &model.tab)
+                                        }
+                                    ]
+                                ]
+                            ]
+                        )
+                    ]
+                ]
+            ]
+        ],
+        match &model.page{
+            Pages::Home=>{
+                home(&model)
+            }
+            Pages::Activity(m)=>{
+                activities::view(m, ctx_group, ctx_school).map_msg(Msg::Activities)
+            }
+            Pages::Limitation(m) => {
+                limitations::view(m, ctx_school, ctx_group).map_msg(Msg::Limitations)
+            }
+            Pages::Timetable(m) => {
+                timetables::view(m, ctx_group).map_msg(Msg::Timetables)
+            }
         }
-        Pages::Activity(m)=>{
-            activities::view(m, ctx_group, ctx_school).map_msg(Msg::Activities)
-        }
-        Pages::Limitation(m) => {
-            limitations::view(m, ctx_school, ctx_group).map_msg(Msg::Limitations)
-        }
-        Pages::Timetable(m) => {
-            timetables::view(m, ctx_group).map_msg(Msg::Timetables)
-        }
-    }
+    ]
 }
 fn home(model: &Model)->Node<Msg>{
     div![

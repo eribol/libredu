@@ -2,6 +2,8 @@ use rand::seq::SliceRandom;
 use seed::{*};
 use crate::model;
 use crate::page::school::group::timetable::{ClassAvailable, Activity, NewClassTimetable};
+use crate::model::teacher::TeacherAvailableForTimetables;
+use crate::model::timetable::ClassAvailableForTimetable;
 //use async_std::prelude::*;
 //use async_std::task;
 
@@ -101,13 +103,13 @@ pub(crate) fn recursive_put(
     let copy_timetables = timetables.clone();
     let copy_cat = cat.clone();
     for conflict_act in &conflict_acts {
-        let mut c_act = conflict_act.clone();
-        c_act.shuffle(&mut thread_rng());
-        for a in &c_act {
-            delete_activity(_acts, a, tat, timetables, cat, true);
+        //let mut c_act = conflict_act.clone();
+        //conflict_act.shuffle(&mut thread_rng());
+        for a in conflict_act {
+            delete_activity(_acts, &a, tat, timetables, cat, true);
         }
         //let mut c_act2: Vec<Activity> = Vec::new();
-        c_act.sort_by(|a, b| b.hour.cmp(&a.hour));
+        //c_act.sort_by(|a, b| b.hour.cmp(&a.hour));
         //c_act.insert(0, act.clone());
         let available = find_timeslot(act, &_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, true);
         match available {
@@ -120,21 +122,25 @@ pub(crate) fn recursive_put(
                 break;
             }
         }
-        ignore_list.append(&mut c_act.clone());
+        //ignore_list.append(&mut c_act.clone());
+        //ignore_list.dedup();
         let mut okey = true;
-        for a in &c_act {
-            let available = find_timeslot(a, &_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, true);
+        for a in conflict_act {
+            let available = find_timeslot(&a, &_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, true);
             match available {
                 Some(slots) => {
-                    put_activity(a, _acts, tat, timetables, cat, slots[0].0, slots[0].1);
-                    //ignore_list.retain(|a3| a3.id != a.id);
+                    put_activity(&a, _acts, tat, timetables, cat, slots[0].0, slots[0].1);
+                    ignore_list.push(a.clone());
                 },
                 None => {
                     if depth < 3 {
-                        let rec_result = recursive_put(a, _acts, timetables, &clean_tat, tat, cat, max_day_hour, depth + 1, max_depth, ignore_list);
+                        let rec_result = recursive_put(&a, _acts, timetables, &clean_tat, tat, cat, max_day_hour, depth + 1, max_depth, ignore_list);
                         if !rec_result {
                             okey = false;
                             break;
+                        }
+                        else {
+                            //ignore_list.push(a.clone());
                         }
                     }
                     else {
@@ -146,7 +152,7 @@ pub(crate) fn recursive_put(
         }
         if okey {
             okey2 = true;
-            ignore_list.retain(|a3| !c_act.iter().any(|a4| a4.id == a3.id));
+            //ignore_list.retain(|a3| a3.id != act.id || !conflict_act.iter().any(|a4| a4.id == a3.id));
             break;
         }
         //else if deneme2 >= 1{
@@ -157,7 +163,7 @@ pub(crate) fn recursive_put(
             *tat = copy_tat.clone();
             *timetables = copy_timetables.clone();
             *cat = copy_cat.clone();
-            ignore_list.retain(|a3| !c_act.iter().any(|a4| a4.id == a3.id));
+            ignore_list.retain(|a3| !conflict_act.iter().any(|a4| a4.id == a3.id));
             okey2 = false;
             //break;
         }
@@ -232,6 +238,7 @@ fn find_conflict_activity(
                         for c in &conflict_slot{
                             let activity = activities.iter()
                                 .find(|a| a.id == c.activities.unwrap() && a.id != act.id && !ignore_list.iter().any(|a2| a2.id == a.id));
+                                //.find(|a| a.id == c.activities.unwrap() && a.id != act.id);
                             match activity{
                                 Some(a)=>{
                                     less_conflict.push(a.clone());
@@ -264,12 +271,12 @@ fn find_conflict_activity(
         total_act[i].sort_by(|a,b| a.id.cmp(&b.id));
         total_act[i].dedup();
     }
-    if total_act.len()>=depth{
-        return total_act[0..depth].to_vec();
-    }
-    else {
+    //if total_act.len()>=depth{
+    //    return total_act[0..depth].to_vec();
+    //}
+    //else {
         return total_act
-    }
+    //}
     /*if depth < 1{
         if total_act.len()>=10{
             return total_act[0..10].to_vec();
@@ -412,4 +419,11 @@ pub fn find_timeslot(
     }
 
     return None;
+}
+
+pub fn sort_act(total_acts: &Vec<Activity>, clean_tat: &Vec<TeacherAvailableForTimetables>, clean_cat:&Vec<ClassAvailableForTimetable>) -> Vec<Activity>{
+    for a in total_acts{
+        //let teacher_available = clean_tat.iter().filter
+    }
+    vec![]
 }

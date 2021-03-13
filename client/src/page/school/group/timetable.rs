@@ -172,9 +172,9 @@ pub fn init(orders: &mut impl Orders<Msg>, ctx_school: &detail::SchoolContext, c
     });
     let mut model = Model::default();
     model.generating = false;
-    model.params.hour = 2;
+    model.params.hour = 8;
     //model.params.depth2 = 2;
-    model.params.depth = 10;
+    model.params.depth = 15;
     model
 }
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, _ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext) {

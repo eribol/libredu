@@ -153,35 +153,34 @@ pub fn context(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_gro
         C!{"columns"},
         div![
             C!{"column is-2"},
-
-                div![
-                    table![
-                        C!{"table table-hover"},
-                        thead![
-                            tr![
-                                th![
-                                    attrs!{At::Scope=>"col"},
-                                    "Sınıf"
-                                ]
+            div![
+                table![
+                    C!{"table table-hover"},
+                    thead![
+                        tr![
+                            th![
+                                attrs!{At::Scope=>"col"},
+                                "Sınıf"
                             ]
-                        ],
-                        tbody![
-                            ctx_group.classes.iter().enumerate().map(|c|
-                                //log!(&c),
-                                tr![
-                                    C!{"table-light"},
-                                    td![
-                                        a![
-                                            &c.1.kademe.to_string(), "/", &c.1.sube, " Sınıfı",
-                                            attrs!{
-                                                At::Href=> format!("/schools/{}/groups/{}/classes/{}/{}", &ctx_school.school.id, &ctx_group.group.id, c.1.id, &model.tab)
-                                            }
-                                        ]
+                        ]
+                    ],
+                    tbody![
+                        ctx_group.classes.iter().enumerate().map(|c|
+                            tr![
+                                C!{"table-light"},
+                                td![
+                                    a![
+                                        &c.1.kademe.to_string(), "/", &c.1.sube, " Sınıfı",
+                                        attrs!{
+                                            At::Href=> format!("/schools/{}/groups/{}/classes/{}/{}", &ctx_school.school.id, &ctx_group.group.id, c.1.id, &model.tab)
+                                        }
                                     ]
                                 ]
-                            )
-                            ]]]
-
+                            ]
+                        )
+                    ]
+                ]
+            ]
         ],
         match &model.page{
             Pages::Home=>{
