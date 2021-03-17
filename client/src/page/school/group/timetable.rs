@@ -2,7 +2,7 @@ use serde::*;
 use seed::{*, prelude::*};
 use crate::{Context, createPDF, class_print, model};
 use crate::page::school::detail;
-use crate::page::school::group::test_generate;
+use crate::page::school::group::{test_generate, deneme_generate};
 use crate::model::timetable::Day;
 use crate::model::teacher::TeacherTimetable;
 use crate::model::class::{ClassTimetable, ClassTimetableActivity};
@@ -12,7 +12,6 @@ use crate::model::group::Schedule;
 use crate::page::school::group::generate;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
-
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AuthUser{
@@ -279,9 +278,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 if model.generating {
                     let mut second = 0;
                     if (model.total_hour as usize - timetables.len()) < 50 && model.data.acts.len() > 100 {
-                        second = 80;
+                        second = 1000;
                     }
-                    orders.perform_cmd(cmds::timeout(10, || Msg::Generate));
+                    orders.perform_cmd(cmds::timeout(1, || Msg::Generate));
                 }
             }
             else {

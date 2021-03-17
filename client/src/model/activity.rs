@@ -1,5 +1,6 @@
 use serde::*;
 use crate::model::class;
+use crate::model::teacher::TeacherAvailableForTimetables;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Subject{
@@ -47,3 +48,4 @@ pub struct ActivityTeacher{
     pub(crate) first_name: String,
     pub(crate) last_name: String,
 }
+

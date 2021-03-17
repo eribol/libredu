@@ -8,3 +8,4 @@ mod test_generate;
 mod classes;
 mod teacher;
 pub mod common_exam;
+pub mod deneme_generate;

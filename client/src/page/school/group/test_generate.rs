@@ -95,7 +95,7 @@ pub fn tests(
             tests.classes.push(class.clone())
         }
     }
-
+    /*
     for teacher in &ctx_school.teachers{
         use crate::page::school::group::generate::recursive_put;
         use crate::page::school::group::generate::find_timeslot;
@@ -146,4 +146,5 @@ pub fn tests(
             }
         }
     }
+    */
 }
