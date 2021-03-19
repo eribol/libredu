@@ -51,6 +51,7 @@ pub(crate) fn generate(
                 *timetables = timetables_backup;
                 *tat = tat_backup;
                 *cat = cat_backup;
+                */
                 let mut conflict_acts = find_conflict_activity(&act2, &total_acts, &timetables, clean_tat, &tat, &cat, max_day_hour, max_depth, &mut vec![]);
                 if conflict_acts.len() == 0 {
                     log!("Çakışan aktivite yok");
@@ -62,7 +63,7 @@ pub(crate) fn generate(
                 for a in &c_act {
                     delete_activity(total_acts, a, tat, timetables, cat, true);
                 }
-                c_act.insert(0, act2.clone());
+                //c_act.insert(0, act2.clone());
                 let available2 = find_timeslot(act2, &total_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, false);
                 match available2 {
                     Some(slots2) => {
@@ -72,7 +73,7 @@ pub(crate) fn generate(
                     None => {
                         return false
                     }
-                }*/
+                }
                 return true;
             }
         }

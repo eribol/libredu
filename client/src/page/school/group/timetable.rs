@@ -4,7 +4,7 @@ use crate::{Context, createPDF, class_print, model};
 use crate::page::school::detail;
 use crate::page::school::group::{test_generate, deneme_generate};
 use crate::model::timetable::Day;
-use crate::model::teacher::TeacherTimetable;
+use crate::model::teacher::{TeacherTimetable, TeacherAvailableForTimetables};
 use crate::model::class::{ClassTimetable, ClassTimetableActivity};
 use crate::model::activity::{ActivityTeacher, Subject};
 use crate::page::school::detail::{SchoolContext, GroupContext};
@@ -380,11 +380,27 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             model.data= d;
             model.clean_cat = model.data.cat.clone();
             model.clean_tat = model.data.tat.clone();
+            for t in &_ctx_school.teachers {
+                let limitations = model.clean_tat.clone().into_iter().filter(|l| l.user_id == t.id).collect::<Vec<TeacherAvailableForTimetables>>();
+                let acts = model.data.acts.clone().into_iter().filter(|a| a.teacher.unwrap() == t.id).collect::<Vec<Activity>>();
+                for l in limitations {
+                    for h in l.hours.iter().enumerate() {
+                        if !*h.1 {
+                            let tt = model.data.timetables.clone().into_iter().enumerate()
+                                .filter(|tt2| tt2.1.day_id.unwrap() == l.day && tt2.1.hour.unwrap() == h.0 as i16 &&
+                                    acts.iter().any(|a| a.id == tt2.1.activities.unwrap())).collect::<Vec<(usize, NewClassTimetable)>>();
+                            if tt.len() == 1 {
+                                model.data.timetables.remove(tt[0].0);
+                            }
+                            //
+                        }
+                    }
+                }
+            }
             //let acts: Vec<Activity> = model.data.acts.clone().into_iter().filter(|a| ctx_group.classes.iter().any(|c| a.classes.iter().any(|ac| ac == c.id))).collect();
             for act in &model.data.acts{
                 match act.teacher{
                     Some(_t) => {
-
                         model.total_hour += act.hour as i32;
                     }
                     None => {}
@@ -416,8 +432,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     }
                     None => {}
                 }
-
             }
+
         }
         Msg::FetchData(Err(_))=>{
             //log!("Hata");

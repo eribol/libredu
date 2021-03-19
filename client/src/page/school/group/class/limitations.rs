@@ -302,7 +302,7 @@ pub fn limitations(model: &Model, ctx_group: &GroupContext)->Node<Msg>{
             model.limitation.iter().enumerate().map(|d|
                 tr![
                     td![
-                        &d.1.day.name,
+                        &d.1.day.name.to_uppercase(),
                         {
                             let day_index = d.0;
                             ev(Ev::Click, move |_event|

@@ -1,4 +1,4 @@
-use crate::model::timetable::{Day};
+use crate::model::timetable::{Day, ClassAvailable};
 use serde::*;
 use seed::{*, prelude::*};
 use crate::{Context};
@@ -29,7 +29,11 @@ pub enum Msg{
     FetchClass(fetch::Result<Class>),
     FetchActivities(fetch::Result<Vec<ClassActivity>>),
     FetchTimetable(fetch::Result<Vec<ClassTimetable>>),
-
+    FetchLimitation(fetch::Result<Vec<ClassAvailable>>),
+    ChangeHour((usize,usize)),
+    ChangeAllHour(usize),
+    ChangeAllDay(usize),
+    Submit
 }
 
 #[derive(Debug, Default, Clone)]
@@ -37,6 +41,7 @@ pub struct Model{
     pub class: Class,
     pub timetable: Vec<ClassTimetable>,
     pub activities: Vec<ClassActivity>,
+    pub limitation: Vec<ClassAvailable>,
     pub classes: Vec<Class>,
     days: Vec<Day>,
 }
@@ -49,22 +54,6 @@ pub fn init(class: i32, orders: &mut impl Orders<Msg>, ctx_school: &mut SchoolCo
             .method(Method::Get);
         async {
             Msg::FetchClass(async {
-                request
-                    .fetch()
-                    .await?
-                    .check_status()?
-                    .json()
-                    .await
-            }.await)
-        }
-    });
-
-    orders.perform_cmd({
-        let url = format!("/api/days");
-        let request = Request::new(url)
-            .method(Method::Get);
-        async {
-            Msg::FetchDays(async {
                 request
                     .fetch()
                     .await?
@@ -101,14 +90,171 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         }
         Msg::FetchTimetable(tm)=>{
             model.timetable=tm.unwrap();
+            orders.perform_cmd({
+                let url = format!("/api/days");
+                let request = Request::new(url)
+                    .method(Method::Get);
+                async {
+                    Msg::FetchDays(async {
+                        request
+                            .fetch()
+                            .await?
+                            .check_status()?
+                            .json()
+                            .await
+                    }.await)
+                }
+            });
         }
         Msg::FetchDays(days)=>{
             model.days=days.unwrap();
+            orders.perform_cmd({
+                let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", ctx_school.school.id, &ctx_group.group.id, model.class.id);
+                let request = Request::new(url)
+                    .method(Method::Get);
+                async {
+                    Msg::FetchLimitation(async {
+                        request
+                            .fetch()
+                            .await?
+                            .check_status()?
+                            .json()
+                            .await
+                    }.await)
+                }
+            });
         }
         Msg::FetchActivities(acts)=>{
             model.activities = acts.unwrap_or(vec![]);
         }
+        Msg::FetchLimitation(json)=>{
+            match json {
+                Ok(mut l) => {
+                    l.sort_by(|a, b| a.day.id.cmp(&b.day.id));
+                    model.limitation = l;
+                    if model.limitation.len()==0{
+                        for d in model.days.iter() {
+                            if !model.limitation.iter().any(|ta| ta.day.id == d.id) {
+                                let hours = vec![false; ctx_group.group.hour as usize];
+                                model.limitation.push(ClassAvailable { day: d.clone(), hours: hours })
+                            }
+                            if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
+                                let hours = vec![false; ctx_group.group.hour as usize];
+                                model.limitation[(d.id - 1) as usize].hours = hours;
+                            }
 
+                        }
+                    }
+                    //let mut changed = false;
+                    /*
+                    for d in model.days.iter() {
+
+                        if !model.limitation.iter().any(|ta| ta.day.id == d.id) {
+                            let hours = vec![true; ctx_group.group.hour as usize];
+                            model.limitation.push(ClassAvailable { day: d.clone(), hours: hours });
+                            changed = true;
+                        }
+                        if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
+                            let hours = vec![true; ctx_group.group.hour as usize];
+                            model.limitation[(d.id - 1) as usize].hours = hours;
+                            changed = true;
+                        }
+                    }
+                    if changed{
+                        orders.perform_cmd({
+                            let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", ctx_school.school.id, ctx_group.group.id ,model.class.id);
+                            let request = Request::new(url)
+                                .method(Method::Post)
+                                .json(&model.limitation);
+                            async {
+                                Msg::FetchLimitation(async {
+                                    request?
+                                        .fetch()
+                                        .await?
+                                        .check_status()?
+                                        .json()
+                                        .await
+                                }.await)
+                            }
+                        });
+                    }
+                    */
+                }
+                Err(_)=>{
+                    if model.limitation.len()==0{
+                        for d in model.days.iter() {
+                            if !model.limitation.iter().any(|ta| ta.day.id == d.id) {
+                                let hours = vec![false; ctx_group.group.hour as usize];
+                                model.limitation.push(ClassAvailable { day: d.clone(), hours: hours })
+                            }
+                            if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
+                                let hours = vec![false; ctx_group.group.hour as usize];
+                                model.limitation[(d.id - 1) as usize].hours = hours;
+                            }
+
+                        }
+                    }
+                }
+            }
+
+        }
+        Msg::ChangeHour(ids)=>{
+            if model.limitation[ids.0].hours[ids.1]{
+                model.limitation[ids.0].hours[ids.1]=false;
+            }
+            else{
+                model.limitation[ids.0].hours[ids.1]=true;
+            }
+        }
+        Msg::ChangeAllHour(index) => {
+            let mut all = true;
+            for l in &model.limitation{
+                if !l.hours[index]{
+                    all = false;
+                    break;
+                }
+            }
+            if all{
+                for d in 0..7{
+                    model.limitation[d].hours[index] = false;
+                }
+            }
+            else {
+                for d in 0..7{
+                    model.limitation[d].hours[index] = true;
+                }
+            }
+        }
+        Msg::ChangeAllDay(index) => {
+            if model.limitation[index].hours.iter().any(|h| !*h){
+                for h in 0..ctx_group.group.hour as usize{
+                    model.limitation[index].hours[h as usize] = true;
+                }
+            }
+            else {
+                for h in 0..ctx_group.group.hour as usize{
+                    model.limitation[index].hours[h as usize] = false;
+                }
+            }
+        }
+        Msg::Submit=>{
+            orders.perform_cmd({
+                let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", ctx_school.school.id, &ctx_group.group.id, &model.class.id);
+                let request = Request::new(url)
+                    .method(Method::Post)
+                    .json(&model.limitation);
+                async {
+                    Msg::FetchLimitation(async {
+                        request?
+                            .fetch()
+                            .await?
+                            .check_status()?
+                            .json()
+                            .await
+                    }.await)
+                }
+            });
+        }
     }
 }
 pub fn view(model: &Model, ctx_school:&SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
@@ -139,17 +285,29 @@ fn timetable(model: &Model, _ctx_school:&SchoolContext, ctx_group: &GroupContext
                 ],
                 (0..ctx_group.group.hour as i32).map(|h|
                     td![
-                        &h+1
+                        &h+1,
+                        {
+                            let hour_index: usize = h as usize;
+                            ev(Ev::Click, move |_event|
+                                Msg::ChangeAllHour(hour_index)
+                            )
+                        }
                     ]
                 )
             ],
-            model.days.iter().enumerate().map(|d|
+            model.limitation.iter().enumerate().map(|d|
                 tr![
                     td![
-                        &d.1.name
+                        &d.1.day.name.to_uppercase(),
+                        {
+                            let day_index = d.0;
+                            ev(Ev::Click, move |_event|
+                                Msg::ChangeAllDay(day_index)
+                            )
+                        }
                     ],
-                    (0..ctx_group.group.hour).map(|h|
-                        get_timetable_row((d.0+1) as i32, (h) as i16, &model.timetable)
+                    d.1.hours.iter().enumerate().map(|h|
+                        get_timetable_row((d.0+1) as i32, h, &model.timetable)
                     )
                 ]
             )
@@ -157,7 +315,11 @@ fn timetable(model: &Model, _ctx_school:&SchoolContext, ctx_group: &GroupContext
         input![
             attrs!{
                 At::Type=>"button", At::Class=>"button is-primary", At::Value=>"Kaydet"
-            }
+            },
+            ev(Ev::Click, |event| {
+                event.prevent_default();
+                Msg::Submit
+            })
             //ev(Ev::Click, |event| {
             //    event.prevent_default();
             //    Msg::Print
@@ -166,8 +328,8 @@ fn timetable(model: &Model, _ctx_school:&SchoolContext, ctx_group: &GroupContext
     ]
 }
 
-fn get_timetable_row(day: i32, hour: i16, timetable: &Vec<ClassTimetable>)->Node<Msg>{
-    let get_timetable = timetable.iter().find(|t| t.day_id == day && t.hour == hour);
+fn get_timetable_row(day: i32, hour: (usize, &bool), timetable: &Vec<ClassTimetable>)->Node<Msg>{
+    let get_timetable = timetable.iter().find(|t| t.day_id == day && t.hour == hour.0 as i16);
 
     match get_timetable{
         Some(t)=>{
@@ -186,13 +348,48 @@ fn get_timetable_row(day: i32, hour: i16, timetable: &Vec<ClassTimetable>)->Node
                 }
             }
             td![
+                if *hour.1 {
+                    style!{
+                        St::Background=>"blue",
+                        St::Color => "white"
+                    }
+                }
+                else{
+                    style!{
+                        St::Background=>"gray"
+                    }
+                },
                 &name[..3].iter().cloned().collect::<String>().to_uppercase(),".", " ", &lastname[..3].iter().cloned().collect::<String>().to_uppercase(), ".",br![],
-                &subject
+                &subject,
+                {
+                    let day_index = day as usize;
+                    let hour_index = hour.0;
+                    ev(Ev::Click, move |_event|
+                        Msg::ChangeHour((day_index-1, hour_index))
+                    )
+                }
             ]
         }
         None=>{
             td![
-
+                if *hour.1 {
+                    style!{
+                        St::Background=>"blue",
+                        St::Color => "white"
+                    }
+                }
+                else{
+                    style!{
+                        St::Background=>"gray"
+                    }
+                },
+                {
+                    let day_index = day as usize;
+                    let hour_index = hour.0;
+                    ev(Ev::Click, move |_event|
+                        Msg::ChangeHour((day_index-1, hour_index))
+                    )
+                }
             ]
         }
     }

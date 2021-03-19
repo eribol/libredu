@@ -14,7 +14,10 @@ pub enum Msg{
     FetchTimetable(fetch::Result<Vec<teacher::TeacherTimetable>>),
     FetchActivities(fetch::Result<Vec<activity::TeacherActivity>>),
     FetchLimitation(fetch::Result<Vec<teacher::TeacherAvailable>>),
-    Print
+    ChangeHour((usize,usize)),
+    ChangeAllHour(usize),
+    ChangeAllDay(usize),
+    Submit
 }
 
 
@@ -209,12 +212,62 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchDays(days)=>{
             model.days=days.unwrap();
         }
-        Msg::Print=>{
-            //use crate::print_timetable::print_timetable;
-            //let _printable = print_timetable();
-            //let table = vec![model.timetable.clone()];
-            //let timetables = vec![(&model.teacher.first_name, &model.teacher.last_name, &model.timetable)];
-            //createPDF(&serde_json::to_string(&timetables).unwrap(), &serde_json::to_string(&model.days).unwrap(), 0, (model.selected_group.hour-1) as i16, &serde_json::to_string(&_ctx_school.school).unwrap());
+        Msg::ChangeHour(ids)=>{
+            if model.limitation[ids.0].hours[ids.1]{
+                model.limitation[ids.0].hours[ids.1]=false;
+            }
+            else{
+                model.limitation[ids.0].hours[ids.1]=true;
+            }
+        }
+        Msg::ChangeAllHour(index) => {
+            let mut all = true;
+            for l in &model.limitation{
+                if !l.hours[index]{
+                    all = false;
+                    break;
+                }
+            }
+            if all{
+                for d in 0..7{
+                    model.limitation[d].hours[index] = false;
+                }
+            }
+            else {
+                for d in 0..7{
+                    model.limitation[d].hours[index] = true;
+                }
+            }
+        }
+        Msg::ChangeAllDay(index) => {
+            if model.limitation[index].hours.iter().any(|h| !*h){
+                for h in 0..ctx_group.group.hour as usize{
+                    model.limitation[index].hours[h as usize] = true;
+                }
+            }
+            else {
+                for h in 0..ctx_group.group.hour as usize{
+                    model.limitation[index].hours[h as usize] = false;
+                }
+            }
+        }
+        Msg::Submit=>{
+            orders.perform_cmd({
+                let url = format!("/api/schools/{}/groups/{}/teachers/{}/limitations", ctx_school.school.id, &ctx_group.group.id, &model.teacher.id);
+                let request = Request::new(url)
+                    .method(Method::Post)
+                    .json(&model.limitation);
+                async {
+                    Msg::FetchLimitation(async {
+                        request?
+                            .fetch()
+                            .await?
+                            .check_status()?
+                            .json()
+                            .await
+                    }.await)
+                }
+            });
         }
     }
 }
@@ -245,14 +298,26 @@ fn timetable(model: &Model, ctx_group: &GroupContext)->Node<Msg>{
                 ],
                 (0..ctx_group.group.hour as i32).map(|h|
                     td![
-                        &h+1
+                        &h+1,
+                        {
+                            let hour_index: usize = h as usize;
+                            ev(Ev::Click, move |_event|
+                                Msg::ChangeAllHour(hour_index)
+                            )
+                        }
                     ]
                 )
             ],
             model.limitation.iter().enumerate().map(|d|
                 tr![
                     td![
-                        &d.1.day.name.to_uppercase()
+                        &d.1.day.name.to_uppercase(),
+                        {
+                            let day_index = d.0;
+                            ev(Ev::Click, move |_event|
+                                Msg::ChangeAllDay(day_index)
+                            )
+                        }
                     ],
                     d.1.hours.iter().enumerate().map(|h|
                         get_timetable_row((d.0+1) as i32, h, &model.timetable, &model)
@@ -262,11 +327,11 @@ fn timetable(model: &Model, ctx_group: &GroupContext)->Node<Msg>{
         ],
         input![
             attrs!{
-                At::Type=>"button", At::Class=>"button is-primary", At::Value=>"Yazdır"
+                At::Type=>"button", At::Class=>"button is-primary", At::Value=>"Kaydet"
             },
             ev(Ev::Click, |event| {
                 event.prevent_default();
-                Msg::Print
+                Msg::Submit
             })
         ]
     ]
@@ -308,7 +373,14 @@ fn get_timetable_row(day: i32, hour: (usize, &bool), timetable: &Vec<TeacherTime
                         &tc.kademe.to_string(), "/", &tc.sube
                     ]
                 ),
-                &subject.to_uppercase()
+                &subject.to_uppercase(),
+                {
+                    let day_index = day as usize;
+                    let hour_index = hour.0;
+                    ev(Ev::Click, move |_event|
+                        Msg::ChangeHour((day_index-1, hour_index))
+                    )
+                }
             ]
         }
         None=>{
@@ -322,6 +394,13 @@ fn get_timetable_row(day: i32, hour: (usize, &bool), timetable: &Vec<TeacherTime
                     style!{
                         St::Background=>"gray"
                     }
+                },
+                {
+                    let day_index = day as usize;
+                    let hour_index = hour.0;
+                    ev(Ev::Click, move |_event|
+                        Msg::ChangeHour((day_index-1, hour_index))
+                    )
                 }
             ]
         }
