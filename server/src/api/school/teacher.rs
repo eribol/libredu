@@ -2,7 +2,7 @@ use tide::Request;
 use crate::AppState;
 use crate::request::{Auth, SchoolAuth};
 use http_types::{StatusCode, Method, Body};
-use crate::model::timetable;
+use crate::model::{timetable, subject};
 use crate::model::user;
 use crate::model::school;
 use crate::model::class;
@@ -47,30 +47,27 @@ pub async fn get_activities(req: Request<AppState>) -> tide::Result {
     if school_auth.role <= 4 {
         //use sqlx_core::cursor::Cursor;
         //use sqlx_core::row::Row;
-        let acts: Vec<SimpleAct> = sqlx::query_as(r#"SELECT activities.id, activities.teacher, activities.subject, activities.classes, activities.hour, activities.split
-                        FROM activities inner join subjects on activities.subject = subjects.id
+        let acts: Vec<Activity> = sqlx::query_as(r#"SELECT * FROM activities inner join subjects on activities.subject = subjects.id
                         WHERE activities.teacher = $1 order by activities.subject, activities.classes"#)
             .bind(&teacher_id)
-            .bind(&school_auth.school.id)
+            //.bind(&school_auth.school.id)
             .fetch_all(&req.state().db_pool).await?;
-        let mut activities: Vec<activity::TeacherActivity> = Vec::new();
+        let mut activities: Vec<activity::FullActivity> = Vec::new();
         for a in acts {
-            let subject: activity::Subject = sqlx::query_as("SELECT * FROM subjects WHERE id = $1").bind(&a.subject).fetch_one(&req.state().db_pool).await?;
+            let subject = school_auth.school.get_subjects(&req).await?.into_iter().find(|s| s.id == a.subject).unwrap();
             //let class: class::Class = sqlx::query_as("SELECT * FROM classes WHERE id = $1").bind(&a.class).fetch_one(&req.state().db_pool).await?;
-            let classes: Vec<class::Class> = sqlx::query_as("SELECT * FROM classes WHERE id = any($1) and school = $2 and group_id = $3")
-                .bind(&a.classes)
-                .bind(&school_auth.school.id)
-                .bind(&group_id)
-                .fetch_all(&req.state().db_pool).await?;
-            let act = activity::TeacherActivity {
+            let teacher = school_auth.school.get_teachers(&req).await?.into_iter().find(|t| t.id == a.teacher).unwrap();
+            let classes = school_auth.school.get_classes(&req).await?.into_iter().filter(|c| a.classes.iter().any(|c2| c2 == &c.id)).collect::<Vec<Class>>();
+            let act = activity::FullActivity {
                 id: a.id,
-                subject,
-                teacher: a.teacher,
+                subject: subject.clone(),
+                teacher: teacher.clone(),
                 hour: a.hour,
                 split: false,
-                classes
+                classes: classes.clone(),
+                teachers: None
             };
-            activities.push(act);
+            activities.push(act.clone());
         }
         res.set_body(Body::from_json(&activities)?);
         Ok(res)
@@ -126,79 +123,6 @@ pub async fn del_activities(req: Request<AppState>) -> tide::Result {
             let res = tide::Response::new(StatusCode::Unauthorized);
             Ok(res)
         }
-    }
-}
-
-pub async fn activities(mut req: Request<AppState>) -> tide::Result {
-    let mut res = tide::Response::new(StatusCode::Ok);
-    //let school_id: i32 = req.param("school")?.parse()?;
-    let teacher_id: i32 = req.param("teacher_id")?.parse()?;
-    let group_id: i32 = req.param("group_id")?.parse()?;
-    use sqlx_core::postgres::PgQueryAs;
-    let act_form: NewActivity = req.body_json().await?;
-    let user = req.user().await.unwrap();
-    let school_auth: &SchoolAuth = req.ext().unwrap();
-    if school_auth.role <= 2 || teacher_id == user.id{
-
-        let classes: Vec<Class> = sqlx::query_as(r#"select * from classes where id = any($1) and school = $2 and group_id = $3"#)
-            .bind(&act_form.classes)
-            .bind(&school_auth.school.id)
-            .bind(&group_id)
-            .fetch_all(&req.state().db_pool).await?;
-
-        let teacher: user::TeacherAct = sqlx::query_as(r#"select users.id, users.first_name, users.last_name, school_users.role, roles.name
-                from school_users inner join users on school_users.user_id = users.id inner join roles on school_users.role = roles.id
-                where user_id = $1 and school_id = $2"#)
-            .bind(&act_form.teacher)
-            .bind(&school_auth.school.id)
-            .fetch_one(&req.state().db_pool).await?;
-        if teacher.id == teacher_id {
-            let mut acts: Vec<activity::TeacherActivity> = Vec::new();
-            for h in act_form.hour.split(" ").collect::<Vec<&str>>() {
-                match h.parse::<i16>() {
-                    Ok(hour) => {
-                        let _act: Activity = sqlx::query_as(r#"insert into activities(subject, teacher, hour, split, classes) values($1, $2, $3, $4, $5)
-                                        returning id, hour, teacher, split, subject, classes"#)
-                            .bind(&act_form.subject)
-                            .bind(&act_form.teacher)
-                            .bind(&hour)
-                            .bind(false)
-                            .bind(&act_form.classes)
-                            .fetch_one(&req.state().db_pool).await?;
-                        use sqlx_core::cursor::Cursor;
-                        use sqlx_core::row::Row;
-                        let mut cursor = sqlx::query(r#"SELECT
-                                        activities.id, subjects.id, subjects.name, activities.teacher,
-                                        activities.hour, activities.split, subjects.kademe, activities.classes, subjects.optional
-                                        FROM activities inner join subjects on activities.subject = subjects.id
-                                        WHERE activities.id = $1"#)
-                            .bind(&_act.id)
-                            .fetch(&req.state().db_pool);
-                        while let Some(row) = cursor.next().await? {
-                            //println!("{:?}", format!("{}",row.to_string()));
-                            let ids: Vec<i32> = row.get(7);
-                            let clss: Vec<Class> = classes.clone().into_iter().filter(|c| ids.iter().any(|r| r == &c.id)).collect();
-                            let act2 = activity::TeacherActivity {
-                                id: row.get(0),
-                                subject: activity::Subject { name: row.get(2), id: row.get(1), kademe: row.get(6), optional: row.get(8) },
-                                teacher: row.get(3),
-                                classes: clss,
-                                hour: row.get(4),
-                                split: row.get(5)
-                            };
-                            acts.push(act2);
-                        }
-                    }
-                    Err(_) => {}
-                }
-            }
-            res.set_body(Body::from_json(&acts)?);
-            Ok(res)
-        } else {
-            Ok(res)
-        }
-    } else {
-        Ok(res)
     }
 }
 

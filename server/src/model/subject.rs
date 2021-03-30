@@ -8,7 +8,7 @@ pub struct NewSubject{
     pub kademe: String
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct Subject{
     pub id: i32,
     pub name: String,

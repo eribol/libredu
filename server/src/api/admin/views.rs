@@ -3,7 +3,7 @@ use crate::AppState;
 use crate::request::Auth;
 use serde::*;
 use crate::model::school::SchoolType;
-use crate::model::activity::Subject;
+use crate::model::subject::Subject;
 
 pub async fn add_school_type(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(tide::StatusCode::Ok);

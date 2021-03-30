@@ -115,15 +115,4 @@ impl SchoolDetail{
             .fetch_one(&req.state().db_pool).await?;
         Ok(lbrry)
     }
-    pub async fn get_activities(&self, req: &tide::Request<AppState>, group:&i32 ) -> sqlx_core::Result<Activity>{
-        let act = Activity{
-            id: 0,
-            subject: 0,
-            teacher: 0,
-            hour: 0,
-            split: false,
-            classes: vec![]
-        };
-        Ok(act)
-    }
 }

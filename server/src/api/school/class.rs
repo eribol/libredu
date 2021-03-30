@@ -7,104 +7,45 @@ use crate::model::school::SchoolDetail;
 use crate::request::{Auth, SchoolAuth};
 use crate::model::timetable::{ClassAvailable, InsertClassAvailable};
 use crate::model::timetable::Day;
-use crate::model::activity::{Subject, NewActivity, Activity, ActivityTeacher};
+use crate::model::activity::{NewActivity, Activity};
 use crate::model::city::{City, Town};
 use crate::model::student::SimpleStudent;
+use crate::model::subject::Subject;
+use crate::model::teacher::Teacher;
 
 pub async fn activities(mut req: Request<AppState>) -> tide::Result {
-
     let class_id: i32 = req.param("class_id")?.parse()?;
-    use sqlx_core::postgres::PgQueryAs;
     use sqlx_core::cursor::Cursor;
     use sqlx_core::row::Row;
-    match req.method() {
-        Method::Get => {
-            //let school_auth: &SchoolAuth = req.ext().unwrap();
-            let mut res = tide::Response::new(StatusCode::Ok);
-            let mut cursor = sqlx::query(r#"SELECT
+    //let school_auth: &SchoolAuth = req.ext().unwrap();
+    let mut res = tide::Response::new(StatusCode::Ok);
+    let mut cursor = sqlx::query(r#"SELECT
                         activities.id, subjects.id, subjects.name, users.id, users.first_name, users.last_name, activities.hour, activities.split, subjects.kademe,subjects.optional
                         FROM activities inner join users on activities.teacher= users.id inner join subjects on activities.subject = subjects.id
                         WHERE $1 = any(activities.classes) order by activities.subject, activities.teacher"#)
-                .bind(&class_id)
-                .fetch(&req.state().db_pool);
-            let mut acts: Vec<ClassActivity> = Vec::new();
+        .bind(&class_id)
+        .fetch(&req.state().db_pool);
+    let mut acts: Vec<ClassActivity> = Vec::new();
 
-            while let Some(row) = cursor.next().await? {
-                //println!("{:?}", format!("{}",row.to_string()));
-                let act = ClassActivity {
-                    id: row.get(0),
-                    subject: Subject { name: row.get(2), id: row.get(1), kademe: row.get(8), optional: row.get(9) },
-                    teacher: ActivityTeacher {
-                        id: row.get(3),
-                        first_name: row.get(4),
-                        last_name: row.get(5)
-                    },
-                    hour: row.get(6),
-                    split: row.get(7)
-                };
-                acts.push(act);
-            }
-            res.set_body(Body::from_json(&acts)?);
-            Ok(res)
-        }
-        Method::Post => {
-            let act: NewActivity = req.body_json().await?;
-            let school_auth: &SchoolAuth = req.ext().unwrap();
-            let mut res = tide::Response::new(StatusCode::Ok);
-            let clss: Class = sqlx::query_as("Select * from classes where id = any($1)")
-                .bind(&act.classes)
-                .fetch_one(&req.state().db_pool).await?;
-            if clss.school == school_auth.school.id && school_auth.role < 4{
-                let mut acts: Vec<ClassActivity> = Vec::new();
-                for h in act.hour.split(" ").collect::<Vec<&str>>() {
-                    match h.parse::<i16>() {
-                        Ok(hour) => {
-                            let _insert: Activity = sqlx::query_as("insert into activities(teacher, subject, hour, split, classes) values($1, $2, $3, $4, $5) \
-                                            returning id, subject, teacher, hour, split, classes")
-                                //.bind(&act.class)
-                                .bind(&act.teacher)
-                                .bind(&act.subject)
-                                .bind(&hour)
-                                .bind(&act.split)
-                                .bind(&act.classes)
-                                .fetch_one(&req.state().db_pool).await?;
-                            let mut cursor = sqlx::query(r#"SELECT
-                                    activities.id, subjects.id, subjects.name, users.id, users.first_name, users.last_name, activities.hour, activities.split, subjects.kademe, subjects.optional
-                                    FROM activities inner join users on activities.teacher= users.id inner join subjects on activities.subject = subjects.id
-                                    WHERE activities.id = $1"#)
-                                .bind(&_insert.id)
-                                .fetch(&req.state().db_pool);
-
-                            while let Some(row) = cursor.next().await? {
-                                let act = ClassActivity {
-                                    id: row.get(0),
-                                    subject: Subject { name: row.get(2), id: row.get(1), kademe: row.get(8), optional: row.get(9) },
-                                    teacher: ActivityTeacher {
-                                        id: row.get(3),
-                                        first_name: row.get(4),
-                                        last_name: row.get(5)
-                                    },
-                                    hour: row.get(6),
-                                    split: row.get(7)
-                                };
-                                acts.push(act);
-                            }
-                        }
-                        Err(_) => {}
-                    }
-                }
-                res.set_body(Body::from_json(&acts)?);
-                Ok(res)
-            } else {
-                let res = tide::Response::new(StatusCode::Unauthorized);
-                Ok(res)
-            }
-        }
-        _ => {
-            let res = tide::Response::new(StatusCode::MethodNotAllowed);
-            Ok(res)
-        }
+    while let Some(row) = cursor.next().await? {
+        //println!("{:?}", format!("{}",row.to_string()));
+        let act = ClassActivity {
+            id: row.get(0),
+            subject: Subject { name: row.get(2), id: row.get(1), kademe: row.get(8), optional: row.get(9), school: 0 },
+            teacher: Teacher {
+                id: row.get(3),
+                first_name: row.get(4),
+                last_name: row.get(5),
+                role_id: 0,
+                role_name: "".to_string()
+            },
+            hour: row.get(6),
+            split: row.get(7)
+        };
+        acts.push(act);
     }
+    res.set_body(Body::from_json(&acts)?);
+    Ok(res)
 }
 
 pub async fn class_detail(req: Request<AppState>) -> tide::Result {
@@ -267,10 +208,12 @@ pub async fn timetables(req: Request<AppState>) -> tide::Result {
                 hour: row.get(3),
                 activity: ClassTimetableActivity {
                     id: row.get(4),
-                    teacher: ActivityTeacher {
+                    teacher: Teacher {
                         id: row.get(5),
                         first_name: row.get(6),
-                        last_name: row.get(7)
+                        last_name: row.get(7),
+                        role_id: 0,
+                        role_name: "".to_string()
                     }
                 },
                 subject: row.get(8)

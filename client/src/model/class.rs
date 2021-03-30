@@ -1,5 +1,6 @@
 use serde::*;
-use crate::model::activity::{ActivityTeacher, Subject};
+use crate::model::subject::Subject;
+use crate::model::teacher::Teacher;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct Class{
@@ -23,14 +24,14 @@ pub struct ClassTimetable{
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct ClassTimetableActivity{
     pub id: i32,
-    pub teacher: ActivityTeacher
+    pub teacher: Teacher
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct ClassActivity{
     pub id: i32,
     pub subject: Subject,
-    pub teacher: ActivityTeacher,
+    pub teacher: Teacher,
     pub hour: i16,
     pub split: bool
 }

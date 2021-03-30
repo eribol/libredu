@@ -6,12 +6,12 @@ use crate::page::school::group::{test_generate, deneme_generate};
 use crate::model::timetable::Day;
 use crate::model::teacher::{TeacherTimetable, TeacherAvailableForTimetables};
 use crate::model::class::{ClassTimetable, ClassTimetableActivity};
-use crate::model::activity::{ActivityTeacher, Subject};
 use crate::page::school::detail::{SchoolContext, GroupContext};
 use crate::model::group::Schedule;
 use crate::page::school::group::generate;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
+use crate::model::{teacher, subject};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AuthUser{
@@ -38,7 +38,7 @@ pub struct Model{
     pub class_timetables: Vec<ClassTimetable>,
     pub data: TimetableData,
     pub test: test_generate::Tests,
-    subjects: Vec<Subject>,
+    subjects: Vec<subject::Subject>,
     schedules: Vec<Vec<Schedule>>,
     pub error: String
 }
@@ -108,7 +108,7 @@ pub enum Msg{
     DepthChanged(String),
     DepthChanged2(String),
     FetchDays(fetch::Result<Vec<Day>>),
-    FetchSubjects(fetch::Result<Vec<Subject>>),
+    FetchSubjects(fetch::Result<Vec<subject::Subject>>),
     FetchData(fetch::Result<TimetableData>),
     FetchSchedules(fetch::Result<Vec<Schedule>>),
 }
@@ -340,10 +340,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                                 day_id: tt.day_id.unwrap(),
                                 hour: tt.hour.unwrap(),
                                 subject: subject.name.clone(),
-                                activity: ClassTimetableActivity{ id: 0, teacher: ActivityTeacher{
+                                activity: ClassTimetableActivity{ id: 0, teacher: teacher::Teacher{
                                     id: 0,
                                     first_name: t.first_name.clone(),
-                                    last_name: t.last_name.clone()
+                                    last_name: t.last_name.clone(),
+                                    role_id: 0,
+                                    role_name: "".to_string()
                                 } }
                             };
                             c_print.push(timetable)

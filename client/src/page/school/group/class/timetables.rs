@@ -274,6 +274,7 @@ fn timetable(model: &Model, _ctx_school:&SchoolContext, ctx_group: &GroupContext
     div![
         C!{"column"},
         table![
+            C!{"table is-fullwidth"},
             style!{
                 //St::TableLayout=>"fixed",
                 //St::Width=>"1050px"

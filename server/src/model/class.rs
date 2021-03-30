@@ -1,5 +1,8 @@
 use serde::*;
-use crate::model::activity::{ActivityTeacher, Subject};
+use crate::model::activity::{Activity};
+use crate::AppState;
+use crate::model::subject::Subject;
+use crate::model::teacher::Teacher;
 
 #[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow, Default)]
 pub struct Class{
@@ -31,14 +34,14 @@ pub struct ClassTimetable{
 #[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow, Default)]
 pub struct ClassTimetableActivity{
     pub id: i32,
-    pub teacher: ActivityTeacher
+    pub teacher: Teacher
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow, Default)]
 pub struct ClassActivity{
     pub id: i32,
     pub subject: Subject,
-    pub teacher: ActivityTeacher,
+    pub teacher: Teacher,
     pub hour: i16,
     pub split: bool
 }
@@ -63,4 +66,10 @@ pub struct ClassAvailableForTimetables{
     pub(crate) class_id: i32,
     pub(crate) day: i32,
     pub(crate) hours: Vec<bool>
+}
+
+impl Class{
+    pub async fn get_classes(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<Vec<ClassForTimetables>>{
+        Ok(vec![])
+    }
 }

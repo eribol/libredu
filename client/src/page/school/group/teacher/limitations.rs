@@ -1,6 +1,6 @@
 use seed::{*, prelude::*};
 use crate::{Context};
-use crate::model::{teacher};
+use crate::model::{teacher, subject};
 use crate::model::timetable;
 use crate::model::activity;
 use crate::page::school::detail;
@@ -36,8 +36,8 @@ pub struct Teacher{
 pub struct Model{
     pub teacher: Teacher,
     pub act_form: activity::NewActivity,
-    pub activities: Vec<activity::TeacherActivity>,
-    subjects: Vec<activity::Subject>,
+    pub activities: Vec<activity::Activity>,
+    subjects: Vec<subject::Subject>,
     pub timetable: Vec<TeacherTimetable>,
     days: Vec<timetable::Day>,
     pub limitation: Vec<teacher::TeacherAvailable>,

@@ -68,7 +68,7 @@ pub async fn login(mut req: Request<AppState>) -> tide::Result {
                                 //domain = "127.0.0.1".to_string()
                             }
                         };
-                        use time::{Duration};
+                        use time::Duration;
                         //println!("{:?}", env::var("DOMAIN_NAME").unwrap_or("127.0.0.1".to_string()));
                         let _cookie = Cookie::build("libredu-user", u.id.to_string())
                             .domain(domain.clone())

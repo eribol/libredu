@@ -1,6 +1,6 @@
 use seed::{*, prelude::*};
 use crate::{Context};
-use crate::model::activity;
+use crate::model::{activity, subject};
 use crate::page::school::detail;
 use serde::*;
 use crate::page::school::detail::{SchoolContext, GroupContext};
@@ -10,9 +10,9 @@ use web_sys::{HtmlSelectElement, HtmlOptionElement};
 pub enum Msg{
     Home,
     FetchTeacher(fetch::Result<Teacher>),
-    FetchActivities(fetch::Result<Vec<activity::TeacherActivity>>),
-    FetchAct(fetch::Result<Vec<activity::TeacherActivity>>),
-    FetchSubjects(fetch::Result<Vec<activity::Subject>>),
+    FetchActivities(fetch::Result<Vec<activity::FullActivity>>),
+    FetchAct(fetch::Result<Vec<activity::FullActivity>>),
+    FetchSubjects(fetch::Result<Vec<subject::Subject>>),
     SubmitActivity,
     ChangeActClass(String),
     ChangeActHour(String),
@@ -37,8 +37,8 @@ pub struct Teacher{
 pub struct Model{
     teacher: Teacher,
     act_form: activity::NewActivity,
-    activities: Vec<activity::TeacherActivity>,
-    subjects: Vec<activity::Subject>,
+    activities: Vec<activity::FullActivity>,
+    subjects: Vec<subject::Subject>,
     select: ElRef<HtmlSelectElement>,
     error: String
 }
@@ -198,7 +198,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             if ctx_group.classes.len() > 0 && model.subjects.len() > 0{
                 if model.act_form.classes.len() != 0 && model.act_form.subject != 0 && model.act_form.hour != ""{
                     orders.perform_cmd({
-                        let url = format!("/api/schools/{}/groups/{}/teachers/{}/activities", ctx_school.school.id, ctx_group.group.id, model.teacher.id);
+                        let url = format!("/api/schools/{}/groups/{}/activities", ctx_school.school.id, ctx_group.group.id);
                         let request = Request::new(url)
                             .method(Method::Post)
                             .json(&model.act_form);
@@ -235,6 +235,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             });
         }
         Msg::FetchPatchAct(act)=>{
+            /*
             match act{
                 Ok(a) =>{
                     let acts = &mut model.activities;
@@ -250,6 +251,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
 
                 }
             }
+            */
         }
     }
 }
@@ -283,7 +285,7 @@ pub fn view(model: &Model, ctx_group: &GroupContext, ctx_school:&SchoolContext)-
                     &model.error,
                     model.activities.iter().map(|a|
                         tr![
-                            match a.teacher{
+                            match &a.teacher{
                                 Some(_ab)=>{
                                     style!{
                                     }
@@ -307,7 +309,7 @@ pub fn view(model: &Model, ctx_group: &GroupContext, ctx_school:&SchoolContext)-
                             td![
                                 &a.hour.to_string()
                             ],
-                            match a.teacher{
+                            match &a.teacher{
                                 Some(_ab) =>{
                                     td![
                                         a![

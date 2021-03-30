@@ -420,11 +420,7 @@ pub async fn get_timetables(req: Request<AppState>) -> tide::Result {
         let teachers = school_auth.school.get_teachers(&req).await?;
         let cat = group.get_cat(&req).await?;
         let classes = group.get_classes(&req).await?;
-        let acts: Vec<Activity> = sqlx::query_as(r#"select activities.id, activities.subject, activities.hour, activities.teacher, activities.split, activities.classes
-                        from activities where classes && $1::integer[]"#)
-            //.bind(&school_id)
-            .bind(&group.get_classes_ids(&req).await?)
-            .fetch_all(&req.state().db_pool).await?;
+        let acts: Vec<Activity> = group.get_acts(&req).await?;
         let timetables = group.get_timetables(&req).await?;
         let timetable_data = TimetableData {
             tat,
@@ -435,6 +431,22 @@ pub async fn get_timetables(req: Request<AppState>) -> tide::Result {
             timetables
         };
         res.set_body(Body::from_json(&timetable_data)?);
+        Ok(res)
+    } else {
+        Ok(res)
+    }
+}
+
+pub async fn add_activity(mut req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    use sqlx_core::postgres::PgQueryAs;
+    let group_id: i32 = req.param("group_id")?.parse()?;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    if school_auth.role < 6 {
+        let group = grp::get_group(school_auth.school.id, group_id, &req).await?;
+        use crate::model::timetable::{TimetableData, Activity};
+        let add_act = group.add_acts(&mut req).await?;
+        res.set_body(Body::from_json(&add_act)?);
         Ok(res)
     } else {
         Ok(res)

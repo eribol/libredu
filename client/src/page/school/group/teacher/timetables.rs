@@ -12,7 +12,7 @@ pub enum Msg{
     FetchDays(fetch::Result<Vec<timetable::Day>>),
     FetchTeacher(fetch::Result<user::TeacherAct>),
     FetchTimetable(fetch::Result<Vec<teacher::TeacherTimetable>>),
-    FetchActivities(fetch::Result<Vec<activity::TeacherActivity>>),
+    FetchActivities(fetch::Result<Vec<activity::FullActivity>>),
     FetchLimitation(fetch::Result<Vec<teacher::TeacherAvailable>>),
     ChangeHour((usize,usize)),
     ChangeAllHour(usize),
@@ -25,7 +25,7 @@ pub enum Msg{
 pub struct Model{
     pub teacher: user::TeacherAct,
     pub timetable: Vec<TeacherTimetable>,
-    activities: Vec<activity::TeacherActivity>,
+    activities: Vec<activity::FullActivity>,
     limitation: Vec<teacher::TeacherAvailable>,
     days: Vec<timetable::Day>,
 }
@@ -291,6 +291,7 @@ fn timetable(model: &Model, ctx_group: &GroupContext)->Node<Msg>{
         C!{"column is-12"},
 
         table![
+            C!{"table is-fullwidth"},
             C!{"table is-bordered"},
             tr![
                 td![

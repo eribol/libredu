@@ -5,13 +5,13 @@ use crate::{Context};
 use crate::model::timetable::ClassAvailable;
 use crate::model::class::{Class, ClassActivity};
 use crate::model::school::SchoolDetail;
-use crate::model::activity;
+use crate::model::{activity, subject};
 use crate::page::school::detail::{SchoolContext, ClassGroups, GroupContext};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Activity{
     pub(crate) id: i32,
-    pub(crate) subject: activity::Subject,
+    pub(crate) subject: subject::Subject,
     pub(crate) teacher: i32,
     pub(crate) class: Class,
     pub(crate) hour: i16,
@@ -27,7 +27,7 @@ pub enum Msg{
     //FetchClasses(fetch::Result<Vec<Class>>),
     FetchActivities(fetch::Result<Vec<ClassActivity>>),
     FetchAct(fetch::Result<Vec<ClassActivity>>),
-    FetchSubjects(fetch::Result<Vec<activity::Subject>>),
+    FetchSubjects(fetch::Result<Vec<subject::Subject>>),
     ChangeHour((usize,usize)),
     SubmitActivity,
     ChangeActTeacher(String),
@@ -43,7 +43,7 @@ pub struct Model{
     pub school: SchoolDetail,
     pub activities: Vec<ClassActivity>,
     pub classes: Vec<Class>,
-    subjects: Vec<activity::Subject>,
+    subjects: Vec<subject::Subject>,
     days: Vec<Day>,
     pub act_form: activity::NewActivity,
     pub limitation: Vec<ClassAvailable>,
@@ -202,11 +202,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
 
         }
         Msg::SubmitActivity=>{
-            model.act_form.classes.push(model.class.id);
+            if model.act_form.classes.len() == 0{
+                model.act_form.classes.push(model.class.id);
+            }
             model.act_form.split = false;
             if model.act_form.teacher != 0 && model.act_form.subject != 0 && model.act_form.hour !=""{
                 orders.perform_cmd({
-                    let url = format!("/api/schools/{}/groups/{}/classes/{}/activities", ctx_school.school.id, &ctx_group.group.id, &model.class.id);
+                    let url = format!("/api/schools/{}/groups/{}/activities", ctx_school.school.id, &ctx_group.group.id);
                     let request = Request::new(url)
                         .method(Method::Post)
                         .json(&model.act_form);
