@@ -108,7 +108,7 @@ pub(crate) fn recursive_put(
         //c_act.shuffle(&mut thread_rng());
         //c_act.sort_by(|a, b| b.hour.cmp(&a.hour));
         c_act.insert(0, act.clone());
-        ignore_list.push(act.clone());
+        *ignore_list = c_act.clone();
         //ignore_list.append(&mut c_act.clone());
         let mut okey = true;
         for a in &c_act {
@@ -118,7 +118,7 @@ pub(crate) fn recursive_put(
                     put_activity(a, _acts, tat, timetables, cat, slots[0].0, slots[0].1);
                 },
                 None => {
-                    if depth < 5 {
+                    if depth < 10 {
                         let rec_result = recursive_put(a, _acts, timetables, &clean_tat, tat, cat, max_day_hour, depth + 1, max_depth, ignore_list);
                         if !rec_result {
                             okey = false;
@@ -134,11 +134,11 @@ pub(crate) fn recursive_put(
         }
         if okey {
             okey2 = true;
-            ignore_list.retain(|a3| a3.id != act.id);
+            //ignore_list.retain(|a3| a3.id != act.id);
             break;
         }
         else {
-            for a in &c_act {
+            /*for a in &c_act {
                 delete_activity(_acts, a, tat, timetables, cat, true);
                 //ignore_list.retain(|a3| a3.id != a.id);
             }
@@ -155,7 +155,7 @@ pub(crate) fn recursive_put(
                         //break;
                     }
                 }
-            }
+            }*/
             //ignore_list.retain(|a3| !c_act.iter().any(|a4| a4.id == a3.id));
             okey2 = false;
             //break;
