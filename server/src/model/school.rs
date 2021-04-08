@@ -3,6 +3,8 @@ use crate::model::city::{City, Town};
 use crate::AppState;
 use crate::model::{class, subject, group, teacher, library};
 use crate::model::activity::Activity;
+use tide::{Error, Response};
+use crate::model::teacher::{SimpleTeacher, Teacher};
 
 
 #[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize)]
@@ -66,10 +68,42 @@ impl NewSchool{
 }
 
 impl SchoolDetail{
+    pub async fn get_teacher(&self, req: &tide::Request<AppState>, teacher_id: i32) -> Option<teacher::Teacher>{
+        use sqlx::Cursor;
+        use sqlx::Row;
+        //let teacher_id: i32 = req.param("teacher_id")?.parse()?;
+        let mut tchr = sqlx::query("SELECT users.id, users.first_name, users.last_name, roles.id, roles.name, users.is_active \
+                        FROM school_users inner join users on school_users.user_id = users.id inner join roles on school_users.role = roles.id \
+                        WHERE school_users.school_id = $1 and school_users.role <= 5 and user_id = $2 order by roles.id, users.first_name")
+            .bind(&self.id)
+            .bind(&teacher_id)
+            .fetch(&req.state().db_pool);
+        let mut teacher: teacher::Teacher;
+        while let Some(row) = tchr.next().await.unwrap() {
+            teacher = teacher::Teacher {
+                id: row.get(0),
+                first_name: row.get(1),
+                last_name: row.get(2),
+                role_id: row.get(3),
+                role_name: row.get(4),
+                is_active: row.get(5)
+            };
+            return Some(teacher)
+        }
+        None
+    }
+    pub async fn del_teacher(&self, req: &tide::Request<AppState>, teacher_id: i32) -> sqlx_core::Result<SimpleTeacher>{
+        use sqlx::prelude::PgQueryAs;
+        let mut tchr: SimpleTeacher = sqlx::query_as(r#"delete from school_users using users where school_users.school_id = $1 and school_users.user_id = $2 returning users.id"#)
+            .bind(&self.id)
+            .bind(&teacher_id)
+            .fetch_one(&req.state().db_pool).await?;
+        Ok(tchr)
+    }
     pub async fn get_teachers(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<Vec<teacher::Teacher>>{
         use sqlx::Cursor;
         use sqlx::Row;
-        let mut tchrs = sqlx::query("SELECT users.id, users.first_name, users.last_name, roles.id, roles.name \
+        let mut tchrs = sqlx::query("SELECT users.id, users.first_name, users.last_name, roles.id, roles.name, users.is_active \
                         FROM school_users inner join users on school_users.user_id = users.id inner join roles on school_users.role = roles.id \
                         WHERE school_users.school_id = $1 and school_users.role <= 5 order by roles.id, users.first_name")
             .bind(&self.id)
@@ -81,11 +115,27 @@ impl SchoolDetail{
                 first_name: row.get(1),
                 last_name: row.get(2),
                 role_id: row.get(3),
-                role_name: row.get(4)
+                role_name: row.get(4),
+                is_active: row.get(5)
             };
             teachers.push(teacher);
         }
         Ok(teachers)
+    }
+    pub async fn get_classes_ids(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<Vec<i32>> {
+        use sqlx::prelude::PgQueryAs;
+        let ids: (Option<Vec<i32>>, ) = sqlx::query_as(r#"select array_agg(id) from  classes where school= $1"#)
+            .bind(&self.id)
+            //.bind(&self.id)
+            .fetch_one(&req.state().db_pool).await?;
+        match ids.0 {
+            Some(i) => {
+                Ok(i)
+            }
+            None => {
+                Ok(vec![])
+            }
+        }
     }
     pub async fn get_classes(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<Vec<class::Class>>{
         use sqlx::prelude::PgQueryAs;
@@ -93,6 +143,23 @@ impl SchoolDetail{
             .bind(&self.id)
             .fetch_all(&req.state().db_pool).await?;
         Ok(classes)
+    }
+    pub async fn get_class(&self, req: &tide::Request<AppState>, group_id: i32, class_id: i32) -> sqlx_core::Result<class::Class>{
+        use sqlx::prelude::PgQueryAs;
+        match self.get_group(req,group_id).await{
+            Ok(g) => {
+                let clss: class::Class = sqlx::query_as(r#"SELECT * FROM classes WHERE school=$1 and id = $2 and group_id = $3"#)
+                    .bind(&self.id)
+                    .bind(&class_id)
+                    .bind(&g.id)
+                    .fetch_one(&req.state().db_pool).await?;
+                Ok(clss)
+            }
+            Err(e) => {
+                Err(e)
+            }
+        }
+
     }
     pub async fn get_subjects(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<Vec<subject::Subject>>{
         use sqlx::prelude::PgQueryAs;
@@ -108,6 +175,14 @@ impl SchoolDetail{
             .fetch_all(&req.state().db_pool).await?;
         Ok(groups)
     }
+    pub async fn get_group(&self, req: &tide::Request<AppState>, group_id: i32) -> sqlx_core::Result<group::ClassGroups>{
+        use sqlx::prelude::PgQueryAs;
+        let group: group::ClassGroups = sqlx::query_as("select * from class_groups where school = $1 and id = $2")
+            .bind(&self.id)
+            .bind(&group_id)
+            .fetch_one(&req.state().db_pool).await?;
+        Ok(group)
+    }
     pub async fn get_library(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<library::Library>{
         use sqlx::prelude::PgQueryAs;
         let lbrry: library::Library  = sqlx::query_as(r#"select * from libraries where school = $1"#)
@@ -115,4 +190,5 @@ impl SchoolDetail{
             .fetch_one(&req.state().db_pool).await?;
         Ok(lbrry)
     }
+
 }

@@ -47,11 +47,10 @@ pub(crate) fn generate(
                 return true;
             }
             else {
-                /*
                 *timetables = timetables_backup;
                 *tat = tat_backup;
                 *cat = cat_backup;
-                */
+
                 let mut conflict_acts = find_conflict_activity(&act2, &total_acts, &timetables, clean_tat, &tat, &cat, max_day_hour, max_depth, &mut vec![]);
                 if conflict_acts.len() == 0 {
                     log!("Çakışan aktivite yok");

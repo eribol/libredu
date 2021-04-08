@@ -95,6 +95,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchAct(act)=>{
             match act{
                 Ok(mut a) => {
+                    log!(&a);
                     model.activities.append(&mut a);
                 }
                 Err(_) => {}
@@ -139,6 +140,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
 
         }
         Msg::FetchActivities(acts)=>{
+            log!(&acts);
             match acts{
                 Ok(a) => {
                     model.activities = a.clone().into_iter().filter(|a|
@@ -186,7 +188,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             match id{
                 Ok(i)=>{
                     // This should change. It search all vec and remove but it does not stop when it find the right element.
-                    model.activities.retain(|a| a.id != i.parse::<i32>().unwrap())
+                    log!(&i);
+                    let a = model.activities.iter().enumerate().find(|a| a.1.id == i.parse::<i32>().unwrap());
+                    match a{
+                        Some(aa) => {
+                            model.activities.remove(aa.0);
+                        }
+                        None => {}
+                    }
+
                 }
                 Err(_)=>{}
             }
@@ -310,7 +320,7 @@ pub fn view(model: &Model, ctx_group: &GroupContext, ctx_school:&SchoolContext)-
                                 &a.hour.to_string()
                             ],
                             match &a.teacher{
-                                Some(_ab) =>{
+                                Some(_) =>{
                                     td![
                                         a![
                                             "Sil",

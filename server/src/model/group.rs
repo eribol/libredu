@@ -100,8 +100,10 @@ impl ClassGroups {
     pub async fn add_acts(&self, req: &mut tide::Request<AppState>) -> tide::Result<Vec<activity::FullActivity>> {
         use sqlx::prelude::PgQueryAs;
         let mut act: activity::NewActivity = req.body_json().await?;
-        act.classes.retain(|c| *c & 1 == 1);
-        act.teachers.retain(|t| *t & 1 == 1);
+        act.classes.sort();
+        act.classes.dedup();
+        //act.classes.retain(|c| *c & 1 == 1);
+        //act.teachers.retain(|t| *t & 1 == 1);
         let school = req.get_school().await.unwrap();
         let teacher = school.get_teachers(&req).await?.into_iter().find(|t| t.id == act.teacher).unwrap();
         let subject = school.get_subjects(&req).await?.into_iter().find(|s| s.id == act.subject).unwrap();

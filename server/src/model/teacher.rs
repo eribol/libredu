@@ -1,6 +1,7 @@
 use serde::*;
 use crate::model::timetable;
 use crate::model::class::Class;
+use crate::AppState;
 
 #[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct TeacherAvailable{
@@ -32,5 +33,20 @@ pub struct Teacher{
     pub first_name: String,
     pub last_name: String,
     pub role_id: i32,
-    pub role_name: String
+    pub role_name: String,
+    pub is_active: bool
+}
+
+#[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize, Default)]
+pub struct SimpleTeacher{
+    pub id: i32
+}
+
+impl Teacher{
+    pub async fn del(&self, _req: &tide::Request<AppState>) -> i32{
+        0
+    }
+    pub async fn del_activities(&self, _req: &tide::Request<AppState>) -> sqlx_core::Result<i32>{
+        Ok(0)
+    }
 }

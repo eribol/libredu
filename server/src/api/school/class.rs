@@ -20,7 +20,7 @@ pub async fn activities(mut req: Request<AppState>) -> tide::Result {
     //let school_auth: &SchoolAuth = req.ext().unwrap();
     let mut res = tide::Response::new(StatusCode::Ok);
     let mut cursor = sqlx::query(r#"SELECT
-                        activities.id, subjects.id, subjects.name, users.id, users.first_name, users.last_name, activities.hour, activities.split, subjects.kademe,subjects.optional
+                        activities.id, subjects.id, subjects.name, users.id, users.first_name, users.last_name, activities.hour, activities.split, subjects.kademe,subjects.optional, users.is_active
                         FROM activities inner join users on activities.teacher= users.id inner join subjects on activities.subject = subjects.id
                         WHERE $1 = any(activities.classes) order by activities.subject, activities.teacher"#)
         .bind(&class_id)
@@ -37,7 +37,8 @@ pub async fn activities(mut req: Request<AppState>) -> tide::Result {
                 first_name: row.get(4),
                 last_name: row.get(5),
                 role_id: 0,
-                role_name: "".to_string()
+                role_name: "".to_string(),
+                is_active: row.get(10)
             },
             hour: row.get(6),
             split: row.get(7)
@@ -50,13 +51,11 @@ pub async fn activities(mut req: Request<AppState>) -> tide::Result {
 
 pub async fn class_detail(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
-    let class_id = req.param("class_id")?;
+    let class_id = req.param("class_id")?.parse()?;
+    let group_id = req.param("group_id")?.parse()?;
     use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
-    let class: Class = sqlx::query_as(r#"SELECT * FROM classes WHERE school=$1 and id = $2"#)
-        .bind(&school_auth.school.id)
-        .bind(&class_id.parse::<i32>()?)
-        .fetch_one(&req.state().db_pool).await?;
+    let class = school_auth.school.get_class(&req, group_id, class_id).await?;
     res.set_body(Body::from_json(&class)?);
     Ok(res)
 }
@@ -193,7 +192,7 @@ pub async fn timetables(req: Request<AppState>) -> tide::Result {
         .fetch_one(&req.state().db_pool).await?;
     if school_auth.role <= 8 {
         let mut class = sqlx::query("SELECT class_timetable.id, class_timetable.class_id, class_timetable.day_id, class_timetable.hour,
-                            activities.id, users.id, users.first_name, users.last_name, subjects.name
+                            activities.id, users.id, users.first_name, users.last_name, subjects.name, users.is_active
                             FROM class_timetable inner join activities on class_timetable.activities = activities.id
                             inner join users on activities.teacher = users.id
                             inner join subjects on activities.subject = subjects.id WHERE class_id = $1")
@@ -213,7 +212,8 @@ pub async fn timetables(req: Request<AppState>) -> tide::Result {
                         first_name: row.get(6),
                         last_name: row.get(7),
                         role_id: 0,
-                        role_name: "".to_string()
+                        role_name: "".to_string(),
+                        is_active: row.get(9)
                     }
                 },
                 subject: row.get(8)

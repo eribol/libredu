@@ -547,7 +547,7 @@ pub async fn get_books(req: Request<AppState>) -> tide::Result {
 }
 pub async fn books(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
-    let library_id = req.param("library_id").unwrap().parse::<i32>().unwrap();
+    //let library_id = req.param("library_id").unwrap().parse::<i32>().unwrap();
     let book = req.body_json::<library::NewBook>().await?;
     use sqlx::prelude::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();

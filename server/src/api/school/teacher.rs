@@ -17,16 +17,6 @@ use crate::model::city::{City, Town};
 use crate::model::user::{SimpleTeacher};
 
 #[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize, Default)]
-pub struct Teacher{
-    id: i32,
-    first_name: String,
-    last_name: String,
-    is_active: bool,
-    email: Option<String>,
-    tel: Option<String>
-}
-
-#[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize, Default)]
 pub struct SimpleAct{
     pub(crate) id: i32,
     pub(crate) teacher: Option<i32>,
@@ -47,13 +37,14 @@ pub async fn get_activities(req: Request<AppState>) -> tide::Result {
     if school_auth.role <= 4 {
         //use sqlx_core::cursor::Cursor;
         //use sqlx_core::row::Row;
-        let acts: Vec<Activity> = sqlx::query_as(r#"SELECT * FROM activities inner join subjects on activities.subject = subjects.id
-                        WHERE activities.teacher = $1 order by activities.subject, activities.classes"#)
+        let acts: Vec<Activity> = sqlx::query_as(r#"SELECT * FROM activities WHERE activities.teacher = $1"#)
             .bind(&teacher_id)
             //.bind(&school_auth.school.id)
             .fetch_all(&req.state().db_pool).await?;
         let mut activities: Vec<activity::FullActivity> = Vec::new();
+        println!("{:?}", &acts);
         for a in acts {
+            println!("{:?}", &a);
             let subject = school_auth.school.get_subjects(&req).await?.into_iter().find(|s| s.id == a.subject).unwrap();
             //let class: class::Class = sqlx::query_as("SELECT * FROM classes WHERE id = $1").bind(&a.class).fetch_one(&req.state().db_pool).await?;
             let teacher = school_auth.school.get_teachers(&req).await?.into_iter().find(|t| t.id == a.teacher).unwrap();
@@ -77,66 +68,45 @@ pub async fn get_activities(req: Request<AppState>) -> tide::Result {
 }
 
 pub async fn del_activities(req: Request<AppState>) -> tide::Result {
-    let school_id: i32 = req.param("school")?.parse()?;
+    //let school_id: i32 = req.param("school")?.parse()?;
     let teacher_id: i32 = req.param("teacher_id")?.parse()?;
     let act_id: i32 = req.param("act_id")?.parse()?;
     use sqlx_core::cursor::Cursor;
     use sqlx_core::row::Row;
-    let mut school = SchoolDetail::default();
-    let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
-            FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.id = $1")
-        .bind(&school_id)
-        .fetch(&req.state().db_pool);
-    while let Some(row) = query.next().await?{
-        school = SchoolDetail{
-            id: row.get(0),
-            name: row.get(1),
-            manager: row.get(2),
-            school_type: row.get(3),
-            tel: None,
-            location: None,
-            city: City{ pk: row.get(4), name: row.get(5) },
-            town: Town{
-                city: row.get(4),
-                pk: row.get(6),
-                name: row.get(7)
-            }
-        }
-    }
-    match req.user().await {
-        Some(user)=>{
-            if school.manager == user.id{
-                let mut res = tide::Response::new(StatusCode::Ok);
-                let _update = sqlx::query(r#"delete from activities where teacher = $1 and id = $2"#)
-                    .bind(&teacher_id)
-                    .bind(&act_id)
-                    .execute(&req.state().db_pool).await?;
-                res.set_body(Body::from_json(&act_id)?);
-                Ok(res)
-            }
-            else{
-                let res = tide::Response::new(StatusCode::Unauthorized);
-                Ok(res)
-            }
-        }
-        None=>{
-            let res = tide::Response::new(StatusCode::Unauthorized);
-            Ok(res)
-        }
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+
+    if school_auth.role < 3 {
+        let mut res = tide::Response::new(StatusCode::Ok);
+        let ids = school_auth.school.get_classes_ids(&req).await?;
+        //let teacher = school_auth.school.get_teacher(&req, teacher_id).await?;
+        let _update = sqlx::query(r#"delete from activities WHERE (teacher = $1 or $1 = ANY(teachers)) and array[$2::int[]] @> classes and id = $3"#)
+            .bind(&teacher_id)
+            .bind(ids)
+            .bind(&act_id)
+            .execute(&req.state().db_pool).await?;
+        res.set_body(Body::from_json(&act_id)?);
+        Ok(res)
+    } else {
+        let res = tide::Response::new(StatusCode::Unauthorized);
+        Ok(res)
     }
 }
 
 pub async fn teacher_detail(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let teacher_id: i32 = req.param("teacher_id")?.parse()?;
-    use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role <= 8 {
-        let teacher: Teacher = sqlx::query_as(r#"SELECT * FROM users WHERE id=$1"#)
-            .bind(&teacher_id)
-            .fetch_one(&req.state().db_pool).await?;
-        res.set_body(Body::from_json(&teacher)?);
-        Ok(res)
+        let teacher = school_auth.school.get_teacher(&req, teacher_id).await;
+        match teacher{
+            Some(t) =>{
+                res.set_body(Body::from_json(&t)?);
+                Ok(res)
+            }
+            None => {
+                Ok(res)
+            }
+        }
     } else {
         Ok(res)
     }
@@ -278,53 +248,44 @@ pub async fn timetables(req: Request<AppState>) -> tide::Result {
 
 pub async fn del_teacher(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
-    //let school_id: i32 = req.param("school")?.parse()?;
     let teacher_id: i32 = req.param("teacher_id")?.parse()?;
     use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role <= 2 {
-        let teacher: SimpleTeacher = sqlx::query_as(r#"SELECT users.id, users.first_name, users.last_name, users.is_active, users.email, users.tel
-                        FROM users inner join school_users on users.id = school_users.user_id
-                        WHERE school_users.school_id = $1 and school_users.user_id = $2 and school_users.role > 1"#)
-            .bind(&school_auth.school.id)
-            .bind(&teacher_id)
-            .fetch_one(&req.state().db_pool).await?;
-
-        let _ = sqlx::query(r#"update classes set teacher = null WHERE teacher = $1"#)
-            .bind(&teacher.id)
-            .execute(&req.state().db_pool).await?;
-        let _del_school_user = sqlx::query(r#"delete from teacher_available WHERE user_id= $1 and school_id = $2"#)
-            .bind(&teacher.id)
-            .bind(&school_auth.school.id)
-            .execute(&req.state().db_pool).await?;
-        if !teacher.is_active {
-            let _ = sqlx::query(r#"delete from activities WHERE teacher=$1"#)
-                .bind(&teacher.id)
-                .execute(&req.state().db_pool).await?;
-            let _ = sqlx::query(r#"delete from school_users WHERE user_id = $1 and school_id = $2"#)
-                .bind(&teacher_id)
-                .bind(&school_auth.school.id)
-                .execute(&req.state().db_pool).await?;
-            let _ = sqlx::query(r#"delete from users WHERE id = $1"#)
-                .bind(&teacher.id)
-                .execute(&req.state().db_pool).await?;
-            res.set_body(Body::from_json(&teacher_id)?);
-            Ok(res)
-        } else {
-            let _ = sqlx::query(r#"delete from school_users WHERE user_id = $1 and school_id = $2"#)
-                .bind(&teacher_id)
-                .bind(&school_auth.school.id)
-                .execute(&req.state().db_pool).await?;
-            let classes: (Option<Vec<i32>>, ) = sqlx::query_as(r#"select array_agg(id) from  classes where school= $1"#)
-                .bind(&school_auth.school.id)
-                .fetch_one(&req.state().db_pool).await?;
-            let _ = sqlx::query(r#"delete from activities WHERE teacher=$1 and array[$2::int[]] @> classes "#)
-                .bind(&teacher_id)
-                .bind(classes.0.unwrap_or_default())
-                .execute(&req.state().db_pool).await?;
-            res.set_body(Body::from_json(&teacher_id)?);
-            Ok(res)
+        //use crate::model::teacher;
+        let tchr = school_auth.school.get_teacher(&req, teacher_id).await;
+        match tchr{
+            Some(t) =>{
+                let _ = sqlx::query(r#"update classes set teacher = null WHERE teacher = $1"#)
+                    .bind(&teacher_id)
+                    .execute(&req.state().db_pool).await?;
+                let _ = school_auth.school.del_teacher(&req, teacher_id).await?;
+                if !t.is_active {
+                    let _ = sqlx::query(r#"delete from users WHERE id = $1"#)
+                        .bind(&teacher_id)
+                        .execute(&req.state().db_pool).await?;
+                    let _ = sqlx::query(r#"delete from activities WHERE (teacher = $1 or $1 = ANY(teachers))"#)
+                        .bind(&teacher_id)
+                        .execute(&req.state().db_pool).await?;
+                    res.set_body(Body::from_json(&teacher_id)?);
+                    Ok(res)
+                } else {
+                    let classes: (Option<Vec<i32>>, ) = sqlx::query_as(r#"select array_agg(id) from  classes where school= $1"#)
+                        .bind(&school_auth.school.id)
+                        .fetch_one(&req.state().db_pool).await?;
+                    let _ = sqlx::query(r#"delete from activities WHERE (teacher = $1 or $1 = ANY(teachers)) and array[$2::int[]] @> classes "#)
+                        .bind(&teacher_id)
+                        .bind(classes.0.unwrap_or_default())
+                        .execute(&req.state().db_pool).await?;
+                    res.set_body(Body::from_json(&teacher_id)?);
+                    Ok(res)
+                }
+            }
+            None => {
+                Ok(res)
+            }
         }
+
     }
     else {
         Ok(res)
@@ -347,16 +308,15 @@ pub async fn patch_teacher(mut req: Request<AppState>) -> tide::Result {
     use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role <= 2 {
-        let teacher: sqlx::Result<Teacher> = sqlx::query_as(r#"SELECT * FROM users
-                        WHERE id=$1 and is_active = false and email is null and key is null and tel is null"#)
-            .bind(&teacher_id)
-            .fetch_one(&req.state().db_pool).await;
+        use crate::model::teacher::Teacher;
+        let teacher = school_auth.school.get_teacher(&req, teacher_id).await;
         match teacher {
-            Ok(_t) => {
+            Some(_t) => {
+                use crate::model::teacher::SimpleTeacher;
                 let form: UpdateTeacherForm = req.body_json().await?;
-                let update_teacher: Teacher = sqlx::query_as(r#"UPDATE users
+                let update_teacher: SimpleTeacher = sqlx::query_as(r#"UPDATE users
                             set is_active = true, email = $1, tel = $2, key = $3, password = $4, first_name = $5, last_name = $6
-                            WHERE id=$7 returning id, first_name, last_name, is_active, email, tel"#)
+                            WHERE id=$7 returning id"#)
                     .bind(&form.email)
                     .bind(&bcrypt::hash(form.tel, 8).unwrap())
                     .bind(&uuid::Uuid::new_v4().to_string())
@@ -368,7 +328,7 @@ pub async fn patch_teacher(mut req: Request<AppState>) -> tide::Result {
                 res.set_body(Body::from_json(&update_teacher)?);
                 Ok(res)
             }
-            Err(_) => {
+            None => {
                 //res.set_body(Body::from_json(&teacher)?);
                 Ok(res)
             }
