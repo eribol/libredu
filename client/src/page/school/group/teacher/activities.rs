@@ -95,7 +95,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchAct(act)=>{
             match act{
                 Ok(mut a) => {
-                    log!(&a);
                     model.activities.append(&mut a);
                 }
                 Err(_) => {}
@@ -140,7 +139,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
 
         }
         Msg::FetchActivities(acts)=>{
-            log!(&acts);
             match acts{
                 Ok(a) => {
                     model.activities = a.clone().into_iter().filter(|a|
@@ -244,7 +242,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 }
             });
         }
-        Msg::FetchPatchAct(act)=>{
+        Msg::FetchPatchAct(_act)=>{
             /*
             match act{
                 Ok(a) =>{

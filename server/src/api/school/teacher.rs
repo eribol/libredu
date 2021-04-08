@@ -42,9 +42,7 @@ pub async fn get_activities(req: Request<AppState>) -> tide::Result {
             //.bind(&school_auth.school.id)
             .fetch_all(&req.state().db_pool).await?;
         let mut activities: Vec<activity::FullActivity> = Vec::new();
-        println!("{:?}", &acts);
         for a in acts {
-            println!("{:?}", &a);
             let subject = school_auth.school.get_subjects(&req).await?.into_iter().find(|s| s.id == a.subject).unwrap();
             //let class: class::Class = sqlx::query_as("SELECT * FROM classes WHERE id = $1").bind(&a.class).fetch_one(&req.state().db_pool).await?;
             let teacher = school_auth.school.get_teachers(&req).await?.into_iter().find(|t| t.id == a.teacher).unwrap();
