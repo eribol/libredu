@@ -1,7 +1,7 @@
 use serde::*;
 use tide::{Request};
 use crate::AppState;
-use crate::views::AuthUser;
+use crate::model::user::AuthUser;
 use bcrypt::verify;
 //use async_trait::async_trait;
 use crate::model::school::{School, SchoolDetail};

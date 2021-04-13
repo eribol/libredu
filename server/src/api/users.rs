@@ -7,6 +7,7 @@ use crate::model::school::School;
 use crate::model::group::ClassGroups;
 use crate::model::{class, teacher};
 use crate::views::ResetPassword;
+use crate::request::Auth;
 
 pub async fn get(req: Request<AppState>)-> tide::Result {
     let mut res = Response::new(StatusCode::Ok);
