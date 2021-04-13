@@ -47,11 +47,10 @@ pub(crate) fn generate(
                 return true;
             }
             else {
-                /*
                 *timetables = timetables_backup;
                 *tat = tat_backup;
                 *cat = cat_backup;
-                */
+
                 let mut conflict_acts = find_conflict_activity(&act2, &total_acts, &timetables, clean_tat, &tat, &cat, max_day_hour, max_depth, &mut vec![]);
                 if conflict_acts.len() == 0 {
                     log!("Çakışan aktivite yok");
@@ -63,17 +62,20 @@ pub(crate) fn generate(
                 for a in &c_act {
                     delete_activity(total_acts, a, tat, timetables, cat, true);
                 }
-                //c_act.insert(0, act2.clone());
-                let available2 = find_timeslot(act2, &total_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, false);
-                match available2 {
-                    Some(slots2) => {
-                        put_activity(act2, total_acts, tat, timetables, cat, slots2[0].0, slots2[0].1);
-                        return true
-                    },
-                    None => {
-                        return false
+                c_act.insert(0, act2.clone());
+                for a in &c_act{
+                    let available2 = find_timeslot(a, &total_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, false);
+                    match available2 {
+                        Some(slots2) => {
+                            put_activity(act2, total_acts, tat, timetables, cat, slots2[0].0, slots2[0].1);
+                            //return true
+                        },
+                        None => {
+                            //return false
+                        }
                     }
                 }
+                return true
             }
         }
     }
@@ -98,6 +100,9 @@ pub(crate) fn recursive_put(
     //let start = Instant::now();
     use rand::thread_rng;
     let mut okey2 = false;
+    if !ignore_list.iter().any(|i| i.id == act.id){
+        ignore_list.push(act.clone());
+    }
     for conflict_act in &conflict_acts {
         let mut c_act = conflict_act.clone();
         for a in &c_act {
@@ -107,7 +112,6 @@ pub(crate) fn recursive_put(
         //c_act.shuffle(&mut thread_rng());
         //c_act.sort_by(|a, b| b.hour.cmp(&a.hour));
         c_act.insert(0, act.clone());
-        ignore_list.push(act.clone());
         //ignore_list.append(&mut c_act.clone());
         let mut okey = true;
         for a in &c_act {
@@ -142,19 +146,34 @@ pub(crate) fn recursive_put(
                 //ignore_list.retain(|a3| a3.id != a.id);
             }
             c_act.remove(0);
-            for a in &c_act {
-                let available = find_timeslot(a, &_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, true);
-                match available {
-                    Some(slots) => {
-                        put_activity(a, _acts, tat, timetables, cat, slots[0].0, slots[0].1);
-                        //ignore_list.push(a.clone());
-                    },
-                    None => {
-                        //okey = false;
-                        //break;
+            for _i in 0..3{
+                let mut okey3 = true;
+                for a in &c_act {
+                    delete_activity(_acts, a, tat, timetables, cat, true);
+                    //ignore_list.retain(|a3| a3.id != a.id);
+                }
+                for a in &c_act {
+                    let available = find_timeslot(a, &_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, true);
+                    match available {
+                        Some(slots) => {
+                            put_activity(a, _acts, tat, timetables, cat, slots[0].0, slots[0].1);
+                            //ignore_list.push(a.clone());
+                        },
+                        None => {
+                            okey3 = false;
+                            break;
+                        }
                     }
                 }
+                if okey3{
+                    //log!("vaay");
+                    break;
+                }
+                else{
+                    c_act.shuffle(&mut thread_rng());
+                }
             }
+
             //ignore_list.retain(|a3| !c_act.iter().any(|a4| a4.id == a3.id));
             okey2 = false;
             //break;

@@ -42,7 +42,7 @@ pub(crate) fn generate(
             let timetables_backup = timetables.clone();
             let tat_backup = tat.clone();
             let cat_backup = cat.clone();
-            let rec_result = recursive_put(&act2, total_acts, timetables, clean_tat, tat, cat, max_day_hour, 0, max_depth, &mut vec![]);
+            let rec_result = recursive_put(&act2, total_acts, timetables, clean_tat, tat, cat, max_day_hour, 0, max_depth, &mut vec![],&tat_backup, &cat_backup, &timetables_backup);
             if rec_result {
                 return true;
             }
@@ -93,16 +93,20 @@ pub(crate) fn recursive_put(
     depth: usize,
     //depth2: usize,
     max_depth: usize,
-    ignore_list: &mut Vec<Activity>
+    ignore_list: &mut Vec<Activity>,
+    tat2: &Vec<model::teacher::TeacherAvailableForTimetables>,
+    cat2: &Vec<ClassAvailable>,
+    timetables2: &Vec<NewClassTimetable>
 )
     -> bool {
-    let conflict_acts = find_conflict_activity(act, &_acts, &timetables, &clean_tat, &tat, &cat, max_day_hour, max_depth, ignore_list);
+    let mut conflict_acts = find_conflict_activity(act, &_acts, &timetables, &clean_tat, &tat, &cat, max_day_hour, max_depth, ignore_list);
     //let start = Instant::now();
     use rand::thread_rng;
     let mut okey2 = false;
     if !ignore_list.iter().any(|i| i.id == act.id){
         ignore_list.push(act.clone());
     }
+    conflict_acts.shuffle(&mut thread_rng());
     for conflict_act in &conflict_acts {
         let mut c_act = conflict_act.clone();
         for a in &c_act {
@@ -122,7 +126,7 @@ pub(crate) fn recursive_put(
                 },
                 None => {
                     if depth < 5 {
-                        let rec_result = recursive_put(a, _acts, timetables, &clean_tat, tat, cat, max_day_hour, depth + 1, max_depth, ignore_list);
+                        let rec_result = recursive_put(a, _acts, timetables, &clean_tat, tat, cat, max_day_hour, depth + 1, max_depth, ignore_list, &tat.clone(), &cat.clone(), &timetables.clone());
                         if !rec_result {
                             okey = false;
                             break;
@@ -141,39 +145,9 @@ pub(crate) fn recursive_put(
             break;
         }
         else {
-            for a in &c_act {
-                delete_activity(_acts, a, tat, timetables, cat, true);
-                //ignore_list.retain(|a3| a3.id != a.id);
-            }
-            c_act.remove(0);
-            for _i in 0..3{
-                let mut okey3 = true;
-                for a in &c_act {
-                    delete_activity(_acts, a, tat, timetables, cat, true);
-                    //ignore_list.retain(|a3| a3.id != a.id);
-                }
-                for a in &c_act {
-                    let available = find_timeslot(a, &_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, true);
-                    match available {
-                        Some(slots) => {
-                            put_activity(a, _acts, tat, timetables, cat, slots[0].0, slots[0].1);
-                            //ignore_list.push(a.clone());
-                        },
-                        None => {
-                            okey3 = false;
-                            break;
-                        }
-                    }
-                }
-                if okey3{
-                    //log!("vaay");
-                    break;
-                }
-                else{
-                    c_act.shuffle(&mut thread_rng());
-                }
-            }
-
+            *tat = tat2.clone();
+            *cat = cat2.clone();
+            *timetables = timetables2.clone();
             //ignore_list.retain(|a3| !c_act.iter().any(|a4| a4.id == a3.id));
             okey2 = false;
             //break;
