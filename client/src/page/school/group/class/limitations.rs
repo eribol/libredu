@@ -282,14 +282,14 @@ pub fn limitations(model: &Model, ctx_group: &GroupContext)->Node<Msg>{
     div![
         C!{"column"},
         table![
-            C!{"table is-bordered"},
+            C!{"table is-bordered is-scrollable"},
             tr![
                 td![
                     "Günler/Saatler"
                 ],
                 (0..ctx_group.group.hour as i32).map(|h|
                     td![
-                        &h+1, ". Saat",
+                        &h+1, "",
                         {
                             let hour_index: usize = h as usize;
                             ev(Ev::Click, move |_event|

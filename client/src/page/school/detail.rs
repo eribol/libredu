@@ -347,6 +347,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchGroup(group) => {
             match group {
                 Ok(g) => {
+                    log!("eklendi");
                     ctx_school.groups.push(g);
                 }
                 Err(_) => {}

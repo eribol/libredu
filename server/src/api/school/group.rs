@@ -104,75 +104,46 @@ pub async fn get_students(req: Request<AppState>) -> tide::Result {
 pub async fn add_groups(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let group = req.body_json::<AddGroup>().await?;
-    let school_id: i32 = req.param("school")?.parse()?;
-    //let mut school: Vec<school::SchoolDetail> = Vec::new();
-    match req.user().await {
-        Some(u)=> {
-            use sqlx_core::postgres::PgQueryAs;
-            use sqlx_core::cursor::Cursor;
-            use sqlx_core::row::Row;
-            let mut _school = SchoolDetail::default();
-            let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
-                    FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.id = $1")
-                .bind(&school_id)
-                .fetch(&req.state().db_pool);
-            while let Some(row) = query.next().await?{
-                _school = SchoolDetail{
-                    id: row.get(0),
-                    name: row.get(1),
-                    manager: row.get(2),
-                    school_type: row.get(3),
-                    tel: None,
-                    location: None,
-                    city: City{ pk: row.get(4), name: row.get(5) },
-                    town: Town{
-                        city: row.get(4),
-                        pk: row.get(6),
-                        name: row.get(7)
-                    }
-                }
-            }
-            if u.is_admin || _school.manager == u.id{
-                let s: ClassGroups = sqlx::query_as("insert into class_groups(school, name, hour) values($1, $2, $3) returning id, name, hour")
-                    .bind(&school_id)
-                    .bind(&group.name)
-                    .bind(&group.hour)
-                    .fetch_one(&req.state().db_pool).await?;
-                use crate::model::school::SchoolTeacher;
-                let teachers: Vec<SchoolTeacher> = sqlx::query_as("select * from school_users where school_id = $1")
-                    .bind(&school_id)
-                    .fetch_all(&req.state().db_pool).await?;
-                let days: Vec<i32> = vec![1,2,3,4,5, 6,7];
-                for t in teachers{
-                    for d in &days{
-                        let hours: Vec<bool>;
-                        if d > &5{
-                            hours = vec![false; s.hour as usize];
-                        }
-                        else{
-                            hours = vec![true; s.hour as usize];
-                        }
-                        let _teacher_available = sqlx::query("INSERT into teacher_available(user_id, school_id, day, hours, group_id) values($1, $2, $3, $4, $5)")
-                            .bind(&t.user_id)
-                            .bind(&school_id)
-                            .bind(d)
-                            .bind(hours)
-                            .bind(&s.id)
-                            .execute(&req.state().db_pool).await;
+    //let school_id: i32 = req.param("school")?.parse()?;
+    let mut school_auth: &SchoolAuth = req.ext().unwrap();
 
-                    }
+    if school_auth.role < 3 {
+        use sqlx_core::postgres::PgQueryAs;
+        let s: ClassGroups = sqlx::query_as("insert into class_groups(school, name, hour) values($1, $2, $3) returning id, name, hour, school")
+            .bind(&school_auth.school.id)
+            .bind(&group.name)
+            .bind(&group.hour)
+            .fetch_one(&req.state().db_pool).await?;
+        println!("grup eklendi");
+        use crate::model::school::SchoolTeacher;
+        let teachers: Vec<SchoolTeacher> = sqlx::query_as("select * from school_users where school_id = $1")
+            .bind(&school_auth.school.id)
+            .fetch_all(&req.state().db_pool).await?;
+        println!("öğretmenler");
+        let days: Vec<i32> = vec![1, 2, 3, 4, 5, 6, 7];
+        for t in teachers {
+            for d in &days {
+                let hours: Vec<bool>;
+                if d > &5 {
+                    hours = vec![false; s.hour as usize];
+                } else {
+                    hours = vec![true; s.hour as usize];
                 }
-                res.set_body(Body::from_json(&s)?);
-                res.insert_header("content-type", "application/json");
-                Ok(res)
-            }
-            else {
-                Ok(res)
+                let _teacher_available = sqlx::query("INSERT into teacher_available(user_id, school_id, day, hours, group_id) values($1, $2, $3, $4, $5)")
+                    .bind(&t.user_id)
+                    .bind(&school_auth.school.id)
+                    .bind(d)
+                    .bind(hours)
+                    .bind(&s.id)
+                    .execute(&req.state().db_pool).await;
             }
         }
-        None=>{
-            Ok(res)
-        }
+        println!("öğretmenler eklendi");
+        res.set_body(Body::from_json(&s)?);
+        res.insert_header("content-type", "application/json");
+        Ok(res)
+    } else {
+        Ok(res)
     }
 }
 
@@ -180,62 +151,34 @@ pub async fn del_group(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let school_id: i32 = req.param("school")?.parse()?;
     let group_id: i32 = req.param("group_id")?.parse()?;
-    match req.user().await {
-        Some(u)=> {
-            use sqlx_core::postgres::PgQueryAs;
-            use sqlx_core::cursor::Cursor;
-            use sqlx_core::row::Row;
-            let mut school = SchoolDetail::default();
-            let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
-                    FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.id = $1")
-                .bind(&school_id)
-                .fetch(&req.state().db_pool);
-            while let Some(row) = query.next().await?{
-                school = SchoolDetail{
-                    id: row.get(0),
-                    name: row.get(1),
-                    manager: row.get(2),
-                    school_type: row.get(3),
-                    tel: None,
-                    location: None,
-                    city: City{ pk: row.get(4), name: row.get(5) },
-                    town: Town{
-                        city: row.get(4),
-                        pk: row.get(6),
-                        name: row.get(7)
-                    }
-                }
-            }
-            if u.is_admin || school.manager == u.id{
-                let groups: Vec<ClassGroups> = sqlx::query_as("select * from class_groups where school = $1")
-                    .bind(&school_id)
-                    .fetch_all(&req.state().db_pool).await?;
 
-                if groups.len() > 1 {
-                    let _del_teacher_availables = sqlx::query("delete from teacher_available where school_id = $1 and group_id = $2")
-                        .bind(&school_id)
-                        .bind(&group_id)
-                        .execute(&req.state().db_pool).await?;
-                    let s: ClassGroups = sqlx::query_as("delete from class_groups where school = $1 and id = $2 returning id, name, hour")
-                        .bind(&school_id)
-                        .bind(&group_id)
-                        .fetch_one(&req.state().db_pool).await?;
-                    res.set_body(Body::from_json(&s)?);
-                    res.insert_header("content-type", "application/json");
-                    Ok(res)
-                } else {
-                    res.insert_header("content-type", "application/json");
-                    Ok(res)
-                }
-            }
-            else {
-                res.insert_header("content-type", "application/json");
-                Ok(res)
-            }
-        }
-        None=>{
+    use sqlx_core::postgres::PgQueryAs;
+    use sqlx_core::cursor::Cursor;
+    use sqlx_core::row::Row;
+    let mut school_auth: &SchoolAuth = req.ext().unwrap();
+    if school_auth.role < 3 {
+        let groups: Vec<ClassGroups> = sqlx::query_as("select * from class_groups where school = $1")
+            .bind(&school_id)
+            .fetch_all(&req.state().db_pool).await?;
+
+        if groups.len() > 1 {
+            let _del_teacher_availables = sqlx::query("delete from teacher_available where school_id = $1 and group_id = $2")
+                .bind(&school_id)
+                .bind(&group_id)
+                .execute(&req.state().db_pool).await?;
+            let s: ClassGroups = sqlx::query_as("delete from class_groups where school = $1 and id = $2 returning id, name, hour, school")
+                .bind(&school_id)
+                .bind(&group_id)
+                .fetch_one(&req.state().db_pool).await?;
+            res.set_body(Body::from_json(&s)?);
+            Ok(res)
+        } else {
+            //res.insert_header("content-type", "application/json");
             Ok(res)
         }
+    } else {
+        //res.insert_header("content-type", "application/json");
+        Ok(res)
     }
 }
 

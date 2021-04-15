@@ -228,6 +228,7 @@ pub fn context(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_gro
             }
             Pages::Limitations(m) => {
                 div![
+                    C!{"table-container"},
                     div![
                         C!{"columns"},
                         div![
