@@ -114,12 +114,10 @@ pub async fn add_groups(mut req: Request<AppState>) -> tide::Result {
             .bind(&group.name)
             .bind(&group.hour)
             .fetch_one(&req.state().db_pool).await?;
-        println!("grup eklendi");
         use crate::model::school::SchoolTeacher;
         let teachers: Vec<SchoolTeacher> = sqlx::query_as("select * from school_users where school_id = $1")
             .bind(&school_auth.school.id)
             .fetch_all(&req.state().db_pool).await?;
-        println!("öğretmenler");
         let days: Vec<i32> = vec![1, 2, 3, 4, 5, 6, 7];
         for t in teachers {
             for d in &days {
@@ -138,7 +136,6 @@ pub async fn add_groups(mut req: Request<AppState>) -> tide::Result {
                     .execute(&req.state().db_pool).await;
             }
         }
-        println!("öğretmenler eklendi");
         res.set_body(Body::from_json(&s)?);
         res.insert_header("content-type", "application/json");
         Ok(res)
@@ -185,52 +182,42 @@ pub async fn del_group(req: Request<AppState>) -> tide::Result {
 pub async fn patch_group(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let group_form = req.body_json::<AddGroup>().await?;
-    let school_id: i32 = req.param("school")?.parse()?;
     let group_id: i32 = req.param("group_id")?.parse()?;
-    match req.user().await {
-        Some(u)=> {
-            use sqlx_core::postgres::PgQueryAs;
-            use sqlx_core::cursor::Cursor;
-            use sqlx_core::row::Row;
-            let mut _school = SchoolDetail::default();
-            let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
-                    FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.id = $1")
-                .bind(&school_id)
-                .fetch(&req.state().db_pool);
-            while let Some(row) = query.next().await?{
-                _school = SchoolDetail{
-                    id: row.get(0),
-                    name: row.get(1),
-                    manager: row.get(2),
-                    school_type: row.get(3),
-                    tel: None,
-                    location: None,
-                    city: City{ pk: row.get(4), name: row.get(5) },
-                    town: Town{
-                        city: row.get(4),
-                        pk: row.get(6),
-                        name: row.get(7)
-                    }
-                }
-            }
-            if u.is_admin || _school.manager == u.id{
-                let s: ClassGroups = sqlx::query_as("update class_groups set hour = $3, name = $4 where school = $1 and id = $2 returning id, name, hour")
-                    .bind(&school_id)
+    let mut school_auth: &SchoolAuth = req.ext().unwrap();
+
+    if school_auth.role < 3 {
+        use sqlx_core::postgres::PgQueryAs;
+        let s: ClassGroups = sqlx::query_as("update class_groups set hour = $3, name = $4 where school = $1 and id = $2 returning id, name, hour, school")
+            .bind(&school_auth.school.id)
+            .bind(&group_id)
+            .bind(&group_form.hour)
+            .bind(&group_form.name)
+            .fetch_one(&req.state().db_pool).await?;
+        let mut schedules:  Vec<Schedules>= sqlx::query_as("SELECT * from group_schedules WHERE group_id = $1 order by hour")
+            .bind(&group_id)
+            .fetch_all(&req.state().db_pool).await?;
+        if schedules.len() < group_form.hour as usize{
+            //schedules.clear();
+            for s in schedules.len()+1..(group_form.hour + 1) as usize{
+                let start_time = NaiveTime::parse_from_str("00:00", "%H:%M").unwrap();
+                let _ = sqlx::query("insert into group_schedules(group_id, hour, start_time, end_time) values($1, $2, $3, $4)")
                     .bind(&group_id)
                     .bind(&group_form.hour)
-                    .bind(&group_form.name)
-                    .fetch_one(&req.state().db_pool).await?;
-                println!("{:?}", &s);
-                res.set_body(Body::from_json(&s)?);
-                Ok(res)
-            }
-            else {
-                Ok(res)
+                    .bind(&start_time)
+                    .bind(&start_time)
+                    .execute(&req.state().db_pool).await?;
             }
         }
-        None=>{
-            Ok(res)
+        else if schedules.len() > group_form.hour as usize {
+            //schedules.clear();
+            let _ = sqlx::query("delete from group_schedules where hour > $1")
+                .bind(&group_form.hour)
+                .execute(&req.state().db_pool).await?;
         }
+        res.set_body(Body::from_json(&s)?);
+        Ok(res)
+    } else {
+        Ok(res)
     }
 }
 
