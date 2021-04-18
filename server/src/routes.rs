@@ -4,8 +4,7 @@ use crate::api::users::{get_timetables, get_schools};
 pub fn routes(state: AppState)->tide::Server<AppState>{
     use crate::views::{logout, reset_password, favico, robots};
     let mut app = tide::with_state(state.clone());
-    app.at("/").all(index);
-
+    app.at("/").get(index).post(index);
     app.at("/login").get(index);
     app.at("/admin").get(index);
     app.at("/admin/*").get(index);
@@ -125,6 +124,7 @@ fn students_api(state: AppState)->tide::Server<AppState>{
 }
 
 fn group_api(state: AppState)->tide::Server<AppState>{
+    use crate::api::school::school;
     use crate::api::school::{group};
     use crate::middlewares::{group_auth};
     let mut group_api = tide::with_state(state.clone());
@@ -132,7 +132,7 @@ fn group_api(state: AppState)->tide::Server<AppState>{
     group_api.at("").patch(group::patch_group).delete(group::del_group).get(group::get_group);
     group_api.at("/schedules").get(group::group_schedules).patch(group::patch_group_schedules);
     group_api.at("/timetables").get(group::get_timetables).post(group::timetables);
-    //group_api.at("/class_rooms").get(group::get_class_rooms);
+    group_api.at("/class_rooms").get(school::get_class_rooms).post(school::class_rooms);;
     group_api.at("/classes").get(group::get_classes);
     group_api.at("/students").get(group::get_students);
     group_api.at("/add_class").post(group::add_class);
