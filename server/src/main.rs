@@ -38,10 +38,11 @@ async fn main() -> tide::Result<()> {
         let state = AppState{
             db_pool: pool.clone()
         };
+        let domain = &env::var("DOMAIN_PORT")?;
         let mut app = crate::routes::routes(state.clone());
         app.at("/static").serve_dir("./client/pkg/")?;
         app.at("/sse").get(tide::sse::endpoint(sse));
-        app.listen("127.0.0.1:8080").await?;
+        app.listen(domain).await?;
         Ok(())
     })
 }
