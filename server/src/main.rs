@@ -41,7 +41,7 @@ async fn main() -> tide::Result<()> {
         let mut app = crate::routes::routes(state.clone());
         app.at("/static").serve_dir("./client/pkg/")?;
         app.at("/sse").get(tide::sse::endpoint(sse));
-        app.listen("127.0.0.1:8081").await?;
+        app.listen("127.0.0.1:8080").await?;
         Ok(())
     })
 }
