@@ -1,6 +1,4 @@
 use serde::*;
-use crate::model::activity::{Activity};
-use crate::AppState;
 use crate::model::subject::Subject;
 use crate::model::teacher::Teacher;
 
@@ -67,9 +65,10 @@ pub struct ClassAvailableForTimetables{
     pub(crate) day: i32,
     pub(crate) hours: Vec<bool>
 }
-
+/*
 impl Class{
     pub async fn get_classes(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<Vec<ClassForTimetables>>{
         Ok(vec![])
     }
 }
+*/

@@ -2,11 +2,9 @@ use serde::*;
 use tide::{Request, Response};
 use http_types::{StatusCode, Body};
 use crate::AppState;
-use crate::request::{Auth, SchoolAuth};
-use crate::model::school::{SchoolDetail, School};
+use crate::request::SchoolAuth;
 use crate::model::group::ClassGroups;
 use crate::model::group as grp;
-use crate::model::city::{City, Town};
 use chrono::NaiveTime;
 use crate::model::timetable;
 use crate::model;
@@ -105,7 +103,7 @@ pub async fn add_groups(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let group = req.body_json::<AddGroup>().await?;
     //let school_id: i32 = req.param("school")?.parse()?;
-    let mut school_auth: &SchoolAuth = req.ext().unwrap();
+    let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role < 3 {
         use sqlx_core::postgres::PgQueryAs;
         let s: ClassGroups = sqlx::query_as("insert into class_groups(school, name, hour) values($1, $2, $3) returning id, name, hour, school")
@@ -136,12 +134,12 @@ pub async fn add_groups(mut req: Request<AppState>) -> tide::Result {
             }
         }
         let start_time = NaiveTime::parse_from_str("00:00", "%H:%M").unwrap();
-        for i in 1..group.hour+1{
+        for _ in 1..group.hour+1{
             let _schedules2 = sqlx::query("insert into group_schedules(group_id, hour, start_time, end_time) values($1, $2, $3, $4)")
                 .bind(&s.id)
                 .bind(&s.hour)
                 .bind(&start_time)
-                .bind(&end_time)
+                .bind(&start_time)
                 .execute(&req.state().db_pool).await?;
         }
         res.set_body(Body::from_json(&s)?);
@@ -153,24 +151,20 @@ pub async fn add_groups(mut req: Request<AppState>) -> tide::Result {
 
 pub async fn del_group(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
-    let school_id: i32 = req.param("school")?.parse()?;
     let group_id: i32 = req.param("group_id")?.parse()?;
-
     use sqlx_core::postgres::PgQueryAs;
-    use sqlx_core::cursor::Cursor;
-    use sqlx_core::row::Row;
-    let mut school_auth: &SchoolAuth = req.ext().unwrap();
+    let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role < 3 {
         let groups: Vec<ClassGroups> = sqlx::query_as("select * from class_groups where school = $1")
-            .bind(&school_id)
+            .bind(&school_auth.school.id)
             .fetch_all(&req.state().db_pool).await?;
         if groups.len() > 1 {
             let _del_teacher_availables = sqlx::query("delete from teacher_available where school_id = $1 and group_id = $2")
-                .bind(&school_id)
+                .bind(&school_auth.school.id)
                 .bind(&group_id)
                 .execute(&req.state().db_pool).await?;
             let s: ClassGroups = sqlx::query_as("delete from class_groups where school = $1 and id = $2 returning id, name, hour, school")
-                .bind(&school_id)
+                .bind(&school_auth.school.id)
                 .bind(&group_id)
                 .fetch_one(&req.state().db_pool).await?;
             res.set_body(Body::from_json(&s)?);
@@ -189,8 +183,7 @@ pub async fn patch_group(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let group_form = req.body_json::<AddGroup>().await?;
     let group_id: i32 = req.param("group_id")?.parse()?;
-    let mut school_auth: &SchoolAuth = req.ext().unwrap();
-
+    let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role < 3 {
         use sqlx_core::postgres::PgQueryAs;
         let s: ClassGroups = sqlx::query_as("update class_groups set hour = $3, name = $4 where school = $1 and id = $2 returning id, name, hour, school")
@@ -199,12 +192,12 @@ pub async fn patch_group(mut req: Request<AppState>) -> tide::Result {
             .bind(&group_form.hour)
             .bind(&group_form.name)
             .fetch_one(&req.state().db_pool).await?;
-        let mut schedules:  Vec<Schedules>= sqlx::query_as("SELECT * from group_schedules WHERE group_id = $1 order by hour")
+        let schedules:  Vec<Schedules>= sqlx::query_as("SELECT * from group_schedules WHERE group_id = $1 order by hour")
             .bind(&group_id)
             .fetch_all(&req.state().db_pool).await?;
         if schedules.len() < group_form.hour as usize{
             //schedules.clear();
-            for s in schedules.len()+1..(group_form.hour + 1) as usize{
+            for _ in schedules.len()+1..(group_form.hour + 1) as usize{
                 let start_time = NaiveTime::parse_from_str("00:00", "%H:%M").unwrap();
                 let _ = sqlx::query("insert into group_schedules(group_id, hour, start_time, end_time) values($1, $2, $3, $4)")
                     .bind(&group_id)
@@ -340,13 +333,9 @@ pub async fn timetables(mut req: Request<AppState>) -> tide::Result {
 pub async fn get_timetables(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let group_id: i32 = req.param("group_id")?.parse()?;
-    let school_id: i32 = req.param("school")?.parse()?;
-    use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
-
-
     if school_auth.role < 3 {
-        let group = grp::get_group(school_id, group_id, &req).await?;
+        let group = grp::get_group(school_auth.school.id, group_id, &req).await?;
         use crate::model::timetable::{TimetableData, Activity};
         let tat = group.get_tat(&req).await?;
         let teachers = school_auth.school.get_teachers(&req).await?;
@@ -371,12 +360,10 @@ pub async fn get_timetables(req: Request<AppState>) -> tide::Result {
 
 pub async fn add_activity(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
-    use sqlx_core::postgres::PgQueryAs;
     let group_id: i32 = req.param("group_id")?.parse()?;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role < 6 {
         let group = grp::get_group(school_auth.school.id, group_id, &req).await?;
-        use crate::model::timetable::{TimetableData, Activity};
         let add_act = group.add_acts(&mut req).await?;
         res.set_body(Body::from_json(&add_act)?);
         Ok(res)

@@ -510,7 +510,6 @@ pub async fn get_students(req: Request<AppState>) -> tide::Result {
 }
 pub async fn get_library(req: Request<AppState>) -> tide::Result{
     let mut res = tide::Response::new(StatusCode::Ok);
-    use sqlx::prelude::PgQueryAs;
     let user = req.user().await;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     match user{

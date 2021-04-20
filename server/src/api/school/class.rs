@@ -7,13 +7,13 @@ use crate::model::school::SchoolDetail;
 use crate::request::{Auth, SchoolAuth};
 use crate::model::timetable::{ClassAvailable, InsertClassAvailable};
 use crate::model::timetable::Day;
-use crate::model::activity::{NewActivity, Activity};
+use crate::model::activity::{Activity};
 use crate::model::city::{City, Town};
 use crate::model::student::SimpleStudent;
 use crate::model::subject::Subject;
 use crate::model::teacher::Teacher;
 
-pub async fn activities(mut req: Request<AppState>) -> tide::Result {
+pub async fn activities(req: Request<AppState>) -> tide::Result {
     let class_id: i32 = req.param("class_id")?.parse()?;
     use sqlx_core::cursor::Cursor;
     use sqlx_core::row::Row;
@@ -53,7 +53,6 @@ pub async fn class_detail(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let class_id = req.param("class_id")?.parse()?;
     let group_id = req.param("group_id")?.parse()?;
-    use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     let class = school_auth.school.get_class(&req, group_id, class_id).await?;
     res.set_body(Body::from_json(&class)?);

@@ -2,9 +2,7 @@ use serde::*;
 use crate::model::city::{City, Town};
 use crate::AppState;
 use crate::model::{class, subject, group, teacher, library};
-use crate::model::activity::Activity;
-use tide::{Error, Response};
-use crate::model::teacher::{SimpleTeacher, Teacher};
+use crate::model::teacher::SimpleTeacher;
 
 
 #[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize)]
@@ -78,7 +76,7 @@ impl SchoolDetail{
             .bind(&self.id)
             .bind(&teacher_id)
             .fetch(&req.state().db_pool);
-        let mut teacher: teacher::Teacher;
+        let teacher: teacher::Teacher;
         while let Some(row) = tchr.next().await.unwrap() {
             teacher = teacher::Teacher {
                 id: row.get(0),
@@ -94,7 +92,7 @@ impl SchoolDetail{
     }
     pub async fn del_teacher(&self, req: &tide::Request<AppState>, teacher_id: i32) -> sqlx_core::Result<SimpleTeacher>{
         use sqlx::prelude::PgQueryAs;
-        let mut tchr: SimpleTeacher = sqlx::query_as(r#"delete from school_users using users where school_users.school_id = $1 and school_users.user_id = $2 returning users.id"#)
+        let tchr: SimpleTeacher = sqlx::query_as(r#"delete from school_users using users where school_users.school_id = $1 and school_users.user_id = $2 returning users.id"#)
             .bind(&self.id)
             .bind(&teacher_id)
             .fetch_one(&req.state().db_pool).await?;

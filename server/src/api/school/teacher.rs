@@ -2,19 +2,14 @@ use tide::Request;
 use crate::AppState;
 use crate::request::{Auth, SchoolAuth};
 use http_types::{StatusCode, Method, Body};
-use crate::model::{timetable, subject};
-use crate::model::user;
+use crate::model::{timetable};
 use crate::model::school;
-use crate::model::class;
 use crate::model::activity;
 use crate::model::teacher;
-use crate::model::activity::{NewActivity, Activity};
+use crate::model::activity::Activity;
 use crate::model::class::Class;
 use crate::model::teacher::TeacherTimetable;
 use serde::*;
-use crate::model::school::SchoolDetail;
-use crate::model::city::{City, Town};
-use crate::model::user::{SimpleTeacher};
 
 #[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize, Default)]
 pub struct SimpleAct{
@@ -31,7 +26,6 @@ pub async fn get_activities(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     //let school_id: i32 = req.param("school")?.parse()?;
     let teacher_id: i32 = req.param("teacher_id")?.parse()?;
-    let group_id: i32 = req.param("group_id")?.parse()?;
     use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role <= 4 {
@@ -69,8 +63,6 @@ pub async fn del_activities(req: Request<AppState>) -> tide::Result {
     //let school_id: i32 = req.param("school")?.parse()?;
     let teacher_id: i32 = req.param("teacher_id")?.parse()?;
     let act_id: i32 = req.param("act_id")?.parse()?;
-    use sqlx_core::cursor::Cursor;
-    use sqlx_core::row::Row;
     let school_auth: &SchoolAuth = req.ext().unwrap();
 
     if school_auth.role < 3 {
@@ -306,7 +298,6 @@ pub async fn patch_teacher(mut req: Request<AppState>) -> tide::Result {
     use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role <= 2 {
-        use crate::model::teacher::Teacher;
         let teacher = school_auth.school.get_teacher(&req, teacher_id).await;
         match teacher {
             Some(_t) => {
