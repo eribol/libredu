@@ -60,21 +60,14 @@ pub async fn class_detail(req: Request<AppState>) -> tide::Result {
 }
 
 pub async fn class_delete(req: Request<AppState>) -> tide::Result {
-    let class_id = req.param("class_id")?;
+    let class_id = req.param("class_id")?.parse::<i32>()?;
+    let group_id = req.param("group_id")?.parse::<i32>()?;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role < 4 {
         let mut res = tide::Response::new(StatusCode::Ok);
-        let _class_available = sqlx::query(r#"delete FROM class_available WHERE class_id = $1"#)
-            .bind(&class_id.parse::<i32>()?)
-            .execute(&req.state().db_pool).await?;
-        let _class_activities = sqlx::query(r#"delete FROM activities WHERE $1 = any(classes)"#)
-            .bind(&class_id.parse::<i32>()?)
-            .execute(&req.state().db_pool).await?;
-        let _class = sqlx::query(r#"delete FROM classes WHERE school=$1 and id = $2"#)
-            .bind(&school_auth.school.id)
-            .bind(&class_id.parse::<i32>()?)
-            .execute(&req.state().db_pool).await?;
-        res.set_body(Body::from_json(&class_id.parse::<i32>()?)?);
+        let class = school_auth.school.get_class(&req, group_id, class_id).await?;
+        class.del(&req).await?;
+        res.set_body(Body::from_json(&class_id)?);
         Ok(res)
     } else {
         let res = tide::Response::new(StatusCode::Unauthorized);
@@ -84,27 +77,15 @@ pub async fn class_delete(req: Request<AppState>) -> tide::Result {
 
 pub async fn del_act(req: Request<AppState>) -> tide::Result{
     let act_id: i32 = req.param("act_id")?.parse()?;
+    let class_id: i32 = req.param("class_id")?.parse()?;
+    let group_id: i32 = req.param("group_id")?.parse()?;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role < 4{
-        use sqlx_core::postgres::PgQueryAs;
-        let act: Activity = sqlx::query_as("SELECT * FROM activities where id = $1")
-            .bind(&act_id)
-            .fetch_one(&req.state().db_pool).await?;
-        let cls: Class = sqlx::query_as("SELECT * FROM classes where id = any($1)")
-            .bind(&act.classes)
-            .fetch_one(&req.state().db_pool).await?;
-        if cls.school == school_auth.school.id {
-            let mut res = tide::Response::new(StatusCode::Ok);
-            let _del = sqlx::query("delete FROM activities where id = $1")
-                .bind(&act_id)
-                .execute(&req.state().db_pool).await?;
-            res.set_body(Body::from_string(act_id.to_string()));
-            Ok(res)
-        }
-        else{
-            let res = tide::Response::new(StatusCode::NotAcceptable);
-            Ok(res)
-        }
+        let class = school_auth.school.get_class(&req, group_id, class_id).await?;
+        class.del_act(&req).await?;
+        let mut res = tide::Response::new(StatusCode::Ok);
+        res.set_body(Body::from_json(&act_id)?);
+        Ok(res)
     }
     else{
         let res = tide::Response::new(StatusCode::NotAcceptable);
