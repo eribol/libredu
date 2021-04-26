@@ -90,13 +90,11 @@ impl SchoolDetail{
         }
         None
     }
-    pub async fn del_teacher(&self, req: &tide::Request<AppState>, teacher_id: i32) -> sqlx_core::Result<SimpleTeacher>{
+    pub async fn del_teacher(&self, req: &tide::Request<AppState>, teacher_id: i32) -> sqlx_core::Result<i32>{
         use sqlx::prelude::PgQueryAs;
-        let tchr: SimpleTeacher = sqlx::query_as(r#"delete from school_users using users where school_users.school_id = $1 and school_users.user_id = $2 returning users.id"#)
-            .bind(&self.id)
-            .bind(&teacher_id)
-            .fetch_one(&req.state().db_pool).await?;
-        Ok(tchr)
+        let teacher = self.get_teacher(req, teacher_id).await.unwrap();
+        teacher.del(req).await?;
+        Ok(teacher_id)
     }
     pub async fn get_teachers(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<Vec<teacher::Teacher>>{
         use sqlx::Cursor;

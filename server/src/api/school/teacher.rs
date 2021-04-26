@@ -239,12 +239,23 @@ pub async fn timetables(req: Request<AppState>) -> tide::Result {
 pub async fn del_teacher(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let teacher_id: i32 = req.param("teacher_id")?.parse()?;
-    use sqlx_core::postgres::PgQueryAs;
+    //use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role <= 2 {
         //use crate::model::teacher;
         let tchr = school_auth.school.get_teacher(&req, teacher_id).await;
         match tchr{
+            Some(teacher) => {
+                teacher.del(&req).await?;
+                res.set_body(Body::from_json(&teacher_id)?);
+                Ok(res)
+            }
+            None => {
+                res.set_body(Body::from_json(&teacher_id)?);
+                Ok(res)
+            }
+        }
+        /*match tchr{
             Some(t) =>{
                 let _ = sqlx::query(r#"update classes set teacher = null WHERE teacher = $1"#)
                     .bind(&teacher_id)
@@ -274,7 +285,7 @@ pub async fn del_teacher(req: Request<AppState>) -> tide::Result {
             None => {
                 Ok(res)
             }
-        }
+        }*/
 
     }
     else {
