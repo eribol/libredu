@@ -39,6 +39,7 @@ pub struct Model{
     act_form: activity::NewActivity,
     activities: Vec<activity::FullActivity>,
     subjects: Vec<subject::Subject>,
+    selected_subjects: Vec<subject::Subject>,
     select: ElRef<HtmlSelectElement>,
     error: String
 }
@@ -114,6 +115,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     model.act_form.classes.push(item.value().parse::<i32>().unwrap());
                 }
             }
+            let class= ctx_group.classes.iter().find(|c| c.id == model.act_form.classes[0]).unwrap();
+            model.selected_subjects = model.subjects.clone().into_iter().filter(|s| s.kademe == class.kademe).collect();
+            //let classes = ctx_group.classes.into_iter()
+            //    .filter(|c| c.kademe == class.kademe && model.act_form.classes.iter().any(|c| c)).collect::<Vec<i32>>();
             //model.act_form.classes.push(c.parse::<i32>().unwrap());
         }
         Msg::ChangeActHour(h)=>{
@@ -126,6 +131,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             match subjects{
                 Ok(s) => {
                     model.subjects = s.clone();
+                    model.selected_subjects = s.clone();
                     if s.len() > 0{
                         model.act_form.subject = model.subjects[0].id;
                     }
@@ -146,7 +152,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     ).collect()
                 }
                 Err(e) => {
-                    log!(e);
+                    //log!(e);
                 }
             }
             orders.perform_cmd({
@@ -186,7 +192,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             match id{
                 Ok(i)=>{
                     // This should change. It search all vec and remove but it does not stop when it find the right element.
-                    log!(&i);
+                    //log!(&i);
                     let a = model.activities.iter().enumerate().find(|a| a.1.id == i.parse::<i32>().unwrap());
                     match a{
                         Some(aa) => {
@@ -375,7 +381,7 @@ pub fn view(model: &Model, ctx_group: &GroupContext, ctx_school:&SchoolContext)-
                 select![
                     C!{"select"},
                     attrs!{At::Name=>"subject"},
-                    model.subjects.iter().map(|s|
+                    model.selected_subjects.iter().map(|s|
                         option![
                             attrs!{At::Value=>&s.id},
                             &s.name, "(", &s.kademe.to_string(), ")", if s.optional{" Seçmeli"} else{""}

@@ -126,6 +126,7 @@ pub fn view(model: &Model, ctx: &Context)-> Node<Msg>{
                                 At::Value => &model.form.username,
                             },
                             input_ev(Ev::Input, Msg::EmailChanged),
+                            ev(Ev::Submit, |event|{ event.prevent_default(); Msg::SubmitForm}),
                         ]
                     ]
                 ],
@@ -141,6 +142,7 @@ pub fn view(model: &Model, ctx: &Context)-> Node<Msg>{
                                 At::Value => &model.form.password,
                             },
                             input_ev(Ev::Input, Msg::PasswordChanged),
+                            ev(Ev::Submit, |event|{ event.prevent_default(); Msg::SubmitForm}),
                         ]
                     ]
                 ],
