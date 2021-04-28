@@ -84,7 +84,7 @@ impl Class{
             .bind(act_id)
             .bind(&self.id)
             .fetch_one(&req.state().db_pool).await?;
-        if act.classes.len() == 0{
+        if act.classes.len() <= 1{
             let _ = sqlx::query(r#"delete from activities where id = $1 returning *"#)
                 .bind(act_id)
                 .execute(&req.state().db_pool).await?;
@@ -96,7 +96,7 @@ impl Class{
                 .bind(act_id)
                 .bind(&ids)
                 .execute(&req.state().db_pool).await?;
-            println!("üç");
+
             Ok(act_id)
         }
     }
@@ -106,7 +106,7 @@ impl Class{
             .bind(&self.id)
             .fetch_all(&req.state().db_pool).await?;
         for mut a in acts{
-            if a.classes.len() == 0{
+            if a.classes.len() <= 1{
                 let _ = sqlx::query(r#"delete from activities where id = $1 returning *"#)
                     .bind(a.id)
                     .execute(&req.state().db_pool).await?;
@@ -114,7 +114,7 @@ impl Class{
             }
             else {
                 let ids = &a.classes.into_iter().filter(|c| c != &self.id).collect::<Vec<i32>>();
-                let _ = sqlx::query(r#"update from activities set classes = $2 where id = $1"#)
+                let _ = sqlx::query(r#"update activities set classes = $2 where id = $1"#)
                     .bind(a.id)
                     .bind(&ids)
                     .execute(&req.state().db_pool).await?;
