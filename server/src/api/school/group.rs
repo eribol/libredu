@@ -134,13 +134,13 @@ pub async fn add_groups(mut req: Request<AppState>) -> tide::Result {
             }
         }
         let start_time = NaiveTime::parse_from_str("00:00", "%H:%M").unwrap();
-        for _ in 1..group.hour+1{
+        for i in 1..group.hour+1{
             let _schedules2 = sqlx::query("insert into group_schedules(group_id, hour, start_time, end_time) values($1, $2, $3, $4)")
                 .bind(&s.id)
-                .bind(&s.hour)
+                .bind(&i)
                 .bind(&start_time)
                 .bind(&start_time)
-                .execute(&req.state().db_pool).await?;
+                .execute(&req.state().db_pool).await.expect("Yerleşmedi");
         }
         res.set_body(Body::from_json(&s)?);
         Ok(res)

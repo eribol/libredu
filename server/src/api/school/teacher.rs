@@ -241,7 +241,7 @@ pub async fn del_teacher(req: Request<AppState>) -> tide::Result {
     let teacher_id: i32 = req.param("teacher_id")?.parse()?;
     //use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
-    if school_auth.role <= 2 {
+    if school_auth.role == 2{
         //use crate::model::teacher;
         let tchr = school_auth.school.get_teacher(&req, teacher_id).await;
         match tchr{

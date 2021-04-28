@@ -122,7 +122,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchLimitation(json)=>{
             match json {
                 Ok(mut l) => {
-                    log!(l.len());
                     l.sort_by(|a, b| a.day.id.cmp(&b.day.id));
                     model.limitation = l;
                     let mut changed = false;

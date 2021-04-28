@@ -21,15 +21,22 @@ pub(crate) fn generate(
     let mut acts: Vec<Activity> = total_acts.iter().cloned()
         .filter(|a| a.teacher.is_some() && !timetables.iter().cloned()
             .any(|t| a.id == t.activities.unwrap())).collect();
-
+    acts.shuffle(&mut thread_rng());
+    acts.sort_by(|a, b| b.hour.cmp(&a.hour));
+    /*if timetables.len() == 0{
+        acts.sort_by(|a, b|
+            b.timeslots(&total_acts,&tat,&timetables,&cat, &clean_tat,max_day_hour, false).cmp(
+                &a.timeslots(&total_acts,&tat,&timetables,&cat, &clean_tat,max_day_hour, false)
+            )
+        );
+        //
+    }*/
     if acts.len() == 0 {
         //let mut fivea: Vec<NewClassTimetable> = timetables.iter().cloned().filter(|t| t.class_id.unwrap() == 1).collect();
         //timetables.sort_by(|a, b| a.day_id.cmp(&b.day_id));
         //fivea.sort_by(|a, b| b.hour.cmp(&a.hour));
         return false
     }
-    acts.shuffle(&mut thread_rng());
-    acts.sort_by(|a, b| b.hour.cmp(&a.hour));
     //log!(acts);
     let act2 = &acts[0].clone();
     let available = find_timeslot(act2, &total_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, false);
@@ -50,7 +57,7 @@ pub(crate) fn generate(
                 *timetables = timetables_backup;
                 *tat = tat_backup;
                 *cat = cat_backup;
-
+                log!("oh", &act2.teacher, &act2.classes);
                 let mut conflict_acts = find_conflict_activity(&act2, &total_acts, &timetables, clean_tat, &tat, &cat, max_day_hour, max_depth, &mut vec![]);
                 if conflict_acts.len() == 0 {
                     log!("Çakışan aktivite yok");
@@ -310,9 +317,6 @@ pub fn put_activity(
         for index in c_index{
             cat[index.0].hours[timetable] = false;
         }
-        if !clean_tat[tat_index.0].hours[timetable]{
-            log!("hala mı?");
-        }
         //Add timetable to timetables Array
         timetables.push(tt);
 
@@ -407,4 +411,91 @@ pub fn find_timeslot(
     }
 
     return None;
+}
+
+impl Activity{
+    fn timeslots(&self,
+                     total_acts2: &Vec<Activity>,
+                     tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
+                     timetables: &Vec<NewClassTimetable>,
+                     cat: &Vec<ClassAvailable>,
+                     clean_tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
+                     mut max_day_hour: i32,
+                     _for_conflict: bool) -> usize {
+        {
+            use rand::thread_rng;
+            let mut teacher_availables: Vec<(usize, model::teacher::TeacherAvailableForTimetables)> = tat.iter().cloned()
+                .enumerate()
+                .filter(|t| t.1.user_id == self.teacher.unwrap() && t.1.hours.iter()
+                    .any(|h| *h)).collect();
+            teacher_availables.shuffle(&mut thread_rng());
+            let mut _teacher_total_day_availables: Vec<(usize, model::teacher::TeacherAvailableForTimetables)> = clean_tat.iter().cloned()
+                .enumerate()
+                .filter(|t| t.1.user_id == self.teacher.unwrap() && t.1.hours.iter()
+                    .any(|h| *h)).collect();
+            //let available2 = false;
+            let mut slots: Vec<(i32, usize)> = Vec::new();
+            let mut day: i32;
+            let mut hour: usize;
+            let mut max_total_hour: usize = 0;
+            let teacher_acts: Vec<Activity> = total_acts2.iter().cloned()
+                .filter(|a| a.teacher == self.teacher && a.classes.iter().any(|ac| self.classes.iter().any(|ac2| ac == ac2))).collect();
+            for t in &teacher_acts {
+                max_total_hour += t.hour as usize;
+            }
+            if max_total_hour > 8 {
+                max_day_hour = 4;
+            }
+            //teacher_availables.shuffle(&mut thread_rng());
+            for teacher_available in &teacher_availables {
+                //let same_subject_acts: Vec<Activity> = teacher_acts.iter().cloned()
+                //    .filter(|a| a.class == act.1.class && a.subject == act.1.subject ).collect();
+                let same_day_acts: Vec<NewClassTimetable> = timetables.iter().cloned()
+                    .filter(|t| t.day_id.unwrap() == teacher_available.1.day
+                        && teacher_acts.iter().cloned()
+                        .any(|a| a.id == t.activities.unwrap())).collect();
+                //if same_subject_acts.len() < 8{
+                if self.hour as usize + same_day_acts.len() > max_day_hour as usize {
+                    continue;
+                }
+                let classes_availables: Vec<(usize, ClassAvailable)> = cat.iter().cloned()
+                    .enumerate()
+                    .filter(|c| self.classes.iter().any(|cc| cc == &c.1.class_id) && c.1.day == teacher_available.1.day).collect();
+                for i in 0..teacher_available.1.hours.len() {
+                    if i + self.clone().hour as usize <= teacher_available.1.hours.len() {
+                        //Look for activity hours. If same place/places is/are available for teacher and class
+                        let available = (i..i + self.hour as usize)
+                            .all(|h| teacher_available.1.hours[h] && classes_availables.iter().all(|ca| ca.1.hours[h]));
+                        if available {
+                            day = teacher_available.1.day;
+                            hour = i;
+                            let _other_same_subject: Vec<NewClassTimetable> = timetables.iter().cloned()
+                                .filter(|t| t.day_id.unwrap() == day
+                                    && teacher_acts.iter().cloned()
+                                    .any(|a| a.id == t.activities.unwrap() && a.subject == self.subject)).collect();
+                            if _other_same_subject.len() == 0 {
+                                slots.push((day, hour));
+                                //return Some(slots)
+                            } else {
+                                let hours = _other_same_subject.iter().cloned()
+                                    .find(|t| t.hour.unwrap() == (hour - 1) as i16 || t.hour.unwrap() == hour as i16 + self.hour);
+                                match hours {
+                                    Some(_) => {
+                                        slots.push((day, hour));
+                                        //return Some(slots)
+                                    }
+                                    None => {}
+                                }
+                            }
+                        }
+                    }
+                }
+                //if for_conflict && slots.len() >= 1 || slots.len()>=25{
+                //    break;
+                //}
+            }
+
+            return slots.len();
+        }
+    }
 }
