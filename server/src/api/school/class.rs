@@ -7,7 +7,6 @@ use crate::model::school::SchoolDetail;
 use crate::request::{Auth, SchoolAuth};
 use crate::model::timetable::{ClassAvailable, InsertClassAvailable};
 use crate::model::timetable::Day;
-use crate::model::activity::{Activity};
 use crate::model::city::{City, Town};
 use crate::model::student::SimpleStudent;
 use crate::model::subject::Subject;
@@ -219,42 +218,35 @@ pub async fn update_class(mut req: Request<AppState>) -> tide::Result {
             FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.id = $1")
         .bind(&school_id)
         .fetch(&req.state().db_pool);
-    while let Some(row) = query.next().await?{
-        s = SchoolDetail{
+    while let Some(row) = query.next().await? {
+        s = SchoolDetail {
             id: row.get(0),
             name: row.get(1),
             manager: row.get(2),
             school_type: row.get(3),
             tel: None,
             location: None,
-            city: City{ pk: row.get(4), name: row.get(5) },
-            town: Town{
+            city: City { pk: row.get(4), name: row.get(5) },
+            town: Town {
                 city: row.get(4),
                 pk: row.get(6),
                 name: row.get(7)
             }
         }
     }
-    match req.user().await {
-        Some(u) => {
-            if s.manager == u.id || u.is_admin{
-                let c: Class = sqlx::query_as("update classes set sube = $1, kademe = $2, school = $3, group_id = $4 where id = $5 returning id, sube, kademe, group_id, school")
-                    .bind(&class.sube)
-                    .bind(&class.kademe)
-                    .bind(&school_id)
-                    .bind(&class.group_id)
-                    .bind(&class.id)
-                    .fetch_one(&req.state().db_pool).await?;
-                res.set_body(Body::from_json(&c)?);
-                Ok(res)
-            }
-            else{
-                Ok(res)
-            }
-        }
-        None=>{
-            Ok(res)
-        }
+    let u = req.user().await?;
+    if s.manager == u.id || u.is_admin {
+        let c: Class = sqlx::query_as("update classes set sube = $1, kademe = $2, school = $3, group_id = $4 where id = $5 returning id, sube, kademe, group_id, school")
+            .bind(&class.sube)
+            .bind(&class.kademe)
+            .bind(&school_id)
+            .bind(&class.group_id)
+            .bind(&class.id)
+            .fetch_one(&req.state().db_pool).await?;
+        res.set_body(Body::from_json(&c)?);
+        Ok(res)
+    } else {
+        Ok(res)
     }
 }
 

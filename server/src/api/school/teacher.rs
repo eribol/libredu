@@ -64,18 +64,23 @@ pub async fn del_activities(req: Request<AppState>) -> tide::Result {
     let teacher_id: i32 = req.param("teacher_id")?.parse()?;
     let act_id: i32 = req.param("act_id")?.parse()?;
     let school_auth: &SchoolAuth = req.ext().unwrap();
-
-    if school_auth.role < 3 {
+    let user = req.user().await?;
+    if school_auth.role < 3 || user.id == teacher_id || user.is_admin {
         let mut res = tide::Response::new(StatusCode::Ok);
-        let ids = school_auth.school.get_classes_ids(&req).await?;
-        //let teacher = school_auth.school.get_teacher(&req, teacher_id).await?;
-        let _update = sqlx::query(r#"delete from activities WHERE (teacher = $1 or $1 = ANY(teachers)) and array[$2::int[]] @> classes and id = $3"#)
+        //let ids = school_auth.school.get_classes_ids(&req).await?;
+        let teacher = school_auth.school.get_teacher(&req, teacher_id).await;
+        if let Some(t) = teacher{
+            t.del_act(&req).await?;
+            res.set_body(Body::from_json(&act_id)?);
+        }
+        Ok(res)
+        /*let _update = sqlx::query(r#"delete from activities WHERE (teacher = $1 or $1 = ANY(teachers)) and array[$2::int[]] @> classes and id = $3"#)
             .bind(&teacher_id)
             .bind(ids)
             .bind(&act_id)
             .execute(&req.state().db_pool).await?;
-        res.set_body(Body::from_json(&act_id)?);
-        Ok(res)
+        */
+
     } else {
         let res = tide::Response::new(StatusCode::Unauthorized);
         Ok(res)

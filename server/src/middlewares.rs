@@ -57,7 +57,7 @@ pub fn user_auth<'a>(
 ) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>> {
     Box::pin(async {
         use crate::request::Auth;
-        if let Some(user) = request.user().await {
+        if let Ok(user) = request.user().await {
             request.set_ext(user);
             Ok(next.run(request).await)
         } else {

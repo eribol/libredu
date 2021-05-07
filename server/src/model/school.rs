@@ -2,7 +2,6 @@ use serde::*;
 use crate::model::city::{City, Town};
 use crate::AppState;
 use crate::model::{class, subject, group, teacher, library};
-use crate::model::teacher::SimpleTeacher;
 
 
 #[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize)]
@@ -77,7 +76,7 @@ impl SchoolDetail{
             .bind(&teacher_id)
             .fetch(&req.state().db_pool);
         let teacher: teacher::Teacher;
-        while let Some(row) = tchr.next().await.unwrap() {
+        if let Some(row) = tchr.next().await.unwrap() {
             teacher = teacher::Teacher {
                 id: row.get(0),
                 first_name: row.get(1),
@@ -91,7 +90,6 @@ impl SchoolDetail{
         None
     }
     pub async fn del_teacher(&self, req: &tide::Request<AppState>, teacher_id: i32) -> sqlx_core::Result<i32>{
-        use sqlx::prelude::PgQueryAs;
         let teacher = self.get_teacher(req, teacher_id).await.unwrap();
         teacher.del(req).await?;
         Ok(teacher_id)

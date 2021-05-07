@@ -18,6 +18,7 @@ mod request;
 mod api;
 mod routes;
 mod middlewares;
+//mod routes;
 
 /*const DOMAIN: &str = match &env::var("DOMAIN_NAME"){
     Ok(n) => n,
@@ -40,18 +41,18 @@ async fn main() -> tide::Result<()> {
         };
         let domain = &env::var("DOMAIN_PORT")?;
         let mut app = crate::routes::routes(state.clone());
-        app.at("/static").serve_dir("./client/pkg/")?;
-        app.at("/sse").get(tide::sse::endpoint(sse));
+        app.at("/static/*").serve_dir("./client/pkg/")?;
+        //app.at("/sse").get(tide::sse::endpoint(sse));
         app.listen(domain).await?;
         Ok(())
     })
 }
 
-async fn sse(_req: tide::Request<AppState>, sender: tide::sse::Sender) -> tide::Result<()>{
+/*async fn sse(_req: tide::Request<AppState>, sender: tide::sse::Sender) -> tide::Result<()>{
     let _res = tide::Response::new(StatusCode::Ok);
     sender.send("post", "3", None).await?;
     Ok(())
-}
+}*/
 async fn index(_req: Request<AppState>)->tide::Result{
     use http_types::Body;
     let mut res = tide::Response::new(StatusCode::Ok);

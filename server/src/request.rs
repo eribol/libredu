@@ -8,6 +8,7 @@ use crate::model::school::{School, SchoolDetail};
 use crate::model::city::{City, Town};
 use crate::model::group::ClassGroups;
 use crate::model::class::Class;
+use anyhow::anyhow;
 
 #[derive(Debug, Default, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct Role{
@@ -32,8 +33,8 @@ pub struct GroupMenu{
 }
 #[tide::utils::async_trait]
 pub trait Auth{
-    async fn user(&self)->Option<AuthUser>;
-    async fn is_auth(&self)-> Option<bool>;
+    async fn user(&self)->anyhow::Result<AuthUser>;
+    async fn is_auth(&self)-> bool;
     async fn get_school(&self)-> Option<SchoolDetail>;
     async fn get_school_auth(&self)-> i32;
     async fn get_group(&self)-> Option<ClassGroups>;
@@ -44,28 +45,16 @@ pub trait Auth{
 
 #[tide::utils::async_trait]
 impl Auth for Request<AppState>{
-    async fn user(&self)->Option<AuthUser>{
-        match self.is_auth().await{
-            Some(b)=>{
-                if b {
-                    use sqlx_core::postgres::PgQueryAs;
-                    let user_id = self.cookie("libredu-user").unwrap();
-                    let user2: sqlx::Result<AuthUser> = sqlx::query_as("SELECT * FROM users WHERE id = $1")
-                        .bind(user_id.value().parse::<i32>().unwrap())
-                        //.bind(hash(&f.password))
-                        .fetch_one(&self.state().db_pool).await;
-                    Some(user2.unwrap())
-                }
-                else{
-                    None
-                }
-            },
-            None=>{
-                None
-            }
-        }
+    async fn user(&self)->anyhow::Result<AuthUser> {
+        use sqlx_core::postgres::PgQueryAs;
+        let user_id = self.cookie("libredu-user").ok_or_else(|| anyhow!("No session"))?;
+        let user: AuthUser = sqlx::query_as("SELECT * FROM users WHERE id = $1")
+            .bind(user_id.value().parse::<i32>().expect("Id bulunamadı"))
+            //.bind(hash(&f.password))
+            .fetch_one(&self.state().db_pool).await?;
+        Ok(user)
     }
-    async fn is_auth(&self)-> Option<bool>{
+    async fn is_auth(&self)-> bool{
         let user_id = self.cookie("libredu-user");
         match user_id{
             Some(u)=>{
@@ -78,20 +67,20 @@ impl Auth for Request<AppState>{
                             .fetch_one(&self.state().db_pool).await;
                         match session{
                             Ok(_)=>{
-                                Some(true)
+                                true
                             },
                             Err(_)=>{
-                                Some(false)
+                                false
                             }
                         }
                     },
                     None=>{
-                        Some(false)
+                        false
                     }
                 }
             },
             None=>{
-                Some(false)
+                false
             }
         }
     }
@@ -136,10 +125,10 @@ impl Auth for Request<AppState>{
                 use sqlx::prelude::PgQueryAs;
                 let user_id = self.user().await;
                 match user_id{
-                    None => {
+                    Err(_) => {
                         9
                     }
-                    Some(user) => {
+                    Ok(user) => {
                         if user.is_admin{
                             1
                         }
@@ -262,9 +251,7 @@ impl Auth for Request<AppState>{
 
     }
     async fn login(&self, uname: &str, pas: &str)-> bool{
-
-        let is_valid = verify(pas, uname).unwrap();
-        is_valid
+        verify(pas, uname).unwrap()
     }
 
 }

@@ -9,22 +9,15 @@ pub async fn add_school_type(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(tide::StatusCode::Ok);
     use sqlx_core::postgres::PgQueryAs;
     let class = req.body_json::<NewType>().await?;
-    match req.user().await {
-        Some(u) => {
-            if u.is_admin || u.id == 91{
-                let add_type: SchoolType = sqlx::query_as("insert into school_type(name) values($1) returning id, name")
-                    .bind(&class.name)
-                    .fetch_one(&req.state().db_pool).await?;
-                res.set_body(Body::from_json(&add_type)?);
-                Ok(res)
-            }
-            else{
-                Ok(res)
-            }
-        }
-        None=>{
-            Ok(res)
-        }
+    let u = req.user().await?;
+    if u.is_admin || u.id == 91 {
+        let add_type: SchoolType = sqlx::query_as("insert into school_type(name) values($1) returning id, name")
+            .bind(&class.name)
+            .fetch_one(&req.state().db_pool).await?;
+        res.set_body(Body::from_json(&add_type)?);
+        Ok(res)
+    } else {
+        Ok(res)
     }
 }
 
@@ -32,26 +25,19 @@ pub async fn add_subject(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(tide::StatusCode::Ok);
     use sqlx_core::postgres::PgQueryAs;
     let subject = req.body_json::<NewSubject>().await?;
-    match req.user().await {
-        Some(u) => {
-            if u.is_admin || u.id == 91{
-                let add_type: Subject = sqlx::query_as("insert into subjects(name, kademe, school_type, optional) values($1, $2, $3, $4) returning id, name, kademe, school_type, optional")
-                    .bind(&subject.name)
-                    .bind(&subject.kademe)
-                    .bind(&subject.school_type)
-                    .bind(&subject.optional)
-                    .fetch_one(&req.state().db_pool).await?;
-                res.set_body(Body::from_json(&add_type)?);
-                Ok(res)
-            }
-            else{
-                let res = tide::Response::new(tide::StatusCode::Ok);
-                Ok(res)
-            }
-        }
-        None=>{
-            Ok(res)
-        }
+    let u = req.user().await?;
+    if u.is_admin {
+        let add_type: Subject = sqlx::query_as("insert into subjects(name, kademe, school_type, optional) values($1, $2, $3, $4) returning id, name, kademe, school_type, optional")
+            .bind(&subject.name)
+            .bind(&subject.kademe)
+            .bind(&subject.school_type)
+            .bind(&subject.optional)
+            .fetch_one(&req.state().db_pool).await?;
+        res.set_body(Body::from_json(&add_type)?);
+        Ok(res)
+    } else {
+        let res = tide::Response::new(tide::StatusCode::Ok);
+        Ok(res)
     }
 }
 

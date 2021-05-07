@@ -62,12 +62,9 @@ pub async fn login(mut req: Request<AppState>) -> tide::Result {
                         dotenv::dotenv().expect("Failed to read .env file");
                         use std::env;
                         let mut domain = "127.0.0.1".to_string();
-                        match env::var("DOMAIN_NAME") {
-                            Ok(_) => domain = "libredu.org".to_string(),
-                            Err(_) => {
-                                //domain = "127.0.0.1".to_string()
-                            }
-                        };
+                        if env::var("DOMAIN_NAME").is_ok() {
+                            domain = "libredu.org".to_string();
+                        }
                         use time::Duration;
                         //println!("{:?}", env::var("DOMAIN_NAME").unwrap_or("127.0.0.1".to_string()));
                         let _cookie = Cookie::build("libredu-user", u.id.to_string())
@@ -114,12 +111,8 @@ pub async fn login(mut req: Request<AppState>) -> tide::Result {
 
 pub async fn get_user(req: Request<AppState>) -> tide::Result {
     let mut res = Response::new(StatusCode::Ok);
-    match req.user().await{
-        Some(user) => {
-            res.set_body(Body::from_json(&user)?);
-        }
-        None => {}
-    }
+    let user = req.user().await?;
+    res.set_body(Body::from_json(&user)?);
     Ok(res)
 }
 
@@ -141,22 +134,22 @@ pub async fn signin(mut req: Request<AppState>) -> tide::Result {
                     Ok(res)
                 },
                 Err(_e) => {
-                    if &f.tel.len() != &10 || !f.tel.parse::<f64>().is_ok(){
+                    if f.tel.len() != 10 || f.tel.parse::<f64>().is_err(){
                         let mut res = tide::Response::new(StatusCode::BadRequest);
                         res.set_body(Body::from_json(&"Telefon numaranız geçerli değil")?);
                         Ok(res)
                     }
-                    else if &f.password1 != &f.password2 || &f.password2.len() < &4{
+                    else if f.password1 != f.password2 || f.password2.len() < 4{
                         let mut res = tide::Response::new(StatusCode::BadRequest);
                         res.set_body(Body::from_json(&"Şifreler uyuşmuyor veya kısa")?);
                         Ok(res)
                     }
-                    else if &f.password1 == &"" || &f.password2 == &"" || &f.email == &"" || &f.last_name == &"" || &f.first_name == &""{
+                    else if f.password1.is_empty() || f.password2.is_empty() || f.email.is_empty() || f.last_name.is_empty() || f.first_name.is_empty(){
                         let mut res = tide::Response::new(StatusCode::BadRequest);
                         res.set_body(Body::from_json(&"Bilgiler boş geçilemez")?);
                         Ok(res)
                     }
-                    else if !f.email.contains("@"){
+                    else if !f.email.contains('@'){
                         let mut res = tide::Response::new(StatusCode::BadRequest);
                         res.set_body(Body::from_json(&"E-posta bilgisi doğru girilmemiş")?);
                         Ok(res)
@@ -195,12 +188,9 @@ pub async fn signin(mut req: Request<AppState>) -> tide::Result {
                                         dotenv::dotenv().expect("Failed to read .env file");
                                         use std::env;
                                         let mut domain = "127.0.0.1".to_string();
-                                        match env::var("DOMAIN_NAME") {
-                                            Ok(_) => domain = "libredu.org".to_string(),
-                                            Err(_) => {
-                                                //domain = "127.0.0.1".to_string()
-                                            }
-                                        };
+                                        if env::var("DOMAIN_NAME").is_ok() {
+                                            domain = "libredu.org".to_string();
+                                        }
                                         use time::{Duration};
                                         let _cookie = Cookie::build("libredu-user", user2.id.to_string())
                                             .domain(domain.clone())
@@ -253,12 +243,9 @@ pub async fn signin(mut req: Request<AppState>) -> tide::Result {
                                             dotenv::dotenv().expect("Failed to read .env file");
                                             use std::env;
                                             let mut domain = "127.0.0.1".to_string();
-                                            match env::var("DOMAIN_NAME") {
-                                                Ok(_) => domain = "libredu.org".to_string(),
-                                                Err(_) => {
-                                                    //domain = "127.0.0.1".to_string()
-                                                }
-                                            };
+                                            if env::var("DOMAIN_NAME").is_ok() {
+                                                domain = "libredu.org".to_string();
+                                            }
                                             use time::{Duration};
                                             let _cookie = Cookie::build("libredu-user", user2.id.to_string())
                                                 .domain(domain.clone())

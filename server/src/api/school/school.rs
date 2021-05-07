@@ -18,127 +18,107 @@ use crate::model::user::SimpleUser;
 pub async fn schools(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     //let mut school: Vec<school::SchoolDetail> = Vec::new();
-    match req.user().await {
-        Some(u)=> {
-            use sqlx_core::cursor::Cursor;
-            use sqlx_core::row::Row;
-            let mut s: Vec<SchoolDetail> = vec![];
-            let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
+    let u = req.user().await?;
+    use sqlx_core::cursor::Cursor;
+    use sqlx_core::row::Row;
+    let mut s: Vec<SchoolDetail> = vec![];
+    let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
                     FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk \
                     inner join school_users on school_users.school_id = school.id WHERE school_users.user_id = $1")
-                .bind(&u.id)
-                .fetch(&req.state().db_pool);
-            while let Some(row) = query.next().await?{
-                //println!("okullar");
-                let school = SchoolDetail{
-                    id: row.get(0),
-                    name: row.get(1),
-                    manager: row.get(2),
-                    school_type: row.get(3),
-                    tel: None,
-                    location: None,
-                    city: City{ pk: row.get(4), name: row.get(5) },
-                    town: Town{
-                        city: row.get(4),
-                        pk: row.get(6),
-                        name: row.get(7)
-                    }
-                };
-                s.push(school)
+        .bind(&u.id)
+        .fetch(&req.state().db_pool);
+    while let Some(row) = query.next().await? {
+        //println!("okullar");
+        let school = SchoolDetail {
+            id: row.get(0),
+            name: row.get(1),
+            manager: row.get(2),
+            school_type: row.get(3),
+            tel: None,
+            location: None,
+            city: City { pk: row.get(4), name: row.get(5) },
+            town: Town {
+                city: row.get(4),
+                pk: row.get(6),
+                name: row.get(7)
             }
-            res.set_body(Body::from_json(&s)?);
-            res.insert_header("content-type", "application/json");
-            Ok(res)
-        }
-        None=>{
-            Ok(res)
-        }
+        };
+        s.push(school)
     }
+    res.set_body(Body::from_json(&s)?);
+    res.insert_header("content-type", "application/json");
+    Ok(res)
 }
 pub async fn school_type(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     use sqlx_core::postgres::PgQueryAs;
     use crate::model::school::{SchoolType};
-    match req.user().await{
-        Some(_)=>{
-            let s: Vec<SchoolType> = sqlx::query_as("SELECT * FROM school_type")
-                .fetch_all(&req.state().db_pool).await?;
-            res.set_body(Body::from_json(&s)?);
-            Ok(res)
-        }
-        None=>{
-            Ok(res)
-        }
-    }
-
+    let _user = req.user().await?;
+    let s: Vec<SchoolType> = sqlx::query_as("SELECT * FROM school_type")
+        .fetch_all(&req.state().db_pool).await?;
+    res.set_body(Body::from_json(&s)?);
+    Ok(res)
 }
 pub async fn add(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     use sqlx_core::postgres::PgQueryAs;
-    match req.user().await{
-        Some(u)=>{
-            let s: Result<school::School, sqlx_core::error::Error> = sqlx::query_as("SELECT * FROM school WHERE manager = $1")
-                .bind(&u.id)
-                .fetch_one(&req.state().db_pool).await;
-            match s {
-                Ok(_s) => {
-                    res.set_body(Body::from_json(&"Kayıtlı kurumunuz mevcut")?);
-                    Ok(res)
-                }
-                Err(_) => {
-                    let form = req.body_json::<school::NewSchool>().await?;
-                    let add_school = form.add(&mut req, u.id).await;
-                    match add_school {
-                        Ok(_school) => {
-                            use sqlx_core::cursor::Cursor;
-                            use sqlx_core::row::Row;
-                            let mut s = SchoolDetail::default();
-                            let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
+    let u = req.user().await?;
+    let s: Result<school::School, sqlx_core::error::Error> = sqlx::query_as("SELECT * FROM school WHERE manager = $1")
+        .bind(&u.id)
+        .fetch_one(&req.state().db_pool).await;
+    match s {
+        Ok(_s) => {
+            res.set_body(Body::from_json(&"Kayıtlı kurumunuz mevcut")?);
+            Ok(res)
+        }
+        Err(_) => {
+            let form = req.body_json::<school::NewSchool>().await?;
+            let add_school = form.add(&mut req, u.id).await;
+            match add_school {
+                Ok(_school) => {
+                    use sqlx_core::cursor::Cursor;
+                    use sqlx_core::row::Row;
+                    let mut s = SchoolDetail::default();
+                    let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
                                     FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.id = $1")
-                                .bind(&_school.id)
-                                .fetch(&req.state().db_pool);
-                            while let Some(row) = query.next().await?{
-                                s = SchoolDetail{
-                                    id: row.get(0),
-                                    name: row.get(1),
-                                    manager: row.get(2),
-                                    school_type: row.get(3),
-                                    tel: None,
-                                    location: None,
-                                    city: City{ pk: row.get(4), name: row.get(5) },
-                                    town: Town{
-                                        city: row.get(4),
-                                        pk: row.get(6),
-                                        name: row.get(7)
-                                    }
-                                }
+                        .bind(&_school.id)
+                        .fetch(&req.state().db_pool);
+                    while let Some(row) = query.next().await? {
+                        s = SchoolDetail {
+                            id: row.get(0),
+                            name: row.get(1),
+                            manager: row.get(2),
+                            school_type: row.get(3),
+                            tel: None,
+                            location: None,
+                            city: City { pk: row.get(4), name: row.get(5) },
+                            town: Town {
+                                city: row.get(4),
+                                pk: row.get(6),
+                                name: row.get(7)
                             }
-                            let _add_school_user = sqlx::query!(r#"INSERT into school_users (school_id, user_id, role) values($1, $2, 1)"#,
-                                    s.id, u.id)
-                                .execute(&req.state().db_pool).await?;
-                            let mut hour: i32 = 7;
-                            if s.school_type == 3{
-                                hour = 8;
-                            }
-                            let _g = sqlx::query!(r#"insert into class_groups (name, school, hour) values($1, $2, $3)"#, &"Varsayılan", s.id, hour)
-                                .execute(&req.state().db_pool).await;
-                            res.set_body(Body::from_json(&s)?);
-                            Ok(res)
-                        }
-                        Err(_e) => {
-                            res.set_body(Body::from_json(&"Bu eposta ile kaydedilmiş okul mevcut")?);
-                            //res = res.set_status(StatusCode::NotAcceptable);
-                            Ok(res)
                         }
                     }
+                    let _add_school_user = sqlx::query!(r#"INSERT into school_users (school_id, user_id, role) values($1, $2, 1)"#,
+                                    s.id, u.id)
+                        .execute(&req.state().db_pool).await?;
+                    let mut hour: i32 = 7;
+                    if s.school_type == 3 {
+                        hour = 8;
+                    }
+                    let _g = sqlx::query!(r#"insert into class_groups (name, school, hour) values($1, $2, $3)"#, &"Varsayılan", s.id, hour)
+                        .execute(&req.state().db_pool).await;
+                    res.set_body(Body::from_json(&s)?);
+                    Ok(res)
+                }
+                Err(_e) => {
+                    res.set_body(Body::from_json(&"Bu eposta ile kaydedilmiş okul mevcut")?);
+                    //res = res.set_status(StatusCode::NotAcceptable);
+                    Ok(res)
                 }
             }
         }
-        None=>{
-            Ok(res)
-        }
     }
-
 }
 
 pub async fn school_detail(req: Request<AppState>) -> tide::Result {
@@ -336,47 +316,26 @@ pub async fn students_with_file(req: Request<AppState>) -> tide::Result {
     // MultiPartFor------------
     use futures_codec::{BytesCodec, FramedRead};
     let content_type_string = req.header("Content-Type").unwrap().get(0).unwrap().as_str();
-
-    //   multipart/form-data; N
-    println!("Content-Type1={}", &content_type_string);
-
-    if !content_type_string.contains("multipart/form-data;") {
-        //not 「multipart/form-data;」error
-        //
-        //
-    }
     let boundary_key = "boundary=";
     let skip_last_index = content_type_string.find(boundary_key).unwrap() + boundary_key.len();
     let boundary: String = content_type_string.chars().skip(skip_last_index).take(content_type_string.len() - skip_last_index).collect();
-
-    println!("Content-Type2={}", boundary);
-    //println!("{:?}", &req.body_bytes().await?);
-    //req move ,
-    //let school_auth: &SchoolAuth = req.ext().clone().unwrap();
     let number = req.get_school().await.unwrap();
     let pool = &req.state().db_pool.clone();
     let stream = FramedRead::new(req, BytesCodec);
-
-    // Create a `Multipart` instance from that byte stream and the boundary.
     let mut multipart = Multipart::new(stream, boundary);
-    //println!("hata:{:?}", multipart.next_field().await?.unwrap());
-    // Iterate over the fields, use `next_field()` to get the next field.
     while let Some(mut field) = multipart.next_field().await? {
         // Get the field's filename if provided in "Content-Disposition" header.
         let file_name = field.file_name();
-        match file_name {
-            Some(_file) => {
-                use async_std::fs::File;
-                use async_std::prelude::*;
-                //let school_auth: &SchoolAuth = req.ext().unwrap();
+        if let Some(_file) = file_name {
+            use async_std::fs::File;
+            use async_std::prelude::*;
+            //let school_auth: &SchoolAuth = req.ext().unwrap();
 
-                while let Some(chunk) = field.chunk().await? {
-                    // Do something with field chunk.
-                    let mut file = File::create("students/".to_owned()+&number.name+".xlsx").await?;
-                    file.write_all(&chunk).await?;
-                }
+            while let Some(chunk) = field.chunk().await? {
+                // Do something with field chunk.
+                let mut file = File::create("students/".to_owned() + &number.name + ".xlsx").await?;
+                file.write_all(&chunk).await?;
             }
-            None => {}
         }
     }
     use calamine::{open_workbook, Xlsx, Reader};
@@ -385,34 +344,29 @@ pub async fn students_with_file(req: Request<AppState>) -> tide::Result {
     if let Some(Ok(r)) = excel.worksheet_range("Sheet1") {
         for row in r.rows() {
             let title = row[1].get_float();
-            match title{
-                Some(t) => {
-                    let student = NewStudent{
-                        first_name: row[4].get_string().unwrap().to_string(),
-                        last_name: row[9].get_string().unwrap().to_string(),
-                        number: t as i32
-                    };
-                    use sqlx::prelude::PgQueryAs;
-                    let user: SimpleUser = sqlx::query_as(r#"insert into users(first_name, last_name) values($1, $2) returning id, first_name, last_name"#)
-                        .bind(&student.first_name)
-                        .bind(&student.last_name)
-                        .fetch_one(pool).await?;
-                    let _ = sqlx::query(r#"insert into school_users(user_id, school_id, role) values($1, $2, 8)"#)
-                        .bind(&user.id)
-                        .bind(&number.id)
-                        .execute(pool).await?;
-                    let _ = sqlx::query(r#"insert into students(first_name, last_name, school, school_number, user_id) values($1, $2, $3, $4, $5)"#)
-                        .bind(&student.first_name)
-                        .bind(&student.last_name)
-                        .bind(&number.id)
-                        .bind(&student.number)
-                        .bind(&user.id)
-                        .execute(pool).await?;
-                }
-                None => {}
+            if let Some(t) = title {
+                let student = NewStudent {
+                    first_name: row[4].get_string().unwrap().to_string(),
+                    last_name: row[9].get_string().unwrap().to_string(),
+                    number: t as i32
+                };
+                use sqlx::prelude::PgQueryAs;
+                let user: SimpleUser = sqlx::query_as(r#"insert into users(first_name, last_name) values($1, $2) returning id, first_name, last_name"#)
+                    .bind(&student.first_name)
+                    .bind(&student.last_name)
+                    .fetch_one(pool).await?;
+                let _ = sqlx::query(r#"insert into school_users(user_id, school_id, role) values($1, $2, 8)"#)
+                    .bind(&user.id)
+                    .bind(&number.id)
+                    .execute(pool).await?;
+                let _ = sqlx::query(r#"insert into students(first_name, last_name, school, school_number, user_id) values($1, $2, $3, $4, $5)"#)
+                    .bind(&student.first_name)
+                    .bind(&student.last_name)
+                    .bind(&number.id)
+                    .bind(&student.number)
+                    .bind(&user.id)
+                    .execute(pool).await?;
             }
-            //
-
         }
     }
     let res = tide::Response::new(StatusCode::Ok);
@@ -474,19 +428,17 @@ pub async fn get_unused_numbers(req: Request<AppState>) -> tide::Result {
         .fetch_one(&req.state().db_pool).await?;
     let mut unused_numbers: Vec<i32> = vec![];
     let mut s = 1;
-    match numbers.0{
-        Some(n) => {
-            loop{
-                if n.iter().all(|nn| nn != &s){
-                    unused_numbers.push(s.clone());
-                }
-                if unused_numbers.len() >= 10{
-                    break;
-                }
-                s += 1;
+    if let Some(n) = numbers.0
+    {
+        loop {
+            if n.iter().all(|nn| nn != &s) {
+                unused_numbers.push(s);
             }
+            if unused_numbers.len() >= 10 {
+                break;
+            }
+            s += 1;
         }
-        None => {}
     }
 
     res.set_body(Body::from_json(&unused_numbers)?);
@@ -508,24 +460,16 @@ pub async fn get_students(req: Request<AppState>) -> tide::Result {
         Ok(res)
     }
 }
-pub async fn get_library(req: Request<AppState>) -> tide::Result{
+pub async fn get_library(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
-    let user = req.user().await;
     let school_auth: &SchoolAuth = req.ext().unwrap();
-    match user{
-        Some(u) => {
-            let l = school_auth.school.get_library(&req).await?;
-            if school_auth.role < 3 || u.id == l.manager{
-                res.set_body(Body::from_json(&l)?);
-                Ok(res)
-            }
-            else {
-                Ok(res)
-            }
-        }
-        None => {
-            Ok(res)
-        }
+    let u = req.user().await?;
+    let l = school_auth.school.get_library(&req).await?;
+    if school_auth.role < 3 || u.id == l.manager {
+        res.set_body(Body::from_json(&l)?);
+        Ok(res)
+    } else {
+        Ok(res)
     }
 }
 pub async fn get_books(req: Request<AppState>) -> tide::Result {
@@ -570,81 +514,65 @@ pub async fn books(mut req: Request<AppState>) -> tide::Result {
         Ok(res)
     }
 }
-pub async fn library(mut req: Request<AppState>) -> tide::Result{
+pub async fn library(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     use sqlx::prelude::PgQueryAs;
     let lbrry = req.body_json::<library::NewLibrary>().await?;
-    let user = req.user().await;
+    let _user = req.user().await?;
     let school_auth: &SchoolAuth = req.ext().unwrap();
-    match user{
-        Some(_) => {
-            let l = school_auth.school.get_library(&req).await;
-            match l{
-                Ok(_) => {
-                    Ok(res)
-                }
-                Err(_) => {
-                    if school_auth.role < 3 {
-                        let _ = sqlx::query(r#"select * from school_users where school_id = $1 and user_id = $2) "#)
-                            .bind(&school_auth.school.id)
-                            .bind(&lbrry.manager)
-                            .execute(&req.state().db_pool).await?;
-                        let l2: library::NewLibrary = sqlx::query_as(r#"insert into libraries(school, manager, barkod_min, barkod_max, student)
-                                values($1, $2, $3, $4, $5) returning id, manager, school, barkod_min, barkod_max, student"#)
-                            .bind(&school_auth.school.id)
-                            .bind(&lbrry.manager).bind(lbrry.barkod_min).bind(lbrry.barkod_max).bind(lbrry.student)
-                            .fetch_one(&req.state().db_pool).await?;
-                        res.set_body(Body::from_json(&l2)?);
-                        Ok(res)
-                    }
-                    else {
-                        Ok(res)
-                    }
-                }
-            }
-        }
-        None => {
+
+    let l = school_auth.school.get_library(&req).await;
+    match l{
+        Ok(_) => {
             Ok(res)
+        }
+        Err(_) => {
+            if school_auth.role < 3 {
+                let _ = sqlx::query(r#"select * from school_users where school_id = $1 and user_id = $2) "#)
+                    .bind(&school_auth.school.id)
+                    .bind(&lbrry.manager)
+                    .execute(&req.state().db_pool).await?;
+                let l2: library::NewLibrary = sqlx::query_as(r#"insert into libraries(school, manager, barkod_min, barkod_max, student)
+                                values($1, $2, $3, $4, $5) returning id, manager, school, barkod_min, barkod_max, student"#)
+                    .bind(&school_auth.school.id)
+                    .bind(&lbrry.manager).bind(lbrry.barkod_min).bind(lbrry.barkod_max).bind(lbrry.student)
+                    .fetch_one(&req.state().db_pool).await?;
+                res.set_body(Body::from_json(&l2)?);
+                Ok(res)
+            } else {
+                Ok(res)
+            }
         }
     }
 }
 
-pub async fn patch_library(mut req: Request<AppState>) -> tide::Result{
+pub async fn patch_library(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     use sqlx::prelude::PgQueryAs;
     let lbrry = req.body_json::<library::NewLibrary>().await?;
-    let user = req.user().await;
+    let _user = req.user().await?;
     let school_auth: &SchoolAuth = req.ext().unwrap();
-    match user{
-        Some(_) => {
-            let l: sqlx::Result<library::Library> = sqlx::query_as(r#"select * from libraries where school = $1"#)
-                .bind(&school_auth.school.id)
-                .fetch_one(&req.state().db_pool).await;
-            match l{
-                Ok(_) => {
-                    if school_auth.role < 3 {
-                        let _ = sqlx::query(r#"select * from school_users where school_id = $1 and user_id = $2 "#)
-                            .bind(&school_auth.school.id)
-                            .bind(&lbrry.manager)
-                            .execute(&req.state().db_pool).await?;
-                        let l2: library::NewLibrary = sqlx::query_as(r#"update libraries set manager= $1, barkod_min = $2, barkod_max = $3, student = $4 where school = $5
+    let l: sqlx::Result<library::Library> = sqlx::query_as(r#"select * from libraries where school = $1"#)
+        .bind(&school_auth.school.id)
+        .fetch_one(&req.state().db_pool).await;
+    match l {
+        Ok(_) => {
+            if school_auth.role < 3 {
+                let _ = sqlx::query(r#"select * from school_users where school_id = $1 and user_id = $2 "#)
+                    .bind(&school_auth.school.id)
+                    .bind(&lbrry.manager)
+                    .execute(&req.state().db_pool).await?;
+                let l2: library::NewLibrary = sqlx::query_as(r#"update libraries set manager= $1, barkod_min = $2, barkod_max = $3, student = $4 where school = $5
                                 returning id, manager, school, barkod_min, barkod_max, student"#)
-                            .bind(&lbrry.manager).bind(lbrry.barkod_min).bind(lbrry.barkod_max).bind(lbrry.student).bind(&school_auth.school.id)
-                            .fetch_one(&req.state().db_pool).await?;
-                        res.set_body(Body::from_json(&l2)?);
-                        Ok(res)
-                    }
-                    else {
-                        Ok(res)
-                    }
-
-                }
-                Err(_) => {
-                    Ok(res)
-                }
+                    .bind(&lbrry.manager).bind(lbrry.barkod_min).bind(lbrry.barkod_max).bind(lbrry.student).bind(&school_auth.school.id)
+                    .fetch_one(&req.state().db_pool).await?;
+                res.set_body(Body::from_json(&l2)?);
+                Ok(res)
+            } else {
+                Ok(res)
             }
         }
-        None => {
+        Err(_) => {
             Ok(res)
         }
     }

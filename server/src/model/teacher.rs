@@ -44,7 +44,6 @@ pub struct SimpleTeacher{
 
 impl Teacher{
     pub async fn del(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<i32>{
-        use sqlx::prelude::PgQueryAs;
         self.del_acts(req).await?;
         let school_id: i32 = req.param("school").expect("Okul id numarası belirtilmemiş").parse().expect("Okul numarası sayıdan oluşmalı");
         self.del_from_school(req, school_id).await?;
@@ -62,11 +61,11 @@ impl Teacher{
     pub async fn del_act(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<i32>{
         use sqlx::prelude::PgQueryAs;
         let act_id: i32 = req.param("act_id").expect("Aktivite id numarası belirtilmemiş").parse().expect("Sayı değil");
-        let mut act: activity::Activity  = sqlx::query_as(r#"select * from activities where id = $1 and $2 = any(classes) "#)
+        let act: activity::Activity  = sqlx::query_as(r#"select * from activities where id = $1 and $2 = any(classes) "#)
             .bind(act_id)
             .bind(&self.id)
             .fetch_one(&req.state().db_pool).await?;
-        if act.classes.len() == 0{
+        if act.classes.is_empty(){
             let _ = sqlx::query(r#"delete from activities where id = $1 returning *"#)
                 .bind(act_id)
                 .execute(&req.state().db_pool).await?;
@@ -78,37 +77,32 @@ impl Teacher{
                 .bind(act_id)
                 .bind(&ids)
                 .execute(&req.state().db_pool).await?;
-            println!("üç");
             Ok(act_id)
         }
     }
     pub async fn del_acts(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<&Self>{
         use sqlx::prelude::PgQueryAs;
-        let mut acts: Vec<activity::Activity>  = sqlx::query_as(r#"select * from activities where $1 = any(teachers) or teacher = $1"#)
+        let acts: Vec<activity::Activity>  = sqlx::query_as(r#"select * from activities where $1 = any(teachers) or teacher = $1"#)
             .bind(&self.id)
             .fetch_all(&req.state().db_pool).await?;
-        for mut a in acts {
+        for a in acts {
             let _ = sqlx::query(r#"delete from activities where teacher = $1"#)
                 .bind(a.id)
                 .execute(&req.state().db_pool).await?;
             //return del
-            match a.teachers {
-                Some(teachers) => {
-                    if teachers.len() == 0 {
-                        let _ = sqlx::query(r#"delete from activities where id = $1 returning *"#)
-                            .bind(a.id)
-                            .execute(&req.state().db_pool).await?;
-                        //return del
-                    } else {
-                        let ids = &teachers.into_iter().filter(|t| t != &self.id).collect::<Vec<i32>>();
-                        let _ = sqlx::query(r#"update from activities set teachers = $2 where id = $1"#)
-                            .bind(a.id)
-                            .bind(&ids)
-                            .execute(&req.state().db_pool).await?;
-                    }
+            if let Some(teachers) = a.teachers {
+                if teachers.is_empty() {
+                    let _ = sqlx::query(r#"delete from activities where id = $1 returning *"#)
+                        .bind(a.id)
+                        .execute(&req.state().db_pool).await?;
+                    //return del
+                } else {
+                    let ids = &teachers.into_iter().filter(|t| t != &self.id).collect::<Vec<i32>>();
+                    let _ = sqlx::query(r#"update from activities set teachers = $2 where id = $1"#)
+                        .bind(a.id)
+                        .bind(&ids)
+                        .execute(&req.state().db_pool).await?;
                 }
-                None => {}
-                //return update
             }
         }
         Ok(self)

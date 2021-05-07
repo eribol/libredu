@@ -86,11 +86,11 @@ pub struct ResetPassword{
 }
 pub async fn post_reset(mut req: Request<AppState>) -> tide::Result{
     match req.user().await{
-        Some(_user)=>{
+        Ok(_user)=>{
             let res = tide::Response::new(StatusCode::Unauthorized);
             Ok(res)
         }
-        None=>{
+        Err(_)=>{
             use sqlx_core::postgres::PgQueryAs;
             let reset_form: ResetPassword = req.body_json().await?;
             let user: sqlx::Result<AuthUser> = sqlx::query_as("SELECT * FROM users where email = $1 and (tel = $2 or tel = $3) and key = $4")
@@ -215,102 +215,34 @@ pub async fn send_key(mut req: Request<AppState>) -> tide::Result{
 
 }
 
-pub async fn city(req: Request<AppState>) -> tide::Result{
-    match req.user().await{
-        Some(_user)=>{
-            let mut res = tide::Response::new(StatusCode::Ok);
-            use sqlx_core::postgres::PgQueryAs;
-            let cities: Vec<City> = sqlx::query_as("SELECT * FROM city")
-                .fetch_all(&req.state().db_pool).await?;
-            res.set_body(Body::from_json(&cities)?);
-            Ok(res)
-        }
-        None=>{
-            println!("hata mı var");
-            let mut res = tide::Response::new(StatusCode::Ok);
-            res.set_body(Body::from_json(&"Giriş yapınız")?);
-            Ok(res)
-        }
-    }
+pub async fn city(req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    use sqlx_core::postgres::PgQueryAs;
+    let cities: Vec<City> = sqlx::query_as("SELECT * FROM city")
+        .fetch_all(&req.state().db_pool).await?;
+    res.set_body(Body::from_json(&cities)?);
+    Ok(res)
 }
 
-pub async fn town(req: Request<AppState>) -> tide::Result{
-    //println!("City");
-    match req.user().await{
-        Some(_user)=>{
-            let mut res = tide::Response::new(StatusCode::Ok);
-            use sqlx_core::postgres::PgQueryAs;
-            let city: i32 = req.param("city")?.parse()?;
-            let towns: Vec<Town> = sqlx::query_as("SELECT * FROM town WHERE city = $1")
-                .bind(&city)
-                //.bind(&f.tel)
-                //.bind(hash(&f.password))
-                .fetch_all(&req.state().db_pool).await?;
-            res.set_body(Body::from_json(&towns)?);
-            Ok(res)
-        }
-        None=>{
-            let mut res = tide::Response::new(StatusCode::Ok);
-            res.set_body(Body::from_json(&"Giriş yapınız")?);
-            Ok(res)
-        }
-    }
+pub async fn town(req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    use sqlx_core::postgres::PgQueryAs;
+    let city: i32 = req.param("city")?.parse()?;
+    let towns: Vec<Town> = sqlx::query_as("SELECT * FROM town WHERE city = $1")
+        .bind(&city)
+        .fetch_all(&req.state().db_pool).await?;
+    res.set_body(Body::from_json(&towns)?);
+    Ok(res)
 }
 
-pub async fn days(req: Request<AppState>) -> tide::Result{
-    //println!("City");
-    match req.user().await{
-        Some(_user)=>{
-            let mut res = tide::Response::new(StatusCode::Ok);
-            use sqlx_core::postgres::PgQueryAs;
-
-            let days: Vec<Day> = sqlx::query_as("SELECT * FROM days")
-                .fetch_all(&req.state().db_pool).await?;
-            res.set_body(Body::from_json(&days)?);
-            Ok(res)
-        }
-        None=>{
-            let mut res = tide::Response::new(StatusCode::Ok);
-            res.set_body(Body::from_json(&"Giriş yapınız")?);
-            Ok(res)
-        }
-    }
+pub async fn days(req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    use sqlx_core::postgres::PgQueryAs;
+    let days: Vec<Day> = sqlx::query_as("SELECT * FROM days")
+        .fetch_all(&req.state().db_pool).await?;
+    res.set_body(Body::from_json(&days)?);
+    Ok(res)
 }
-
-/*pub async fn activities(req: Request<AppState>) -> tide::Result{
-    match req.user().await{
-        Some(_user)=>{
-            use sqlx_core::postgres::PgQueryAs;
-            let act_id: i32 = req.param("act_id")?.parse()?;
-            let act: Activity = sqlx::query_as("SELECT * FROM activities where id = $1")
-                .bind(&act_id)
-                .fetch_one(&req.state().db_pool).await?;
-            let cls: Class = sqlx::query_as("SELECT * FROM classes where id = any($1)")
-                .bind(&act.classes)
-                .fetch_one(&req.state().db_pool).await?;
-            let sch: School = sqlx::query_as("SELECT * FROM school WHERE manager = $1")
-                .bind(&_user.id)
-                .fetch_one(&req.state().db_pool).await?;
-            if (_user.id == sch.manager && cls.school == sch.id) || _user.is_admin{
-                let mut res = tide::Response::new(StatusCode::Ok);
-                let _del = sqlx::query("delete FROM activities where id = $1")
-                    .bind(&act_id)
-                    .execute(&req.state().db_pool).await?;
-                res.set_body(Body::from_string(act_id.to_string()));
-                Ok(res)
-            }
-            else{
-                let res = tide::Response::new(StatusCode::NotAcceptable);
-                Ok(res)
-            }
-        }
-        None=>{
-            let mut res = tide::Response::new(StatusCode::NotAcceptable);
-            res.set_body(Body::from_json(&"Giriş yapınız")?);
-            Ok(res)
-        }
-    }
-}*/
 
 pub async fn get_posts(req: Request<AppState>) -> tide::Result {
     use crate::model::post::Post;
@@ -423,25 +355,18 @@ pub async fn del_post(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let post_id: i32 = req.param("post_id")?.parse()?;
     use sqlx_core::postgres::PgQueryAs;
-    match req.user().await{
-        Some(user)=>{
-            let get_post: Post = sqlx::query_as("SELECT * FROM post where id = $1")
-                .bind(&post_id)
-                .fetch_one(&req.state().db_pool).await?;
-            if user.is_admin || get_post.sender == user.id{
-                sqlx::query("delete FROM post where id = $1")
-                    .bind(&post_id)
-                    .execute(&req.state().db_pool).await?;
-                res.set_body(Body::from_json(&post_id)?);
-                Ok(res)
-            }
-            else {
-                Ok(res)
-            }
-        }
-        None=>{
-            Ok(res)
-        }
+    let user = req.user().await?;
+    let get_post: Post = sqlx::query_as("SELECT * FROM post where id = $1")
+        .bind(&post_id)
+        .fetch_one(&req.state().db_pool).await?;
+    if user.is_admin || get_post.sender == user.id {
+        sqlx::query("delete FROM post where id = $1")
+            .bind(&post_id)
+            .execute(&req.state().db_pool).await?;
+        res.set_body(Body::from_json(&post_id)?);
+        Ok(res)
+    } else {
+        Ok(res)
     }
 }
 

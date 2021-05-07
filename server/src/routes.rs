@@ -19,7 +19,7 @@ pub fn routes(state: AppState)->tide::Server<AppState>{
     app.at("/users").get(index);
     app.at("/users/*").get(index);
     app.at("/api").nest({
-        api_routes(state.clone())
+        api_routes(state)
     });
     app
 }

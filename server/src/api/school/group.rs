@@ -195,23 +195,25 @@ pub async fn patch_group(mut req: Request<AppState>) -> tide::Result {
         let schedules:  Vec<Schedules>= sqlx::query_as("SELECT * from group_schedules WHERE group_id = $1 order by hour")
             .bind(&group_id)
             .fetch_all(&req.state().db_pool).await?;
-        if schedules.len() < group_form.hour as usize{
-            //schedules.clear();
-            for _ in schedules.len()+1..(group_form.hour + 1) as usize{
-                let start_time = NaiveTime::parse_from_str("00:00", "%H:%M").unwrap();
-                let _ = sqlx::query("insert into group_schedules(group_id, hour, start_time, end_time) values($1, $2, $3, $4)")
-                    .bind(&group_id)
+        use std::cmp::Ordering;
+        match schedules.len().cmp(&(group_form.hour as usize)){
+            Ordering::Less => {
+                for _ in schedules.len() + 1..(group_form.hour + 1) as usize {
+                    let start_time = NaiveTime::parse_from_str("00:00", "%H:%M").unwrap();
+                    let _ = sqlx::query("insert into group_schedules(group_id, hour, start_time, end_time) values($1, $2, $3, $4)")
+                        .bind(&group_id)
+                        .bind(&group_form.hour)
+                        .bind(&start_time)
+                        .bind(&start_time)
+                        .execute(&req.state().db_pool).await?;
+                }
+            }
+            Ordering::Greater => {
+                let _ = sqlx::query("delete from group_schedules where hour > $1")
                     .bind(&group_form.hour)
-                    .bind(&start_time)
-                    .bind(&start_time)
                     .execute(&req.state().db_pool).await?;
             }
-        }
-        else if schedules.len() > group_form.hour as usize {
-            //schedules.clear();
-            let _ = sqlx::query("delete from group_schedules where hour > $1")
-                .bind(&group_form.hour)
-                .execute(&req.state().db_pool).await?;
+            _ => {}
         }
         res.set_body(Body::from_json(&s)?);
         Ok(res)
@@ -270,7 +272,7 @@ pub async fn patch_group_schedules(mut req: Request<AppState>) -> tide::Result {
             .bind(&school_auth.school.id)
             .fetch_one(&req.state().db_pool).await?;
         schedules_form.sort_by(|a,b| a.hour.cmp(&b.hour));
-        if schedules_form.len() > 0 && schedules_form[schedules_form.len()-1].hour == _group.hour{
+        if !schedules_form.is_empty() && schedules_form[schedules_form.len()-1].hour == _group.hour{
             for s in schedules_form {
                 let _schedules = sqlx::query("update group_schedules set start_time = $3, end_time = $4 WHERE group_id = $1 and hour = $2")
                     .bind(&s.group_id)
