@@ -422,7 +422,7 @@ fn navbar_brand(model: &Model) -> Node<Msg>{
     div![
         C!{"navbar-brand"},
         a![
-            C!{"navbar-item"},
+            C!{"navbar-item is-hidden-mobile"},
             attrs!{
                 At::Href=>"/"
             },
@@ -545,7 +545,7 @@ fn home(model: &Model)->Node<Msg>{
     div![
         C!{"columns"},
         div![
-            C!{"column is-3"},
+            C!{"column is-3 is-hidden-mobile"},
         ],
         div![
             C!{"column is-6"},

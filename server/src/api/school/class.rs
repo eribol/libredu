@@ -19,7 +19,7 @@ pub async fn activities(req: Request<AppState>) -> tide::Result {
     //let school_auth: &SchoolAuth = req.ext().unwrap();
     let mut res = tide::Response::new(StatusCode::Ok);
     let mut cursor = sqlx::query(r#"SELECT
-                        activities.id, subjects.id, subjects.name, users.id, users.first_name, users.last_name, activities.hour, activities.split, subjects.kademe,subjects.optional, users.is_active
+                        activities.id, subjects.id, subjects.name, users.id, users.first_name, users.last_name, activities.hour, activities.split, subjects.kademe,subjects.optional, users.is_active, users.email, users.tel
                         FROM activities inner join users on activities.teacher= users.id inner join subjects on activities.subject = subjects.id
                         WHERE $1 = any(activities.classes) order by activities.subject, activities.teacher"#)
         .bind(&class_id)
@@ -37,7 +37,9 @@ pub async fn activities(req: Request<AppState>) -> tide::Result {
                 last_name: row.get(5),
                 role_id: 0,
                 role_name: "".to_string(),
-                is_active: row.get(10)
+                is_active: row.get(10),
+                email: row.get(11),
+                tel: row.get(12)
             },
             hour: row.get(6),
             split: row.get(7)
@@ -171,7 +173,7 @@ pub async fn timetables(req: Request<AppState>) -> tide::Result {
         .fetch_one(&req.state().db_pool).await?;
     if school_auth.role <= 8 {
         let mut class = sqlx::query("SELECT class_timetable.id, class_timetable.class_id, class_timetable.day_id, class_timetable.hour,
-                            activities.id, users.id, users.first_name, users.last_name, subjects.name, users.is_active
+                            activities.id, users.id, users.first_name, users.last_name, subjects.name, users.is_active, users.email, users.tel
                             FROM class_timetable inner join activities on class_timetable.activities = activities.id
                             inner join users on activities.teacher = users.id
                             inner join subjects on activities.subject = subjects.id WHERE class_id = $1")
@@ -192,7 +194,9 @@ pub async fn timetables(req: Request<AppState>) -> tide::Result {
                         last_name: row.get(7),
                         role_id: 0,
                         role_name: "".to_string(),
-                        is_active: row.get(9)
+                        is_active: row.get(9),
+                        email: row.get(10),
+                        tel: row.get(11)
                     }
                 },
                 subject: row.get(8)

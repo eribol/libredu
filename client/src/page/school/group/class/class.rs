@@ -152,7 +152,7 @@ pub fn context(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_gro
     div![
         C!{"columns"},
         div![
-            C!{"column is-2"},
+            C!{"column is-2 is-hidden-mobile is-hidden-tablet"},
             div![
                 table![
                     C!{"table table-hover"},

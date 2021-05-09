@@ -149,6 +149,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchTeacher(t)=>{
             match t{
                 Ok(_t)=>{
+                    log!(&_t);
                     ctx_school.teachers.insert(0, _t);
                 }
                 Err(_)=>{}

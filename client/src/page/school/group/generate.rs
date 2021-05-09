@@ -57,7 +57,7 @@ pub(crate) fn generate(
                 *timetables = timetables_backup;
                 *tat = tat_backup;
                 *cat = cat_backup;
-                log!("oh", &act2.teacher, &act2.classes);
+                //log!("oh", &act2.teacher, &act2.classes);
                 let mut conflict_acts = find_conflict_activity(&act2, &total_acts, &timetables, clean_tat, &tat, &cat, max_day_hour, max_depth, &mut vec![]);
                 if conflict_acts.len() == 0 {
                     log!("Çakışan aktivite yok");
@@ -392,6 +392,9 @@ pub fn find_timeslot(
                         slots.push((day, hour));
                         return Some(slots)
                     } else {
+                        slots.push((day, hour));
+                        return Some(slots)
+                        /*
                         let hours = _other_same_subject.iter().cloned()
                             .find(|t| t.hour.unwrap() == (hour - 1) as i16 || t.hour.unwrap() == hour as i16 + act.hour);
                         match hours {
@@ -401,6 +404,7 @@ pub fn find_timeslot(
                             }
                             None => {}
                         }
+                        */
                     }
                 }
             }

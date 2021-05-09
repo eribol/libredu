@@ -40,6 +40,7 @@ pub trait Auth{
     async fn get_group(&self)-> Option<ClassGroups>;
     async fn get_class(&self)-> Option<Class>;
     async fn get_group_auth(&self)-> i32;
+    async fn get_teacher(&self) -> sqlx_core::Result<crate::model::teacher::Teacher>;
     async fn login(&self, uname: &str, pas: &str)->  bool;
 }
 
@@ -249,6 +250,32 @@ impl Auth for Request<AppState>{
             }
         }
 
+    }
+    async fn get_teacher(&self) -> sqlx_core::Result<crate::model::teacher::Teacher> {
+        use sqlx::Cursor;
+        use sqlx::Row;
+        let teacher_id: i32 = self.param("teacher_id").expect("Id bulunamadı").parse().expect("Id bulunamadı");
+        let school_id: i32 = self.param("school").expect("Id bulunamadı").parse().expect("Id bulunamadı");
+        let mut tchr = sqlx::query("SELECT users.id, users.first_name, users.last_name, roles.id, roles.name, users.is_active, users.email, users.tel \
+                        FROM school_users inner join users on school_users.user_id = users.id inner join roles on school_users.role = roles.id \
+                        WHERE school_users.school_id = $1 and school_users.role <= 5 and user_id = $2 order by roles.id, users.first_name")
+            .bind(&school_id)
+            .bind(&teacher_id)
+            .fetch(&self.state().db_pool);
+        if let Some(row) = tchr.next().await? {
+            let teacher = crate::model::teacher::Teacher {
+                id: row.get(0),
+                first_name: row.get(1),
+                last_name: row.get(2),
+                role_id: row.get(3),
+                role_name: row.get(4),
+                is_active: row.get(5),
+                email: row.get(6),
+                tel: row.get(7)
+            };
+            return Ok(teacher)
+        }
+        Err(sqlx_core::Error::ColumnNotFound(Box::from("Öğretmen bulunamadı")))
     }
     async fn login(&self, uname: &str, pas: &str)-> bool{
         verify(pas, uname).unwrap()

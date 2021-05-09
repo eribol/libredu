@@ -345,7 +345,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                                     first_name: t.first_name.clone(),
                                     last_name: t.last_name.clone(),
                                     role_id: 0,
-                                    role_name: "".to_string()
+                                    role_name: "".to_string(),
+                                    is_active: false,
+                                    email: None,
+                                    tel: None
                                 } }
                             };
                             c_print.push(timetable)

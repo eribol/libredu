@@ -32,5 +32,8 @@ pub struct Teacher{
     pub first_name: String,
     pub last_name: String,
     pub role_id: i32,
-    pub role_name: String
+    pub role_name: String,
+    pub is_active: bool,
+    pub email: Option<String>,
+    pub tel: Option<String>,
 }

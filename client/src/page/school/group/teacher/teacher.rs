@@ -4,6 +4,7 @@ use crate::page::school::detail;
 use serde::*;
 use crate::page::school::detail::{SchoolContext, GroupContext};
 use crate::page::school::group::teacher::{activities, limitations, timetables};
+use crate::model::teacher::Teacher;
 
 #[derive(Debug)]
 pub enum Msg{
@@ -20,16 +21,6 @@ pub enum Msg{
     ChangePass2(String),
     SubmitUpdate
     //Timetables
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
-pub struct Teacher{
-    pub id: i32,
-    pub first_name: String,
-    pub last_name: String,
-    pub is_active: bool,
-    pub email: Option<String>,
-    pub tel: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
@@ -141,16 +132,18 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             }
         }
         Msg::FetchTeacher(teacher)=>{
-            model.teacher = teacher.unwrap();
-            model.form = UpdateTeacherForm{
-                first_name: model.teacher.first_name.clone(),
-                last_name: model.teacher.last_name.clone(),
-                is_active: model.teacher.is_active,
-                email: model.teacher.email.clone().unwrap_or("".to_string()),
-                tel: model.teacher.tel.clone().unwrap_or("".to_string()),
-                password1: "".to_string(),
-                password2: "".to_string()
-            };
+            if let Ok(t) = teacher {
+                model.teacher = t;
+                model.form = UpdateTeacherForm {
+                    first_name: model.teacher.first_name.clone(),
+                    last_name: model.teacher.last_name.clone(),
+                    is_active: model.teacher.is_active,
+                    email: model.teacher.email.clone().unwrap_or("".to_string()),
+                    tel: model.teacher.tel.clone().unwrap_or("".to_string()),
+                    password1: "".to_string(),
+                    password2: "".to_string()
+                };
+            }
         }
         Msg::ChangeFirstName(f_name) => {
             model.form.first_name = f_name

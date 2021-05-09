@@ -2,6 +2,8 @@ use serde::*;
 use crate::model::city::{City, Town};
 use crate::AppState;
 use crate::model::{class, subject, group, teacher, library};
+use tide::StatusCode;
+use crate::request::Auth;
 
 
 #[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize)]
@@ -65,39 +67,16 @@ impl NewSchool{
 }
 
 impl SchoolDetail{
-    pub async fn get_teacher(&self, req: &tide::Request<AppState>, teacher_id: i32) -> Option<teacher::Teacher>{
-        use sqlx::Cursor;
-        use sqlx::Row;
-        //let teacher_id: i32 = req.param("teacher_id")?.parse()?;
-        let mut tchr = sqlx::query("SELECT users.id, users.first_name, users.last_name, roles.id, roles.name, users.is_active \
-                        FROM school_users inner join users on school_users.user_id = users.id inner join roles on school_users.role = roles.id \
-                        WHERE school_users.school_id = $1 and school_users.role <= 5 and user_id = $2 order by roles.id, users.first_name")
-            .bind(&self.id)
-            .bind(&teacher_id)
-            .fetch(&req.state().db_pool);
-        let teacher: teacher::Teacher;
-        if let Some(row) = tchr.next().await.unwrap() {
-            teacher = teacher::Teacher {
-                id: row.get(0),
-                first_name: row.get(1),
-                last_name: row.get(2),
-                role_id: row.get(3),
-                role_name: row.get(4),
-                is_active: row.get(5)
-            };
-            return Some(teacher)
-        }
-        None
-    }
+
     pub async fn del_teacher(&self, req: &tide::Request<AppState>, teacher_id: i32) -> sqlx_core::Result<i32>{
-        let teacher = self.get_teacher(req, teacher_id).await.unwrap();
+        let teacher = req.get_teacher().await?;
         teacher.del(req).await?;
         Ok(teacher_id)
     }
     pub async fn get_teachers(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<Vec<teacher::Teacher>>{
         use sqlx::Cursor;
         use sqlx::Row;
-        let mut tchrs = sqlx::query("SELECT users.id, users.first_name, users.last_name, roles.id, roles.name, users.is_active \
+        let mut tchrs = sqlx::query("SELECT users.id, users.first_name, users.last_name, roles.id, roles.name, users.is_active, users.email, users.tel \
                         FROM school_users inner join users on school_users.user_id = users.id inner join roles on school_users.role = roles.id \
                         WHERE school_users.school_id = $1 and school_users.role <= 5 order by roles.id, users.first_name")
             .bind(&self.id)
@@ -110,7 +89,9 @@ impl SchoolDetail{
                 last_name: row.get(2),
                 role_id: row.get(3),
                 role_name: row.get(4),
-                is_active: row.get(5)
+                is_active: row.get(5),
+                email: row.get(6),
+                tel: row.get(7)
             };
             teachers.push(teacher);
         }
