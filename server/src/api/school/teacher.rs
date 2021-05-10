@@ -25,16 +25,15 @@ pub struct SimpleAct{
 pub async fn get_activities(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     //let school_id: i32 = req.param("school")?.parse()?;
-    let teacher_id: i32 = req.param("teacher_id")?.parse()?;
+
     use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role <= 4 {
+        let teacher = req.get_teacher().await?;
+        let group = req.get_group().await?;
         //use sqlx_core::cursor::Cursor;
         //use sqlx_core::row::Row;
-        let acts: Vec<Activity> = sqlx::query_as(r#"SELECT * FROM activities WHERE activities.teacher = $1"#)
-            .bind(&teacher_id)
-            //.bind(&school_auth.school.id)
-            .fetch_all(&req.state().db_pool).await?;
+        let acts: Vec<Activity> = teacher.get_acts_for_group(&req, school_auth.school.id, group.id).await?;
         let mut activities: Vec<activity::FullActivity> = Vec::new();
         for a in acts {
             let subject = school_auth.school.get_subjects(&req).await?.into_iter().find(|s| s.id == a.subject).unwrap();
@@ -202,14 +201,16 @@ pub async fn timetables(req: Request<AppState>) -> tide::Result {
     if school_auth.role <= 2 {
         match req.method() {
             Method::Get => {
+                let group = req.get_group().await?;
                 let mut class = sqlx::query("SELECT class_timetable.id, classes.id, classes.kademe, classes.sube, classes.school, classes.group_id,
                             class_timetable.day_id, class_timetable.hour, subjects.name
                             FROM class_timetable inner join activities on class_timetable.activities = activities.id
                             inner join users on activities.teacher = users.id
                             inner join subjects on activities.subject = subjects.id
                             inner join classes on class_timetable.class_id = classes.id
-                            WHERE activities.teacher = $1")
+                            WHERE activities.teacher = $1 and classes.group_id = $2")
                     .bind(&teacher_id)
+                    .bind(&group.id)
                     .fetch(&req.state().db_pool);
                 let mut teacher_timetables: Vec<TeacherTimetable> = Vec::new();
                 while let Some(row) = class.next().await? {

@@ -9,7 +9,7 @@ pub fn school_auth<'a>(
 ) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>> {
     Box::pin(async {
         use crate::request::{SchoolAuth, Auth};
-        if let Some(school) = request.get_school().await {
+        if let Ok(school) = request.get_school().await {
             let role = request.get_school_auth().await;
             let school_auth = SchoolAuth { school, role };
             request.set_ext(school_auth.clone());
@@ -27,7 +27,7 @@ pub fn group_auth<'a>(
 ) -> Pin<Box<dyn Future<Output = Result> + Send + 'a>> {
     Box::pin(async {
         use crate::request::{Auth};
-        if let Some(_group) = request.get_group().await {
+        if let Ok(_group) = request.get_group().await {
             Ok(next.run(request).await)
         }
         else {

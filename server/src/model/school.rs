@@ -67,7 +67,32 @@ impl NewSchool{
 }
 
 impl SchoolDetail{
-
+    pub async fn get(req: &tide::Request<AppState>, school_id: i32) -> sqlx_core::Result<Self>{
+        use sqlx_core::cursor::Cursor;
+        use sqlx_core::row::Row;
+        let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, school.tel, school.location, city.pk, city.name, town.pk, town.name \
+            FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.id = $1")
+            .bind(&school_id)
+            .fetch(&req.state().db_pool);
+        if let Some(row) = query.next().await.unwrap() {
+            let s = SchoolDetail {
+                id: row.get(0),
+                name: row.get(1),
+                manager: row.get(2),
+                school_type: row.get(3),
+                tel: row.get(4),
+                location: row.get(5),
+                city: City { pk: row.get(6), name: row.get(7) },
+                town: Town {
+                    city: row.get(6),
+                    pk: row.get(8),
+                    name: row.get(9)
+                }
+            };
+            return Ok(s)
+        }
+        Err(sqlx_core::Error::ColumnNotFound(Box::from("Öğretmen bulunamadı")))
+    }
     pub async fn del_teacher(&self, req: &tide::Request<AppState>, teacher_id: i32) -> sqlx_core::Result<i32>{
         let teacher = req.get_teacher().await?;
         teacher.del(req).await?;
