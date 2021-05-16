@@ -342,7 +342,7 @@ pub async fn get_timetables(req: Request<AppState>) -> tide::Result {
         let tat = group.get_tat(&req).await?;
         let teachers = school_auth.school.get_teachers(&req).await?;
         let cat = group.get_cat(&req).await?;
-        let classes = group.get_classes(&req).await?;
+        let classes = group.get_classes_for_timetables(&req).await?;
         let acts: Vec<Activity> = group.get_acts(&req).await?;
         let timetables = group.get_timetables(&req).await?;
         let timetable_data = TimetableData {

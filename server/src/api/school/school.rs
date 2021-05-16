@@ -17,35 +17,8 @@ use crate::model::user::SimpleUser;
 
 pub async fn schools(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
-    //let mut school: Vec<school::SchoolDetail> = Vec::new();
-    let u = req.user().await?;
-    use sqlx_core::cursor::Cursor;
-    use sqlx_core::row::Row;
-    let mut s: Vec<SchoolDetail> = vec![];
-    let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
-                    FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk \
-                    inner join school_users on school_users.school_id = school.id WHERE school_users.user_id = $1")
-        .bind(&u.id)
-        .fetch(&req.state().db_pool);
-    while let Some(row) = query.next().await? {
-        //println!("okullar");
-        let school = SchoolDetail {
-            id: row.get(0),
-            name: row.get(1),
-            manager: row.get(2),
-            school_type: row.get(3),
-            tel: None,
-            location: None,
-            city: City { pk: row.get(4), name: row.get(5) },
-            town: Town {
-                city: row.get(4),
-                pk: row.get(6),
-                name: row.get(7)
-            }
-        };
-        s.push(school)
-    }
-    res.set_body(Body::from_json(&s)?);
+    let schools = req.get_schools().await?;
+    res.set_body(Body::from_json(&schools)?);
     res.insert_header("content-type", "application/json");
     Ok(res)
 }

@@ -11,6 +11,7 @@ use crate::model::class::Class;
 use anyhow::anyhow;
 use crate::model::teacher::Teacher;
 
+
 #[derive(Debug, Default, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct Role{
     role: i32
@@ -34,9 +35,10 @@ pub struct GroupMenu{
 }
 #[tide::utils::async_trait]
 pub trait Auth{
-    async fn user(&self)->anyhow::Result<AuthUser>;
+    async fn user(&self)->sqlx_core::Result<AuthUser>;
     async fn is_auth(&self)-> bool;
     async fn get_school(&self)-> sqlx_core::Result<SchoolDetail>;
+    async fn get_schools(&self)-> sqlx_core::Result<Vec<SchoolDetail>>;
     async fn get_school_auth(&self)-> i32;
     async fn get_group(&self)-> sqlx_core::Result<ClassGroups>;
     async fn get_class(&self)-> Option<Class>;
@@ -47,9 +49,9 @@ pub trait Auth{
 
 #[tide::utils::async_trait]
 impl Auth for Request<AppState>{
-    async fn user(&self)->anyhow::Result<AuthUser> {
+    async fn user(&self)->sqlx_core::Result<AuthUser> {
         use sqlx_core::postgres::PgQueryAs;
-        let user_id = self.cookie("libredu-user").ok_or_else(|| anyhow!("No session"))?;
+        let user_id = self.cookie("libredu-user").expect("User not found");
         let user: AuthUser = sqlx::query_as("SELECT * FROM users WHERE id = $1")
             .bind(user_id.value().parse::<i32>().expect("Id bulunamadı"))
             //.bind(hash(&f.password))
@@ -89,6 +91,22 @@ impl Auth for Request<AppState>{
     async fn get_school(&self)-> sqlx_core::Result<SchoolDetail> {
         let school_id = self.param("school").ok().expect("Kurum bulunamadı").parse::<i32>().expect("Kurum Bulunamadı");
         SchoolDetail::get(&self, school_id).await
+    }
+    async fn get_schools(&self)-> sqlx_core::Result<Vec<SchoolDetail>> {
+        use sqlx::Cursor;
+        let user = self.user().await?;
+        let mut s: Vec<SchoolDetail> = vec![];
+        let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
+                    FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk \
+                    inner join school_users on school_users.school_id = school.id WHERE school_users.user_id = $1")
+            .bind(&user.id)
+            .fetch(&self.state().db_pool);
+        while let Some(row) = query.next().await? {
+            use sqlx::Row;
+            let school = SchoolDetail::get(&self, row.get(0)).await?;
+            s.push(school)
+        }
+        Ok(s)
     }
     async fn get_school_auth(&self) -> i32 {
         let school = self.get_school().await;

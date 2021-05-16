@@ -392,9 +392,9 @@ pub fn find_timeslot(
                         slots.push((day, hour));
                         return Some(slots)
                     } else {
-                        slots.push((day, hour));
-                        return Some(slots)
-                        /*
+                        //slots.push((day, hour));
+                        //return Some(slots)
+
                         let hours = _other_same_subject.iter().cloned()
                             .find(|t| t.hour.unwrap() == (hour - 1) as i16 || t.hour.unwrap() == hour as i16 + act.hour);
                         match hours {
@@ -404,7 +404,7 @@ pub fn find_timeslot(
                             }
                             None => {}
                         }
-                        */
+
                     }
                 }
             }

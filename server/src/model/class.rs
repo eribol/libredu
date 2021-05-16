@@ -21,6 +21,18 @@ pub struct ClassForTimetables{
     pub teacher: Option<i32>,
 }
 
+impl From<Class> for ClassForTimetables{
+    fn from(item: Class) -> Self {
+        ClassForTimetables{
+            id: item.id,
+            kademe: item.kademe,
+            sube: item.sube,
+            school: item.school,
+            teacher: None
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow, Default)]
 pub struct ClassTimetable{
     pub id: i32,

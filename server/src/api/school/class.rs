@@ -14,6 +14,7 @@ use crate::model::teacher::Teacher;
 
 pub async fn activities(req: Request<AppState>) -> tide::Result {
     let class_id: i32 = req.param("class_id")?.parse()?;
+    let school_id: i32 = req.param("school")?.parse()?;
     use sqlx_core::cursor::Cursor;
     use sqlx_core::row::Row;
     //let school_auth: &SchoolAuth = req.ext().unwrap();
@@ -31,16 +32,7 @@ pub async fn activities(req: Request<AppState>) -> tide::Result {
         let act = ClassActivity {
             id: row.get(0),
             subject: Subject { name: row.get(2), id: row.get(1), kademe: row.get(8), optional: row.get(9), school: 0 },
-            teacher: Teacher {
-                id: row.get(3),
-                first_name: row.get(4),
-                last_name: row.get(5),
-                role_id: 0,
-                role_name: "".to_string(),
-                is_active: row.get(10),
-                email: row.get(11),
-                tel: row.get(12)
-            },
+            teacher: Teacher::get(&req,school_id, row.get(3)).await?,
             hour: row.get(6),
             split: row.get(7)
         };
@@ -188,16 +180,7 @@ pub async fn timetables(req: Request<AppState>) -> tide::Result {
                 hour: row.get(3),
                 activity: ClassTimetableActivity {
                     id: row.get(4),
-                    teacher: Teacher {
-                        id: row.get(5),
-                        first_name: row.get(6),
-                        last_name: row.get(7),
-                        role_id: 0,
-                        role_name: "".to_string(),
-                        is_active: row.get(9),
-                        email: row.get(10),
-                        tel: row.get(11)
-                    }
+                    teacher: Teacher::get(&req, school_auth.school.id, row.get(5)).await?,
                 },
                 subject: row.get(8)
             };

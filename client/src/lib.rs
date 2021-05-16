@@ -6,6 +6,7 @@ use crate::page::admin;
 
 mod page;
 mod model;
+mod route;
 
 
 const LOGIN: &str = "login";
@@ -750,13 +751,82 @@ div![
     ]
 ]
 }
+
+// ------ ------
+// Before Mount
+// ------ ------
+
+fn before_mount(_: Url) -> BeforeMount {
+    // Since we have the "loading..." text in the app section of index.html,
+    // we use MountType::Takover which will overwrite it with the seed generated html
+    BeforeMount::new().mount_type(MountType::Takeover)
+}
+
+// ------ ------
+//  After Mount
+// ------ ------
+
+fn after_mount(
+    url: Url,
+    orders: &mut impl Orders<Msg<'static>, GMsg>,
+) -> AfterMount<Model<'static>> {
+    orders.send_msg(Msg::RouteChanged(url.try_into().ok()));
+
+    let model = Model::Redirect(Session::new(storage::load_viewer()));
+    AfterMount::new(model).url_handling(UrlHandling::None)
+}
+pub enum GMsg {
+    RoutePushed(Route<'static>),
+    SessionChanged(Session),
+}
+fn sink<'a>(g_msg: GMsg, model: &mut Model<'a>, orders: &mut impl Orders<Msg<'static>, GMsg>) {
+    if let GMsg::RoutePushed(ref route) = g_msg {
+        orders.send_msg(Msg::RouteChanged(Some(route.clone())));
+    }
+
+    match model {
+        Model::NotFound(_) | Model::Redirect(_) => {
+            if let GMsg::SessionChanged(session) = g_msg {
+                *model = Model::Redirect(session);
+                route::go_to(Route::Home, orders);
+            }
+        }
+        Model::Settings(model) => {
+            page::settings::sink(g_msg, model, &mut orders.proxy(Msg::SettingsMsg));
+        }
+        Model::Home(model) => {
+            page::home::sink(g_msg, model);
+        }
+        Model::Login(model) => {
+            page::login::sink(g_msg, model, &mut orders.proxy(Msg::LoginMsg));
+        }
+        Model::Register(model) => {
+            page::register::sink(g_msg, model, &mut orders.proxy(Msg::RegisterMsg));
+        }
+        Model::Profile(model, _) => {
+            page::profile::sink(g_msg, model, &mut orders.proxy(Msg::ProfileMsg));
+        }
+        Model::Article(model) => {
+            page::article::sink(g_msg, model, &mut orders.proxy(Msg::ArticleMsg));
+        }
+        Model::ArticleEditor(model, _) => {
+            page::article_editor::sink(g_msg, model, &mut orders.proxy(Msg::ArticleEditorMsg));
+        }
+    }
+}
+
 // ------ ------
 //     Start
 // ------ ------
 
 #[wasm_bindgen(start)]
 pub fn start() {
-    App::start("app", init, update, view);
+    App::builder(update, view)
+        .before_mount(before_mount)
+        .after_mount(after_mount)
+        .routes(|url| Some(Msg::RouteChanged(url.try_into().ok())))
+        .sink(sink)
+        .build_and_start();
 }
 
 #[wasm_bindgen(module = "/pkg/js/print_teachers.js")]
