@@ -3,20 +3,20 @@ use serde::*;
 use crate::page::school::detail::SchoolContext;
 
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Model{
     form: NewStudent,
     form2: NewStudents,
     students: Vec<Student>,
     unused_numbers: Vec<i32>
 }
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct NewStudent{
     first_name: String,
     last_name: String,
     number: i32,
 }
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct NewStudents{
     file: Option<web_sys::File>,
     group: i32
@@ -78,23 +78,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
 
     match msg{
         Msg::FetchStudents(ss) => {
-            match ss{
-                Ok(s) => {
-                    model.students = s
-                }
-                Err(_) => {}
+            if let Ok(s) = ss {
+                model.students = s
             }
         }
         Msg::FetchStudent(student) => {
-            //log!(&student);
-            match student{
-                Ok(s) => {
-                    model.students.push(s.clone());
-                    model.unused_numbers.retain(|n| n != &s.school_number)
-                }
-                Err(_) => {}
+            if let Ok(s) = student {
+                model.students.push(s.clone());
+                model.unused_numbers.retain(|n| n != &s.school_number)
             }
-
         }
         Msg::DelStudent(id) => {
             orders.perform_cmd({
@@ -111,15 +103,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             });
         }
         Msg::FetchDelStudent(number) => {
-            match number{
-                Ok(n) =>{
-                    //let student = model.students.cloned().iter().find(|s| s.id == n).unwrap();
-                    model.students.retain(|s| s.id != n);
-                    //model.unused_numbers.push(n)
-                }
-                Err(_) => {}
+            if let Ok(n) = number {
+                model.students.retain(|s| s.id != n);
             }
-
         }
         Msg::FetchNumbers(numbers) => {
             model.unused_numbers = numbers.unwrap_or_default()
@@ -160,7 +146,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             });
         },
         Msg::FileChanged(file) => {
-            model.form2.file = file.clone();
+            model.form2.file = file;
         }
         Msg::GroupChanged(s) => {
             model.form2.group= s.parse::<i32>().unwrap();

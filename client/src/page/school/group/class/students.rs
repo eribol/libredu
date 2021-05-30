@@ -118,15 +118,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             });
         }
         Msg::FetchAddStudent(student) => {
-            match student{
-                Ok(s) => {
-                    let student = model.all_students.iter().find(|s2| s2.id == s.id).unwrap();
-                    model.students.push(student.clone());
-                    model.all_students.retain(|s2| s2.id != s.id);
-                    model.students.sort_by(|a, b| a.school_number.cmp(&b.school_number));
-                    model.all_students.sort_by(|a, b| a.school_number.cmp(&b.school_number));
-                }
-                Err(_) => {}
+            if let Ok(s) = student {
+                let student = model.all_students.iter().find(|s2| s2.id == s.id).unwrap();
+                model.students.push(student.clone());
+                model.all_students.retain(|s2| s2.id != s.id);
+                model.students.sort_by(|a, b| a.school_number.cmp(&b.school_number));
+                model.all_students.sort_by(|a, b| a.school_number.cmp(&b.school_number));
             }
         }
         Msg::DelStudent(id) => {
@@ -147,17 +144,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             });
         }
         Msg::FetchDelStudent(student) => {
-            match student{
-                Ok(s) => {
-                    let student = model.students.iter().find(|s2| s2.id == s).unwrap();
-                    model.all_students.insert(0, student.clone());
-                    model.students.retain(|s2| s2.id != s);
-                    model.students.sort_by(|a, b| a.school_number.cmp(&b.school_number));
-                    model.all_students.sort_by(|a, b| a.school_number.cmp(&b.school_number));
-                }
-                Err(e) => {
-                    log!(e);
-                }
+            if let Ok(s) = student {
+                let student = model.students.iter().find(|s2| s2.id == s).unwrap();
+                model.all_students.insert(0, student.clone());
+                model.students.retain(|s2| s2.id != s);
+                model.students.sort_by(|a, b| a.school_number.cmp(&b.school_number));
+                model.all_students.sort_by(|a, b| a.school_number.cmp(&b.school_number));
             }
         }
     }

@@ -1,7 +1,7 @@
 use seed::{*, prelude::*};
 use crate::{Context};
 use crate::model::class::Class;
-use crate::page::school::group::class::class;
+use crate::page::school::group::class::home;
 use crate::model::class::{NewClass};
 use crate::page::school::detail::{SchoolContext, GroupContext};
 
@@ -14,7 +14,7 @@ pub struct Model{
 #[derive(Debug, Clone)]
 pub enum Pages{
     Classes,
-    Class(class::Model)
+    Class(Box<home::Model>)
 }
 impl Default for Pages{
     fn default()->Self{
@@ -28,7 +28,7 @@ pub enum Msg{
     ChangeKademe(String),
     ChangeSube(String),
     FetchClass(fetch::Result<Class>),
-    Class(class::Msg),
+    Class(home::Msg),
     DeleteClass(i32),
     FetchDel(fetch::Result<i32>),
     FetchUpdateClass(fetch::Result<Class>)
@@ -40,7 +40,7 @@ pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, ctx_school: &mut School
     match url.next_path_part(){
         Some("") | None => {
             model.pages = Pages::Classes;
-            if ctx_school.groups.len() > 0{
+            if ctx_school.groups.is_some() && !ctx_school.groups.as_ref().unwrap().is_empty(){
                 model.form.group_id = ctx_group.group.id;
             }
             else {
@@ -48,16 +48,14 @@ pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, ctx_school: &mut School
             }
         }
         Some(_id) => {
-            model.pages = Pages::Class(class::init(url.clone(), &mut orders.proxy(Msg::Class), ctx_school, ctx_group))
+            model.pages = Pages::Class(Box::new(home::init(url.clone(), &mut orders.proxy(Msg::Class), ctx_school, ctx_group)))
         }
     }
     model
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext) {
-
     match msg {
-
         Msg::DeleteClass(id) => {
             orders.perform_cmd({
                 let url = format!("/api/schools/{}/groups/{}/classes/{}", ctx_school.school.id, ctx_group.group.id, id);
@@ -76,17 +74,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             });
         }
         Msg::FetchDel(id) =>{
-            match id{
-                Ok(i) => {
-                    ctx_group.classes.retain(|c| c.id != i);
-                }
-                Err(_) => {
-                }
+            if let Ok(i) = id {
+                ctx_group.classes.retain(|c| c.id != i);
             }
         }
         Msg::Class(msg)=>{
             if let Pages::Class(m) = &mut model.pages {
-                class::update(msg, m, &mut orders.proxy(Msg::Class), _ctx, ctx_school, ctx_group)
+                home::update(msg, m, &mut orders.proxy(Msg::Class), _ctx, ctx_school, ctx_group)
             }
         }
         Msg::AddClass=> {
@@ -113,21 +107,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::ChangeSube(sube)=>{
             model.form.sube = sube
         }
-        Msg::FetchClass(c)=>{
-            match c{
-                Ok(c)=>{
-                    ctx_group.classes.insert(0, c);
-                }
-                Err(_)=>{}
+        Msg::FetchClass(class)=>{
+            if let Ok(c) = class {
+                ctx_group.classes.insert(0, c);
             }
         }
-        Msg::FetchUpdateClass(c)=>{
-            match c{
-                Ok(_c)=>{
-                    //model.classes = model.classes.clone().into_iter().filter(|cg| cg.group_id == model.selected_group.id).collect();
-                }
-                Err(_)=>{}
-            }
+        Msg::FetchUpdateClass(class)=>{
+             if class.is_ok() {
+                 //model.classes = model.classes.clone().into_iter().filter(|cg| cg.group_id == model.selected_group.id).collect();
+             }
         }
     }
 }
@@ -179,7 +167,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group:
                                     input![C!{"button is-primary"},
                                         attrs!{
                                             At::Type=>"button",
-                                            At::Value=> add_button(ctx_school.groups.len()),
+                                            //At::Value=> add_button(ctx_school.groups.len()),
                                             At::Id=>"login_button"
                                         },
                                         ev(Ev::Click, |event| {
@@ -239,7 +227,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group:
     ]
 }
 
-fn class_detail(c_model: &class::Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
+fn class_detail(c_model: &home::Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group: &GroupContext) ->Node<Msg>{
     div![
         C!{"column is-12"},
         div![
@@ -295,16 +283,16 @@ fn class_detail(c_model: &class::Model, ctx: &Context, ctx_school: &SchoolContex
             ]
         ],
         div![
-            class::view(c_model, ctx, ctx_school, ctx_group).map_msg(Msg::Class),
+            home::view(c_model, ctx, ctx_school, ctx_group).map_msg(Msg::Class),
         ]
     ]
 }
 
-fn add_button(group_size: usize) -> &'static str{
-    if group_size == 0{
-        return "Grup Ekle"
+/*
+fn add_button<'a>(group_size: usize) -> &'a str {
+    if group_size == 0 {
+        return "Grup Ekle";
     }
-    else{
-        return "Ekle"
-    }
+    "Ekle"
 }
+*/

@@ -18,4 +18,6 @@ LICENCE
 .pijul/
 .idea/
 .gradle/
+.asynstd-redis/
+**/dist
 .generate2.rs

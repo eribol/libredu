@@ -1,4 +1,4 @@
-pub mod group;
+pub mod home;
 pub mod schedules;
 pub(crate) mod teachers;
 pub mod class;

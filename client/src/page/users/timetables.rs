@@ -62,12 +62,8 @@ pub fn init(_url: Url, orders: &mut impl Orders<Msg>, ctx: &mut Context)->Model{
 pub fn update(msg: Msg, model: &mut Model, _orders: &mut impl Orders<Msg>, _ctx: &mut Context) {
     match msg{
         Msg::FetchTimetable(timetables)=>{
-            match timetables{
-                Ok(t) => {
-                    log(&t.len());
-                    model.timetable= t;
-                }
-                Err(_) => {}
+            if let Ok(t) = timetables {
+                model.timetable = t;
             }
         }
     }
@@ -117,12 +113,12 @@ pub fn view(model: &Model, _ctx: &Context)-> Node<Msg>{
     ]
 }
 
-fn get_act(t: &Vec<TeacherTimetable>, d: &Day, h: i32) -> Node<Msg>{
-    let f = t.iter().find(|a| a.hour == h as i16 && a.day_id == d.id);
-    match f{
-        Some(a) => {
+fn get_act(teacher_timetable: &[TeacherTimetable], day: &Day, hour: i32) -> Node<Msg>{
+    let find = teacher_timetable.iter().find(|a| a.hour == hour as i16 && a.day_id == day.id);
+    match find{
+        Some(f) => {
             div![
-                &a.subject,br![],get_classes(&a.class_id)
+                &f.subject,br![],get_classes(&f.class_id)
             ]
         }
         None => {
@@ -131,7 +127,7 @@ fn get_act(t: &Vec<TeacherTimetable>, d: &Day, h: i32) -> Node<Msg>{
     }
 }
 
-fn get_classes(cls: &Vec<class::Class>) -> String{
+fn get_classes(cls: &[class::Class]) -> String{
     let mut class = "".to_string();
     for c in cls{
         class = class + &c.kademe.to_string() + "/" + &c.sube + "\n"

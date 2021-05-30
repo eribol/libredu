@@ -1,6 +1,5 @@
 use serde::*;
-use crate::model::class;
-use crate::model::teacher::{TeacherAvailableForTimetables, Teacher};
+use crate::model::teacher::Teacher;
 use crate::model::class::Class;
 use crate::model::subject::Subject;
 

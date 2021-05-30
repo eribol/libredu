@@ -2,15 +2,13 @@ use serde::*;
 use seed::{*, prelude::*};
 use crate::{Context, createPDF, class_print, model};
 use crate::page::school::detail;
-use crate::page::school::group::{test_generate, deneme_generate};
+use crate::page::school::group::test_generate;
 use crate::model::timetable::Day;
 use crate::model::teacher::{TeacherTimetable, TeacherAvailableForTimetables};
 use crate::model::class::{ClassTimetable, ClassTimetableActivity};
 use crate::page::school::detail::{SchoolContext, GroupContext};
 use crate::model::group::Schedule;
 use crate::page::school::group::generate;
-use rand::prelude::SliceRandom;
-use rand::thread_rng;
 use crate::model::{teacher, subject};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -114,7 +112,7 @@ pub enum Msg{
 }
 pub fn init(orders: &mut impl Orders<Msg>, ctx_school: &detail::SchoolContext, ctx_group: &GroupContext)-> Model{
     orders.perform_cmd({
-        let adres = format!("/api/days");
+        let adres = "/api/days".to_string();
         let request = Request::new(adres)
             .method(Method::Get);
         async { Msg::FetchDays(async {
@@ -169,8 +167,9 @@ pub fn init(orders: &mut impl Orders<Msg>, ctx_school: &detail::SchoolContext, c
             }.await)
         }
     });
-    let mut model = Model::default();
-    model.generating = false;
+    let mut model = Model{
+        generating: false, ..Default::default()
+    };
     model.params.hour = 8;
     //model.params.depth2 = 2;
     model.params.depth = 15;
@@ -185,12 +184,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             orders.perform_cmd(cmds::timeout(100, || Msg::Generate));
         }
         Msg::FetchSchedules(schedules) => {
-            match schedules{
-                Ok(s) => {
-                    //log!(&s[0]);
-                    model.schedules.push(s);
-                }
-                Err(_) => {}
+            if let Ok(s) = schedules {
+                model.schedules.push(s);
             }
         }
         Msg::DeleteSubmit => {
@@ -234,19 +229,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             test_generate::tests(&acts2, model.params.hour, test, _ctx_school, ctx_group, &model.data.tat, &model.data.cat)
         }
         Msg::DepthChanged(d)=>{
-            match d.parse::<usize>(){
-                Ok(h)=>{
-                    model.params.depth = h;
-                }
-                Err(_)=>{}
+            if let Ok(h) = d.parse::<usize>() {
+                model.params.depth = h;
             }
         }
         Msg::DepthChanged2(d)=>{
-            match d.parse::<usize>(){
-                Ok(h)=>{
-                    model.params.depth2 = h;
-                }
-                Err(_)=>{}
+            if let Ok(h) = d.parse::<usize>() {
+                model.params.depth2 = h;
             }
         }
         Msg::Generate=> {
@@ -268,19 +257,21 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             let result = generate::generate(model.params.hour, model.params.depth, model.params.depth2, tat, cat, &acts, &mut timetables, &model.clean_tat, error);
             model.data.timetables = timetables.clone();
             if result{
-                let acts2: Vec<Activity> = acts.iter().cloned()
+                let _acts2: Vec<Activity> = acts.iter().cloned()
                     .filter(|a| a.teacher.is_some() && !timetables.iter().cloned()
                         .any(|t| a.id == t.activities.unwrap())).collect();
+                /*
                 let mut not_placed = 0;
                 for a in acts2{
                     not_placed += a.hour;
                 }
+                */
                 if model.generating {
                     let mut second = 0;
                     if (model.total_hour as usize - timetables.len()) < 50 && model.data.acts.len() > 100 {
                         second = 1000;
                     }
-                    orders.perform_cmd(cmds::timeout(1, || Msg::Generate));
+                    orders.perform_cmd(cmds::timeout(second, || Msg::Generate));
                 }
             }
             else {
@@ -311,7 +302,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     };
                     teacher_print.push(timetable)
                 }
-                if teacher_print.len() > 0 {
+                if !teacher_print.is_empty() {
                     timetables.push((t.first_name.clone(), t.last_name.clone(), teacher_print));
                 }
 
@@ -331,16 +322,17 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 for tt in &class_timetables{
                     let act = acts.iter().find(|a| a.id == tt.activities.unwrap() && a.teacher.is_some()).unwrap();
                     let teacher = _ctx_school.teachers.iter().find(|t| act.teacher.is_some() && act.teacher.unwrap() == t.id);
-                    match teacher{
-                        Some(t) => {
-                            let subject = model.subjects.iter().find(|s| s.id == act.subject).unwrap();
-                            let timetable = ClassTimetable{
+                    if let Some(t) = teacher {
+                        let subject = model.subjects.iter().find(|s| s.id == act.subject).unwrap();
+                        let timetable = ClassTimetable {
+                            id: 0,
+                            class_id: c.id,
+                            day_id: tt.day_id.unwrap(),
+                            hour: tt.hour.unwrap(),
+                            subject: subject.name.clone(),
+                            activity: ClassTimetableActivity {
                                 id: 0,
-                                class_id: c.id,
-                                day_id: tt.day_id.unwrap(),
-                                hour: tt.hour.unwrap(),
-                                subject: subject.name.clone(),
-                                activity: ClassTimetableActivity{ id: 0, teacher: teacher::Teacher{
+                                teacher: teacher::Teacher {
                                     id: 0,
                                     first_name: t.first_name.clone(),
                                     last_name: t.last_name.clone(),
@@ -349,17 +341,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                                     is_active: false,
                                     email: None,
                                     tel: None
-                                } }
-                            };
-                            c_print.push(timetable)
-                        }
-                        None => {
-
-                        }
+                                }
+                            }
+                        };
+                        c_print.push(timetable)
                     }
-
                 }
-                if c_print.len() > 0{
+                if !c_print.is_empty(){
                     timetables.push((c.kademe.clone(), c.sube.to_string(), c_print));
                 }
             }
@@ -370,13 +358,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         }
         Msg::HourChanged(hour)=>{
 
-            match hour.parse::<i32>(){
-                Ok(h)=>{
-                    if h >= 2 {
-                        model.params.hour = h;
-                    }
+            if let Ok(h) = hour.parse::<i32>() {
+                if h >= 2 {
+                    model.params.hour = h;
                 }
-                Err(_)=>{}
             }
 
         }
@@ -404,14 +389,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             }
             //let acts: Vec<Activity> = model.data.acts.clone().into_iter().filter(|a| ctx_group.classes.iter().any(|c| a.classes.iter().any(|ac| ac == c.id))).collect();
             for act in &model.data.acts{
-                match act.teacher{
-                    Some(_t) => {
-                        model.total_hour += act.hour as i32;
-                    }
-                    None => {}
+                if let Some(_t) = act.teacher {
+                    model.total_hour += act.hour as i32;
                 }
             }
-            
             //model.total_hour = model.data.acts.iter().fold(0, |a,b| if b.teacher.is_some(){(b.hour) as i32 + (a)}else{0});
             if model.data.timetables.iter().any(|tt| model.data.cat.iter().any(|c| (tt.hour.unwrap() as usize ) >= c.hours.len())  ||
                     model.data.tat.iter().any(|t| (tt.hour.unwrap() as usize ) >= t.hours.len())){
@@ -423,19 +404,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 let class_lim = model.data.cat.iter().cloned().enumerate().find(|cl| _act.unwrap().classes.iter().any(|c| c == &cl.1.class_id) && cl.1.day == tt.day_id.unwrap()).unwrap();
                 model.data.cat[class_lim.0].hours[tt.hour.unwrap() as usize]=false;
                 let _act = model.data.acts.iter().find(|a| a.id == tt.activities.unwrap());
-                match _act{
-                    Some(_a) =>{
-                        //log!(&_a);
-                        let _teacher_lim = model.data.tat.iter().cloned().enumerate().find(|tl| tl.1.day == tt.day_id.unwrap() && _a.teacher.is_some() && tl.1.user_id == _a.teacher.unwrap());
-                        match _teacher_lim{
-                            Some(t) => {model.data.tat[t.0].hours[tt.hour.unwrap() as usize] = false;}
-                            None => {
-                                //model.data.acts.retain(|a| a.id != _a.id);
-                            }
-                        }
-
+                if let Some(a) = _act {
+                    let _teacher_lim = model.data.tat.iter().cloned().enumerate().find(|tl| tl.1.day == tt.day_id.unwrap() && a.teacher.is_some() && tl.1.user_id == a.teacher.unwrap());
+                    if let Some(t) = _teacher_lim {
+                        model.data.tat[t.0].hours[tt.hour.unwrap() as usize] = false;
                     }
-                    None => {}
                 }
             }
 
@@ -450,7 +423,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::Save=>{
             for t in &mut model.data.timetables{
                 if t.activities.unwrap() < 0{
-                    t.activities = Some(t.activities.unwrap()*-1);
+                    t.activities = Some(-t.activities.unwrap());
                 }
             }
             orders.perform_cmd({
@@ -632,17 +605,12 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)-> Node<Msg
 }
 fn disabled(ctx: &Context, ctx_school: &SchoolContext) -> bool {
     if ctx.user.is_none(){
-        return true
+        return true;
     }
     else if ctx.user.as_ref().unwrap().is_admin {
-        return false
+        return false;
     }
-    else if ctx.school.iter().any(|s| s.id == ctx_school.school.id) {
-        return false
-    }
-    else {
-        return true
-    }
+    !ctx.schools.iter().any(|s| s.school.id == ctx_school.school.id)
 }
 fn generate(model: &Model)->Node<Msg>{
     if !model.generating{

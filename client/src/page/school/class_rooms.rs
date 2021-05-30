@@ -9,6 +9,7 @@ pub struct Model{
 }
 
 pub fn init(orders: &mut impl Orders<Msg>, ctx_school: &SchoolContext)-> Model {
+    log!("class_rooms");
     let mut model = Model::default();
     orders.perform_cmd({
         let request = Request::new(format!("/api/schools/{}/class_rooms", ctx_school.school.id))
@@ -57,46 +58,31 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx_sc
             });
         }
         Msg::ChangeRw(rw) => {
-            match rw.parse::<i16>(){
-                Ok(r) => {
-                    model.form.rw = r
-                }
-                Err(_) => {}
+            if let Ok(r) = rw.parse::<i16>() {
+                model.form.rw = r
             }
         }
         Msg::ChangeCl(cl) => {
-            match cl.parse::<i16>(){
-                Ok(c) => {
-                    model.form.cl = c
-                }
-                Err(_) => {}
+            if let Ok(c) = cl.parse::<i16>() {
+                model.form.cl = c
             }
         }
         Msg::ChangeName(name) => {
             model.form.name = name
         }
         Msg::ChangeWidth(wd) => {
-            match wd.parse::<i16>(){
-                Ok(w) => {
-                    model.form.width = w
-                }
-                Err(_) => {}
+            if let Ok(w) = wd.parse::<i16>() {
+                model.form.width = w
             }
         }
         Msg::FetchClassroom(cls) => {
-            match cls{
-                Ok(c) => {
-                    model.class_rooms.insert(0, c)
-                }
-                Err(_) => {}
+            if let Ok(c) = cls {
+                model.class_rooms.insert(0, c)
             }
         }
         Msg::FetchClassrooms(cls) => {
-            match cls {
-                Ok(c) => {
-                    model.class_rooms = c
-                }
-                Err(_) => {}
+            if let Ok(c) = cls {
+                model.class_rooms = c
             }
         }
         Msg::DelClassroom(id) => {
@@ -114,11 +100,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx_sc
             });
         }
         Msg::FetchDelClassroom(id) => {
-            match id{
-                Ok(i) => {
-                    model.class_rooms.retain(|c| c.id != i)
-                }
-                Err(_) => {}
+            if let Ok(i) = id {
+                model.class_rooms.retain(|c| c.id != i)
             }
         }
     }

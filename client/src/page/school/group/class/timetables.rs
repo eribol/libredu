@@ -91,7 +91,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchTimetable(tm)=>{
             model.timetable=tm.unwrap();
             orders.perform_cmd({
-                let url = format!("/api/days");
+                let url = "/api/days".to_string();
                 let request = Request::new(url)
                     .method(Method::Get);
                 async {
@@ -125,18 +125,18 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             });
         }
         Msg::FetchActivities(acts)=>{
-            model.activities = acts.unwrap_or(vec![]);
+            model.activities = acts.unwrap_or_default();
         }
         Msg::FetchLimitation(json)=>{
             match json {
                 Ok(mut l) => {
-                    l.sort_by(|a, b| a.day.id.cmp(&b.day.id));
+                    l.sort_by_key(|a| a.day.id);
                     model.limitation = l;
-                    if model.limitation.len()==0{
+                    if model.limitation.is_empty(){
                         for d in model.days.iter() {
                             if !model.limitation.iter().any(|ta| ta.day.id == d.id) {
                                 let hours = vec![false; ctx_group.group.hour as usize];
-                                model.limitation.push(ClassAvailable { day: d.clone(), hours: hours })
+                                model.limitation.push(ClassAvailable { day: d.clone(), hours })
                             }
                             if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
                                 let hours = vec![false; ctx_group.group.hour as usize];
@@ -145,47 +145,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
 
                         }
                     }
-                    //let mut changed = false;
-                    /*
-                    for d in model.days.iter() {
-
-                        if !model.limitation.iter().any(|ta| ta.day.id == d.id) {
-                            let hours = vec![true; ctx_group.group.hour as usize];
-                            model.limitation.push(ClassAvailable { day: d.clone(), hours: hours });
-                            changed = true;
-                        }
-                        if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
-                            let hours = vec![true; ctx_group.group.hour as usize];
-                            model.limitation[(d.id - 1) as usize].hours = hours;
-                            changed = true;
-                        }
-                    }
-                    if changed{
-                        orders.perform_cmd({
-                            let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", ctx_school.school.id, ctx_group.group.id ,model.class.id);
-                            let request = Request::new(url)
-                                .method(Method::Post)
-                                .json(&model.limitation);
-                            async {
-                                Msg::FetchLimitation(async {
-                                    request?
-                                        .fetch()
-                                        .await?
-                                        .check_status()?
-                                        .json()
-                                        .await
-                                }.await)
-                            }
-                        });
-                    }
-                    */
                 }
                 Err(_)=>{
-                    if model.limitation.len()==0{
+                    if model.limitation.is_empty(){
                         for d in model.days.iter() {
                             if !model.limitation.iter().any(|ta| ta.day.id == d.id) {
                                 let hours = vec![false; ctx_group.group.hour as usize];
-                                model.limitation.push(ClassAvailable { day: d.clone(), hours: hours })
+                                model.limitation.push(ClassAvailable { day: d.clone(), hours })
                             }
                             if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
                                 let hours = vec![false; ctx_group.group.hour as usize];
@@ -329,7 +295,7 @@ fn timetable(model: &Model, _ctx_school:&SchoolContext, ctx_group: &GroupContext
     ]
 }
 
-fn get_timetable_row(day: i32, hour: (usize, &bool), timetable: &Vec<ClassTimetable>)->Node<Msg>{
+fn get_timetable_row(day: i32, hour: (usize, &bool), timetable: &[ClassTimetable])->Node<Msg>{
     let get_timetable = timetable.iter().find(|t| t.day_id == day && t.hour == hour.0 as i16);
 
     match get_timetable{
@@ -340,12 +306,12 @@ fn get_timetable_row(day: i32, hour: (usize, &bool), timetable: &Vec<ClassTimeta
             let split_subject = &t.subject.split(' ').collect::<Vec<&str>>();
             if split_subject.len() == 1{
                 subject = subject + &split_subject[0].chars().collect::<Vec<_>>()[..3].iter().cloned().collect::<String>();
-                subject.push_str(".");
+                subject.push('.');
             }
             else {
                 for s in split_subject{
-                    subject.push(s.chars().nth(0).unwrap());
-                    subject.push_str(".");
+                    subject.push(s.chars().next().unwrap());
+                    subject.push('.');
                 }
             }
             td![

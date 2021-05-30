@@ -35,14 +35,8 @@ impl Default for Pages{
     }
 }
 pub fn init(url: Url, orders: &mut impl Orders<Msg>)-> Model {
-    let mut model = Model::default();
-    model.menu = vec![
-        Menu{ name: "Okul Türleri".to_string(), link: "school_types".to_string() },
-        Menu{ name: "Dersler".to_string(), link: "subjects".to_string() }
-    ];
-    model.url = url;
     orders.perform_cmd({
-        let request = Request::new(format!("/api/admin/school_types"))
+        let request = Request::new("/api/admin/school_types".to_string())
             .method(Method::Get);
 
         async { Msg::FetchSchoolTypes(async {
@@ -54,7 +48,13 @@ pub fn init(url: Url, orders: &mut impl Orders<Msg>)-> Model {
                 .await
         }.await)}
     });
-    model
+    Model {
+        menu: vec![
+            Menu { name: "Okul Türleri".to_string(), link: "school_types".to_string() },
+            Menu { name: "Dersler".to_string(), link: "subjects".to_string() },
+        ],
+        url, ..Default::default()
+    }
 }
 
 #[derive(Debug)]
@@ -78,11 +78,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::SchoolTypes => {}
         Msg::FetchSchoolTypes(types) => {
-            match types{
-                Ok(t) => {
-                    model.school_types = t
-                }
-                Err(_) => {}
+            if let Ok(t) = types {
+                model.school_types = t
             }
             match model.url.next_path_part(){
                 Some("") | None => {
@@ -117,11 +114,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             });
         }
         Msg::FetchType(school_type) => {
-            match school_type{
-                Ok(t) => {
-                    model.school_types.push(t)
-                }
-                Err(_) => {}
+            if let Ok(t) = school_type {
+                model.school_types.push(t)
             }
         }
     }

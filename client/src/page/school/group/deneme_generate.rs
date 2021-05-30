@@ -1,7 +1,3 @@
-use rand::seq::SliceRandom;
-use seed::{*};
-use crate::model;
-use crate::page::school::group::timetable::{ClassAvailable, Activity, NewClassTimetable};
 //use async_std::prelude::*;
 //use async_std::task;
 /*

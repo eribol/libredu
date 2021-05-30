@@ -42,14 +42,14 @@ pub struct Model{
 }
 
 pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, ctx: &mut Context)->Model{
-    let mut model = Model::default();
-    model.menu = vec![
-        Menu{ title: "Kişisel Bilgiler".to_string(), link: "".to_string() },
-        Menu{title: "Okullar".to_string(), link: "schools".to_string()},
-        Menu{title: "Ders Programlarım".to_string(), link: "timetables".to_string()},
-        Menu{title: "Şifre değiştir".to_string(), link: "change_password".to_string()}
-    ];
-
+    let mut model = Model{
+        menu: vec![
+            Menu{ title: "Kişisel Bilgiler".to_string(), link: "".to_string() },
+            Menu{title: "Okullar".to_string(), link: "schools".to_string()},
+            Menu{title: "Ders Programlarım".to_string(), link: "timetables".to_string()},
+            Menu{title: "Şifre değiştir".to_string(), link: "change_password".to_string()}
+        ], ..Default::default()
+    };
     match  url.next_path_part(){
         Some("") | None => {
             model.page = Pages::Home

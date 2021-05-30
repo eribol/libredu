@@ -1,7 +1,7 @@
 use serde::*;
 use seed::{*, prelude::*};
 use crate::{Context};
-use crate::page::school::group::teacher::teacher;
+use crate::page::school::group::teacher::home;
 use crate::model::user::Teacher;
 use crate::page::school::detail;
 use crate::page::school::detail::{SchoolContext, GroupContext};
@@ -26,7 +26,7 @@ pub struct Model{
 #[derive(Debug, Clone)]
 pub enum Pages{
     Teachers,
-    Teacher(teacher::Model)
+    Teacher(Box<home::Model>)
 }
 impl Default for Pages{
     fn default()->Self{
@@ -52,7 +52,7 @@ pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, ctx: &mut Context, ctx_
     match url.next_path_part(){
         Some("") | None => {},
         Some(id) => {
-            model.pages = Pages::Teacher(teacher::init(id.parse::<i32>().unwrap(), &mut orders.proxy(Msg::Teacher), ctx, ctx_school, url, ctx_group));
+            model.pages = Pages::Teacher(Box::new(home::init(id.parse::<i32>().unwrap(), &mut orders.proxy(Msg::Teacher), ctx, ctx_school, url, ctx_group)));
         }
     }
     //if _url.path().len()>=4{
@@ -71,23 +71,20 @@ pub enum Msg{
     ChangeLastName(String),
     ChangeRole(String),
     FetchTeacher(fetch::Result<Teacher>),
-    Teacher(teacher::Msg)
+    Teacher(home::Msg)
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx_school: &mut detail::SchoolContext, ctx_group: &mut GroupContext) {
     match msg {
         Msg::FetchTeachers(teachers) => {
-            match teachers{
-                Ok(t) => {
-                    model.teachers = t.clone();
-                    ctx_school.teachers = t
-                }
-                Err(_) => {}
+            if let Ok(t) = teachers {
+                model.teachers = t.clone();
+                ctx_school.teachers = t
             }
         }
         Msg::Teacher(msg)=>{
             if let Pages::Teacher(m) = &mut model.pages {
-                teacher::update(msg, m, &mut orders.proxy(Msg::Teacher), _ctx, ctx_school, ctx_group)
+                home::update(msg, m, &mut orders.proxy(Msg::Teacher), _ctx, ctx_school, ctx_group)
             }
         }
         Msg::AddTeacher=> {
@@ -126,14 +123,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             });
         }
         Msg::FetchDel(teacher)=>{
-            match teacher{
-                Ok(t) => {
-                    model.teachers.retain(|tt| tt.id != t);
-                    ctx_school.teachers.retain(|tt| tt.id != t);
-                }
-                Err(_) => {
-                    //log!("aa");
-                }
+            if let Ok(t) = teacher {
+                model.teachers.retain(|tt| tt.id != t);
+                ctx_school.teachers.retain(|tt| tt.id != t);
             }
         }
         Msg::ChangeFirstName(name)=>{
@@ -147,12 +139,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             model.form.role = r.parse::<i16>().unwrap()
         }
         Msg::FetchTeacher(t)=>{
-            match t{
-                Ok(_t)=>{
-                    log!(&_t);
-                    ctx_school.teachers.insert(0, _t);
-                }
-                Err(_)=>{}
+            if let Ok(_t) = t {
+                ctx_school.teachers.insert(0, _t);
             }
         }
     }
@@ -163,7 +151,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group:
         C!{"column is-full"},
             match &model.pages{
                 Pages::Teacher(m) => {
-                    teacher::view(m, ctx_school, ctx_group).map_msg(Msg::Teacher)
+                    home::view(m, ctx_school, ctx_group).map_msg(Msg::Teacher)
                 },
                 Pages::Teachers => {
                     div![
@@ -357,15 +345,10 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group:
 
 fn disabled(ctx: &Context, ctx_school: &SchoolContext) -> bool {
     if ctx.user.is_none(){
-        return true
+        return true;
     }
     else if ctx.user.as_ref().unwrap().is_admin {
-        return false
+        return false;
     }
-    else if ctx.school.iter().any(|s| s.id == ctx_school.school.id) {
-        return false
-    }
-    else {
-        return true
-    }
+    !ctx.schools.iter().any(|s| s.school.id == ctx_school.school.id)
 }

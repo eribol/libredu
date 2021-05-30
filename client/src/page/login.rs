@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Context, STORAGE_KEY};
 use crate::model::school::{SchoolDetail};
 use crate::model::user::UserDetail;
+use crate::page::school::detail::SchoolContext;
 //use seed::app::subs::url_requested::UrlRequest;
 
 // ------ ------
@@ -41,7 +42,7 @@ pub enum Msg{
     PasswordChanged(String),
     SubmitForm,
     Fetched(fetch::Result<UserDetail>),
-    FetchSchool(fetch::Result<Vec<SchoolDetail>>)
+    FetchSchool(fetch::Result<Vec<(i16, SchoolDetail)>>)
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &mut Context) {
@@ -70,8 +71,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
         },
         Msg::Fetched(Ok(auth_user)) => {
             //LocalStorage::remove(STORAGE_KEY).expect("");
-            LocalStorage::insert(STORAGE_KEY, &auth_user).expect("");
-            ctx.user = LocalStorage::get("libredu-user").unwrap();
+            SessionStorage::insert(STORAGE_KEY, &auth_user).expect("");
+            ctx.user = Some(auth_user);
             orders.perform_cmd({
                 let request = Request::new("/api/schools")
                     .method(Method::Get);
@@ -90,16 +91,28 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
             log!("fetch AuthUser error:", fetch_error);
             orders.skip();
         },
-        Msg::FetchSchool(Ok(schools))=>{
-            LocalStorage::insert("libredu-school", &schools).expect("");
-            ctx.school = schools;
+        Msg::FetchSchool(Ok(schools))=> {
+            for s in schools {
+                let ctx_school = SchoolContext {
+                    teachers: vec![],
+                    role: s.0,
+                    groups: None,
+                    school: s.1,
+                    students: None,
+                    subjects: None,
+                    class_rooms: None,
+                    menu: vec![]
+                };
+                ctx.schools.push(ctx_school);
+            }
+            SessionStorage::insert("schools", &ctx.schools).expect("Okullar eklenemedi");
             orders.notify(
                 subs::UrlRequested::new(crate::Urls::new(&ctx.base_url).home())
             );
         },
         Msg::FetchSchool(Err(_e))=>{
-            ctx.user = Some(LocalStorage::get("libredu-user").unwrap());
-            orders.skip();
+            //ctx.user = Some(LocalStorage::get("libredu-user").unwrap());
+            //orders.skip();
         }
     }
 }

@@ -67,7 +67,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
     match msg {
         Msg::EmailChanged(email) => {
             model.user.email = email;
-            if model.user.email.contains("@"){
+            if model.user.email.contains('@'){
                 //model.form_error.email = "".to_string()
             }
         },
@@ -85,25 +85,22 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
         },
         Msg::FirstNameChanged(name) => {
             model.user.first_name = name;
-            if model.user.first_name != ""{
+            if !model.user.first_name.is_empty(){
                 //model.form_error.first_name = "".to_string()
             }
         },
         Msg::TelChanged(tel) => {
-            match tel.chars().last(){
-                Some(t)=>{
-                    if t.is_digit(10) && tel.len() <= 10{
-                        model.user.tel = tel;
-                        model.error = None;
-                    }
-                },
-                None=>{}
+            if let Some(t) = tel.chars().last() {
+                if t.is_digit(10) && tel.len() <= 10 {
+                    model.user.tel = tel;
+                    model.error = None;
+                }
             }
 
         },
         Msg::LastNameChanged(name) => {
             model.user.last_name = name;
-            if model.user.last_name != ""{
+            if !model.user.last_name.is_empty(){
                 model.error = None
             }
             else {
@@ -116,20 +113,20 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
         },
         Msg::Submit => {
             model.error = None;
-            if !model.user.email.contains("@"){
+            if !model.user.email.contains('@'){
                 model.error = Some("Geçerli bir eposta adresi giriniz".to_string())
             }
             if model.user.password1 != model.user.password2{
                 model.error = Some("Şifreler uyumlu değil".to_string())
             }
-            if model.user.first_name == "" {
+            if model.user.first_name.is_empty(){
                 model.error = Some("Ad alanı boş geçilemez".to_string())
             }
-            if model.user.last_name == ""{
+            if model.user.last_name.is_empty(){
                 model.error = Some("Soyad alanı boş geçilemez".to_string())
             }
             if model.user.tel.len() != 10{
-                if !model.user.tel.parse::<f64>().is_ok(){
+                if model.user.tel.parse::<f64>().is_err(){
                     model.error = Some("Telefon numarası rakamlardan oluşmalı".to_string())
                 }
                 else{

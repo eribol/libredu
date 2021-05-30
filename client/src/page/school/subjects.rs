@@ -74,24 +74,18 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx_sc
             }
         }
         Msg::FetchSubject(subject) => {
-            match subject{
-                Ok(s) => {
-                    model.filtered_subjects.insert(0, s)
-                }
-                Err(_) => {}
+            if let Ok(s) = subject {
+                model.filtered_subjects.insert(0, s)
             }
         }
         Msg::FetchSubjects(subjects) => {
-            match subjects{
-                Ok(s) => {
-                    model.subjects = s;
-                    model.filtered_subjects = model.subjects.clone()
-                }
-                Err(_) => {}
+            if let Ok(s) = subjects {
+                model.subjects = s;
+                model.filtered_subjects = model.subjects.clone()
             }
         }
         Msg::FilterGrade(g) => {
-            if g != "" {
+            if !g.is_empty() {
                 model.filtered_subjects = model.subjects.clone();
                 model.filtered_subjects = model.filtered_subjects.iter().cloned().filter(|s| s.kademe == g).collect()
             }
@@ -100,7 +94,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx_sc
             }
         }
         Msg::FilterOptional(_) => {
-            if model.filtered_subjects.len() > 0 && model.filtered_subjects[0].optional{
+            if !model.filtered_subjects.is_empty() && model.filtered_subjects[0].optional{
                 model.filtered_subjects = model.subjects.iter().cloned().filter(|s| !s.optional && s.kademe == model.filtered_subjects[0].kademe).collect()
             }
             else {
@@ -122,11 +116,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx_sc
             });
         }
         Msg::FetchDelSubject(id) => {
-            match id{
-                Ok(i) =>{
-                    model.filtered_subjects.retain(|s| s.id != i)
-                }
-                Err(_) => {}
+            if let Ok(i) = id {
+                model.filtered_subjects.retain(|s| s.id != i)
             }
         }
     }

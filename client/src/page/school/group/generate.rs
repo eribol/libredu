@@ -5,15 +5,16 @@ use crate::page::school::group::timetable::{ClassAvailable, Activity, NewClassTi
 //use async_std::prelude::*;
 //use async_std::task;
 
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
 pub(crate) fn generate(
     max_day_hour: i32,
     max_depth: usize,
-    depth2: usize,
+    _depth2: usize,
     tat: &mut Vec<model::teacher::TeacherAvailableForTimetables>,
     cat: &mut Vec<ClassAvailable>,
-    total_acts: &Vec<Activity>,
+    total_acts: &[Activity],
     timetables: &mut Vec<NewClassTimetable>,
-    clean_tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
+    clean_tat: &[model::teacher::TeacherAvailableForTimetables],
     error: &mut String
 )
     -> bool {
@@ -31,7 +32,7 @@ pub(crate) fn generate(
         );
         //
     }*/
-    if acts.len() == 0 {
+    if acts.is_empty() {
         //let mut fivea: Vec<NewClassTimetable> = timetables.iter().cloned().filter(|t| t.class_id.unwrap() == 1).collect();
         //timetables.sort_by(|a, b| a.day_id.cmp(&b.day_id));
         //fivea.sort_by(|a, b| b.hour.cmp(&a.hour));
@@ -43,7 +44,7 @@ pub(crate) fn generate(
     match available {
         Some(slots) => {
             put_activity(act2, total_acts, tat, timetables, cat, slots[0].0, slots[0].1, clean_tat);
-            return true
+            true
         },
         None => {
             let timetables_backup = timetables.clone();
@@ -51,7 +52,7 @@ pub(crate) fn generate(
             let cat_backup = cat.clone();
             let rec_result = recursive_put(&act2, total_acts, timetables, clean_tat, tat, cat, max_day_hour, 0, max_depth, &mut vec![],&tat_backup, &cat_backup, &timetables_backup);
             if rec_result {
-                return true;
+                true
             }
             else {
                 *timetables = timetables_backup;
@@ -59,7 +60,7 @@ pub(crate) fn generate(
                 *cat = cat_backup;
                 //log!("oh", &act2.teacher, &act2.classes);
                 let mut conflict_acts = find_conflict_activity(&act2, &total_acts, &timetables, clean_tat, &tat, &cat, max_day_hour, max_depth, &mut vec![]);
-                if conflict_acts.len() == 0 {
+                if conflict_acts.is_empty() {
                     log!("Çakışan aktivite yok");
                     *error = "Sınıf ile öğretmenin uyumlu uygun saatleri mevcut değil. Kısıtlamaları kontrol edin.".to_string();
                     return false;
@@ -72,28 +73,23 @@ pub(crate) fn generate(
                 c_act.insert(0, act2.clone());
                 for a in &c_act{
                     let available2 = find_timeslot(a, &total_acts, &tat, &timetables, &cat, clean_tat, max_day_hour, false);
-                    match available2 {
-                        Some(slots2) => {
-                            put_activity(a, total_acts, tat, timetables, cat, slots2[0].0, slots2[0].1, clean_tat);
-                            //return true
-                        },
-                        None => {
-                            //return false
-                        }
+                    if let Some(slots2) = available2 {
+                        put_activity(a, total_acts, tat, timetables, cat, slots2[0].0, slots2[0].1, clean_tat);
                     }
                 }
-                return true
+                true
             }
         }
     }
 }
 //Add all timetables array to database
 
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
 pub(crate) fn recursive_put(
     act: &Activity,
-    _acts: &Vec<Activity>,
+    _acts: &[Activity],
     timetables: &mut Vec<NewClassTimetable>,
-    clean_tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
+    clean_tat: &[model::teacher::TeacherAvailableForTimetables],
     tat: &mut Vec<model::teacher::TeacherAvailableForTimetables>,
     cat: &mut Vec<ClassAvailable>,
     max_day_hour: i32,
@@ -101,9 +97,9 @@ pub(crate) fn recursive_put(
     //depth2: usize,
     max_depth: usize,
     ignore_list: &mut Vec<Activity>,
-    tat2: &Vec<model::teacher::TeacherAvailableForTimetables>,
-    cat2: &Vec<ClassAvailable>,
-    timetables2: &Vec<NewClassTimetable>
+    tat2: &[model::teacher::TeacherAvailableForTimetables],
+    cat2: &[ClassAvailable],
+    timetables2: &[NewClassTimetable]
 )
     -> bool {
     let mut conflict_acts = find_conflict_activity(act, &_acts, &timetables, &clean_tat, &tat, &cat, max_day_hour, max_depth, ignore_list);
@@ -152,20 +148,20 @@ pub(crate) fn recursive_put(
             break;
         }
         else {
-            *tat = tat2.clone();
-            *cat = cat2.clone();
-            *timetables = timetables2.clone();
+            *tat = tat2.to_owned();
+            *cat = cat2.to_owned();
+            *timetables = timetables2.to_owned();
             //ignore_list.retain(|a3| !c_act.iter().any(|a4| a4.id == a3.id));
             okey2 = false;
             //break;
         }
 
     }
-    return okey2;
+    okey2
 }
 
 
-fn delete_activity(_acts: &Vec<Activity>,act: &Activity, tat: &mut Vec<model::teacher::TeacherAvailableForTimetables>,
+fn delete_activity(_acts: &[Activity],act: &Activity, tat: &mut Vec<model::teacher::TeacherAvailableForTimetables>,
                    timetables: &mut Vec<NewClassTimetable>, cat: &mut Vec<ClassAvailable>, _a: bool)-> bool
 {
     let tt: Vec<(usize, NewClassTimetable)> = timetables.iter().cloned()
@@ -191,28 +187,28 @@ fn delete_activity(_acts: &Vec<Activity>,act: &Activity, tat: &mut Vec<model::te
         //timetables.remove(t.0);
     }
     timetables.retain(|t| t.activities.unwrap() != act.id);
-    return true;
+    true
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
 fn find_conflict_activity(
     act: &Activity,
-    _acts: &Vec<Activity>,
-    timetables: &Vec<NewClassTimetable>,
-    clean_tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
-    _tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
-    cat: &Vec<ClassAvailable>,
+    _acts: &[Activity],
+    timetables: &[NewClassTimetable],
+    clean_tat: &[model::teacher::TeacherAvailableForTimetables],
+    _tat: &[model::teacher::TeacherAvailableForTimetables],
+    cat: &[ClassAvailable],
     max_day_hour: i32,
     depth: usize,
     ignore_list: &mut Vec<Activity>
 )->Vec<Vec<Activity>>
 {
-    use rand::thread_rng;
     //let class = act.class.unwrap();
     let mut total_act: Vec<Vec<Activity>> = Vec::new();
 
-    let activities: Vec<Activity> = _acts.iter().cloned()
+    let activities: Vec<Activity> = _acts.to_owned().into_iter()
         .filter(|a| act.classes.iter().any(|c1| a.classes.iter().any(|c2| c1 == c2)) || a.teacher==act.teacher).collect();
-    let mut teacher_availables: Vec<model::teacher::TeacherAvailableForTimetables> = clean_tat.iter().cloned()
+    let teacher_availables: Vec<model::teacher::TeacherAvailableForTimetables> = clean_tat.to_owned().into_iter()
         .filter(|t| t.user_id == act.teacher.unwrap() && t.hours.iter().any(|h| *h)).collect();
     //teacher_availables.sort_by(|a, b| a.hours.iter().fold(0, |acc, x| if *x{ acc+1} else{acc}).cmp(&b.hours.iter().fold(0, |acc, x| if *x{acc+1}else{acc})));
     //teacher_availables.shuffle(&mut thread_rng());
@@ -224,49 +220,43 @@ fn find_conflict_activity(
                 if available {
                     let mut less_conflict: Vec<Activity> = Vec::new();
                     for i in h..h+act.hour as usize{
-                        let conflict_slot: Vec<NewClassTimetable> = timetables.iter().cloned()
+                        let conflict_slot: Vec<NewClassTimetable> = timetables.to_owned().into_iter()
                             .filter(|t| t.day_id.unwrap() == teacher_available.day && t.hour.unwrap() as usize == i).collect();
 
                         for c in &conflict_slot{
                             let activity = activities.iter()
                                 .find(|a| a.id == c.activities.unwrap() && a.id != act.id && !ignore_list.iter().any(|a2| a2.id == a.id));
-                            match activity{
-                                Some(a)=>{
-                                    less_conflict.push(a.clone());
-                                },
-                                None=>{}
+                            if let Some(a) = activity {
+                                less_conflict.push(a.clone());
                             }
                         }
                     }
-                    let mut copy_tat = _tat.clone();
-                    let mut copy_ch = cat.clone();
-                    let mut copy_tt = timetables.clone();
-                    let mut acts = _acts.clone();
+                    let mut copy_tat = _tat.to_owned();
+                    let mut copy_ch = cat.to_owned();
+                    let mut copy_tt = timetables.to_owned();
+                    let acts = _acts.to_owned();
                     for a in &less_conflict{
-                        delete_activity(&mut acts, a, &mut copy_tat, &mut copy_tt, &mut copy_ch, true);
+                        delete_activity(&acts, a, &mut copy_tat, &mut copy_tt, &mut copy_ch, true);
                     }
                     let available = find_timeslot(act, &acts, &copy_tat, &copy_tt, &copy_ch, &clean_tat, max_day_hour, true);
-                    match available {
-                        Some(_slots) => {
-                            total_act.push(less_conflict);
-                        },
-                        None => {}
+                    if available.is_some() {
+                        total_act.push(less_conflict);
                     }
                 }
             }
         }
     }
     //total_act.shuffle(&mut thread_rng());
-    total_act.sort_by(|a,b| a.len().cmp(&b.len()));
-    for i in 0..total_act.len(){
-        total_act[i].sort_by(|a,b| a.id.cmp(&b.id));
-        total_act[i].dedup();
+    total_act.sort_by_key(|a| a.len());
+    for item in &mut total_act{
+        item.sort_by(|a,b| a.id.cmp(&b.id));
+        item.dedup();
     }
     if total_act.len()>=depth{
-        return total_act[0..depth].to_vec();
+        total_act[0..depth].to_vec()
     }
     else {
-        return total_act
+        total_act
     }
     /*if depth < 1{
         if total_act.len()>=10{
@@ -286,15 +276,16 @@ fn find_conflict_activity(
     }*/
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
 pub fn put_activity(
     act: &Activity,
-    _total_acts: &Vec<Activity>,
+    _total_acts: &[Activity],
     tat: &mut Vec<model::teacher::TeacherAvailableForTimetables>,
     timetables: &mut Vec<NewClassTimetable>,
     cat: &mut Vec<ClassAvailable>,
     day:i32,
     hour: usize,
-    clean_tat: &Vec<model::teacher::TeacherAvailableForTimetables>
+    _clean_tat: &[model::teacher::TeacherAvailableForTimetables]
 )-> bool
 {
     //delete_activity(total_acts, act, tat, timetables, cat, true);
@@ -324,16 +315,17 @@ pub fn put_activity(
     }
     //total_acts[act.0].day=Some(day as i16);
     //total_acts[act.0].hrs=Some(hour as i16);
-    return true;
+    true
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
 pub fn find_timeslot(
     act: &Activity,
-    total_acts2: &Vec<Activity>,
-    tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
-    timetables: &Vec<NewClassTimetable>,
-    cat: &Vec<ClassAvailable>,
-    clean_tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
+    total_acts2: &[Activity],
+    tat: &[model::teacher::TeacherAvailableForTimetables],
+    timetables: &[NewClassTimetable],
+    cat: &[ClassAvailable],
+    clean_tat: &[model::teacher::TeacherAvailableForTimetables],
     mut max_day_hour: i32,
     _for_conflict: bool
 )
@@ -384,11 +376,11 @@ pub fn find_timeslot(
                 if available {
                     day = teacher_available.1.day;
                     hour = i;
-                    let _other_same_subject: Vec<NewClassTimetable> = timetables.iter().cloned()
+                    let _other_same_subject: Vec<NewClassTimetable> = timetables.to_owned().into_iter()
                         .filter(|t| t.day_id.unwrap() == day
                             && teacher_acts.iter().cloned()
                             .any(|a| a.id == t.activities.unwrap() && a.subject == act.subject)).collect();
-                    if _other_same_subject.len() == 0 {
+                    if _other_same_subject.is_empty() {
                         slots.push((day, hour));
                         return Some(slots)
                     } else {
@@ -397,14 +389,10 @@ pub fn find_timeslot(
 
                         let hours = _other_same_subject.iter().cloned()
                             .find(|t| t.hour.unwrap() == (hour - 1) as i16 || t.hour.unwrap() == hour as i16 + act.hour);
-                        match hours {
-                            Some(_) => {
-                                slots.push((day, hour));
-                                return Some(slots)
-                            }
-                            None => {}
+                        if hours.is_some() {
+                            slots.push((day, hour));
+                            return Some(slots)
                         }
-
                     }
                 }
             }
@@ -413,17 +401,18 @@ pub fn find_timeslot(
         //    break;
         //}
     }
-
-    return None;
+    None
 }
 
+/*
 impl Activity{
+    #[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
     fn timeslots(&self,
-                     total_acts2: &Vec<Activity>,
-                     tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
-                     timetables: &Vec<NewClassTimetable>,
-                     cat: &Vec<ClassAvailable>,
-                     clean_tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
+                     total_acts2: &[Activity],
+                     tat: &[model::teacher::TeacherAvailableForTimetables],
+                     timetables: &[NewClassTimetable],
+                     cat: &[ClassAvailable],
+                     clean_tat: &[model::teacher::TeacherAvailableForTimetables],
                      mut max_day_hour: i32,
                      _for_conflict: bool) -> usize {
         {
@@ -477,18 +466,15 @@ impl Activity{
                                 .filter(|t| t.day_id.unwrap() == day
                                     && teacher_acts.iter().cloned()
                                     .any(|a| a.id == t.activities.unwrap() && a.subject == self.subject)).collect();
-                            if _other_same_subject.len() == 0 {
+                            if _other_same_subject.is_empty() {
                                 slots.push((day, hour));
                                 //return Some(slots)
                             } else {
-                                let hours = _other_same_subject.iter().cloned()
+                                let hours = _other_same_subject.into_iter()
                                     .find(|t| t.hour.unwrap() == (hour - 1) as i16 || t.hour.unwrap() == hour as i16 + self.hour);
-                                match hours {
-                                    Some(_) => {
-                                        slots.push((day, hour));
-                                        //return Some(slots)
-                                    }
-                                    None => {}
+                                if hours.is_some() {
+                                    slots.push((day, hour));
+                                    //return Some(slots)
                                 }
                             }
                         }
@@ -498,8 +484,8 @@ impl Activity{
                 //    break;
                 //}
             }
-
-            return slots.len();
+            slots.len()
         }
     }
 }
+*/

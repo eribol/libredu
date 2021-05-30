@@ -1,5 +1,5 @@
 mod limitations;
 mod timetables;
-pub mod class;
+pub mod home;
 mod activities;
 pub mod students;

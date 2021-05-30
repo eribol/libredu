@@ -39,7 +39,7 @@ pub struct SchoolType {
     pub(crate) id: i32
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UpdateSchoolForm{
     pub(crate) name: String,
     //pub manager: i32,
@@ -61,3 +61,32 @@ impl Default for UpdateSchoolForm{
         }
     }
 }
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+pub struct SchoolMenu<'a>{
+    pub link: &'a str,
+    pub name: &'a str,
+}
+
+pub const LIST: &[SchoolMenu] = &[
+
+        SchoolMenu {
+            link: "",
+            name: "Anasayfa"
+        },
+        SchoolMenu {
+            link: "detail",
+            name: "Okul Bilgiler"
+        },
+        SchoolMenu {
+            link: "students",
+            name: "Öğrenciler"
+        },
+        SchoolMenu {
+            link: "subjects",
+            name: "Dersler"
+        },
+        SchoolMenu {
+            link: "class_rooms",
+            name: "Derslikler"
+        }
+];

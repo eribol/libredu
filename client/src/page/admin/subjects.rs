@@ -69,11 +69,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.form.kademe = grade
         }
         Msg::ChangeType(school_type) => {
-            match school_type.parse::<i32>(){
-                Ok(t) => {
-                    model.form.school_type = t
-                }
-                Err(_) => {}
+            if let Ok(t) = school_type.parse::<i32>() {
+                model.form.school_type = t
             }
             orders.perform_cmd({
                 let request = Request::new(format!("/api/admin/subjects/{}", model.form.school_type))
@@ -100,25 +97,19 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
         }
         Msg::FetchSubject(subject) => {
-            match subject{
-                Ok(s) => {
-                    model.subjects.insert(0, s)
-                }
-                Err(_) => {}
+            if let Ok(s) = subject {
+                model.subjects.insert(0, s)
             }
         }
         Msg::FetchSubjects(subjects) => {
-            match subjects{
-                Ok(s) => {
-                    model.subjects = s
-                }
-                Err(_) => {}
+            if let Ok(s) = subjects {
+                model.subjects = s
             }
         }
     }
 }
 
-pub fn view(school_types: &Vec<SchoolType>, model: &Model) -> Node<Msg> {
+pub fn view(school_types: &[SchoolType], model: &Model) -> Node<Msg> {
     div![
         div![
             C!{"field"},

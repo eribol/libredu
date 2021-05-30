@@ -96,16 +96,13 @@ pub fn init(teacher: i32, orders: &mut impl Orders<Msg>, ctx: &mut Context, ctx_
         }
     });
     let teacher_id = ctx_school.teachers.iter().enumerate().find(|t| t.1.id == teacher);
-    match teacher_id{
-        Some(t_id)=>{
-            if t_id.0 >0{
-                model.back_teacher = Some(ctx_school.teachers[t_id.0-1].clone());
-            }
-            if t_id.0 < ctx_school.teachers.len()-1{
-                model.next_teacher = Some(ctx_school.teachers[t_id.0+1].clone());
-            }
+    if let Some(t_id) = teacher_id {
+        if t_id.0 > 0 {
+            model.back_teacher = Some(ctx_school.teachers[t_id.0 - 1].clone());
         }
-        None=>{}
+        if t_id.0 < ctx_school.teachers.len() - 1 {
+            model.next_teacher = Some(ctx_school.teachers[t_id.0 + 1].clone());
+        }
     }
     model
 }
@@ -115,9 +112,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::Home => {
             //log!("teacher:", ctx_school);
         }
-        Msg::Activities(msg)=>{
-
-            if let Pages::Activity(m)= &mut model.page{
+        Msg::Activities(msg)=> {
+            if let Pages::Activity(m) = &mut model.page {
                 activities::update(msg, m, &mut orders.proxy(Msg::Activities), _ctx, ctx_school, ctx_group)
             }
         }
@@ -138,8 +134,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     first_name: model.teacher.first_name.clone(),
                     last_name: model.teacher.last_name.clone(),
                     is_active: model.teacher.is_active,
-                    email: model.teacher.email.clone().unwrap_or("".to_string()),
-                    tel: model.teacher.tel.clone().unwrap_or("".to_string()),
+                    email: model.teacher.email.clone().unwrap_or_else(|| "".to_string()),
+                    tel: model.teacher.tel.clone().unwrap_or_else(|| "".to_string()),
                     password1: "".to_string(),
                     password2: "".to_string()
                 };
@@ -473,9 +469,9 @@ pub fn tab(model: &Model, ctx_school: &SchoolContext, ctx_group: &GroupContext)-
 
 fn active_tab(page: &Pages, i: u8)->bool{
     match page{
-        Pages::Home=>{if i == 0{true}else{false}},
-        Pages::Activity(_m)=>{if i == 1{true}else{false}},
-        Pages::Limitation(_m) => {if i == 2{true}else{false}},
-        Pages::Timetable(_m)=>{if i == 3{true}else{false}},
+        Pages::Home=>{i == 0},
+        Pages::Activity(_m)=>{i == 1},
+        Pages::Limitation(_m) => {i == 2},
+        Pages::Timetable(_m)=>{i == 3},
     }
 }

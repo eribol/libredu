@@ -13,8 +13,6 @@ pub struct Form{
 }
 
 pub fn init(_url: Url, ctx_school: &mut SchoolContext, group: &ClassGroups, orders: &mut impl Orders<Msg>) -> Model{
-    let mut model = Model::default();
-    model.group = group.clone();
     orders.perform_cmd({
         let url = format!("/api/schools/{}/groups/{}/schedules", ctx_school.school.id, group.id);
         let request = Request::new(url)
@@ -30,7 +28,9 @@ pub fn init(_url: Url, ctx_school: &mut SchoolContext, group: &ClassGroups, orde
             }.await)
         }
     });
-    model
+    Model{
+        group: group.clone(), ..Default::default()
+    }
 }
 #[derive(Debug, Default, Clone)]
 pub struct Model{
@@ -52,12 +52,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::ChangeTime => {
         }
         Msg::FetchSchedules(schedules) => {
-            match schedules{
-                Ok(s) => {
-                    model.form = s.clone();
-                }
-                Err(_) => {
-                }
+            if let Ok(s) = schedules {
+                model.form = s;
             }
         }
         Msg::UpdateSchedules => {
@@ -79,9 +75,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             });
         }
         Msg::ChangeStartTime(u, t) => {
-            if model.form.len() == 0{
+            if model.form.is_empty(){
                 let new = Form{
-                    group_id: model.group.id.clone(),
+                    group_id: model.group.id,
                     hour: (u+1)as i32,
                     start_time: NaiveTime::parse_from_str(&t, "%H:%M").unwrap(),
                     end_time: NaiveTime::parse_from_str("00:00", "%H:%M").unwrap()
@@ -93,9 +89,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             }
         }
         Msg::ChangeEndTime(u, t) => {
-            if model.form.len() == 0{
+            if model.form.is_empty(){
                 let new = Form{
-                    group_id: model.group.id.clone(),
+                    group_id: model.group.id,
                     hour: (u+1)as i32,
                     start_time: NaiveTime::parse_from_str("00:00", "%H:%M").unwrap(),
                     end_time: NaiveTime::parse_from_str(&t, "%H:%M").unwrap(),

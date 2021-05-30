@@ -19,7 +19,7 @@ pub struct Menu{
 #[derive(Debug)]
 enum Pages{
     Home,
-    Detail(detail::Model),
+    Detail(Box<detail::Model>),
 }
 
 impl Default for Pages{
@@ -39,7 +39,7 @@ pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, ctx: &mut Context)->Mod
             model.page = Pages::Home
         }
         _ => {
-            model.page = Pages::Detail(detail::init(url.clone(),&mut orders.proxy(Msg::DetailPage),ctx));
+            model.page = Pages::Detail(Box::new(detail::init(url.clone(),&mut orders.proxy(Msg::DetailPage),ctx)));
         }
     }
 

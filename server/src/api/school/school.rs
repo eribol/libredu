@@ -19,7 +19,7 @@ pub async fn schools(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     let schools = req.get_schools().await?;
     res.set_body(Body::from_json(&schools)?);
-    res.insert_header("content-type", "application/json");
+    //res.insert_header("content-type", "application/json");
     Ok(res)
 }
 pub async fn school_type(req: Request<AppState>) -> tide::Result {

@@ -14,8 +14,7 @@ pub enum Msg{
     FetchSchool
 }
 pub fn init(_url: Url, _orders: &mut impl Orders<Msg>, _ctx: &mut Context)->Model{
-    let model = Model::default();
-    model
+    Model::default()
 }
 
 pub fn update(msg: Msg, _model: &mut Model, _orders: &mut impl Orders<Msg>, _ctx: &mut Context) {
@@ -28,11 +27,11 @@ pub fn update(msg: Msg, _model: &mut Model, _orders: &mut impl Orders<Msg>, _ctx
 
 pub fn view(_model: &Model, ctx: &Context)-> Node<Msg>{
     div![
-        ctx.school.iter().map( |school|
+        ctx.schools.iter().map( |ctx_school|
             a![
-                &school.name,
+                &ctx_school.school.name,
                 attrs!{
-                    At::Href => format!("/schools/{}", school.id)
+                    At::Href => format!("/schools/{}", ctx_school.school.id)
                 }
             ]
         )

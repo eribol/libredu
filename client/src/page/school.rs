@@ -20,7 +20,7 @@ pub struct Model{
 pub enum SchoolPage{
     Home,
     Add(add::Model),
-    Detail(detail::Model),
+    Detail(Box<detail::Model>),
     //NotFound
 }
 
@@ -40,14 +40,14 @@ pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, ctx: &mut Context) ->Mo
         },
         _ => {
             Model {
-                page: SchoolPage::Detail(detail::init(url, &mut orders.proxy(Msg::DetailSchool), ctx))
+                page: SchoolPage::Detail(Box::new(detail::init(url, &mut orders.proxy(Msg::DetailSchool), ctx)))
             }
         }
     }
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &mut Context) {
-    //let ctx_school = &mut model.
+    let _ctx_school = &mut ctx.schools.iter_mut().find(|a| a.school.id == 720917).unwrap();
     match msg{
         Msg::AddSchool(msg)=>{
             if let SchoolPage::Add(model) = &mut model.page {

@@ -118,7 +118,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchClass(class)=>{
             model.class = class.unwrap();
             orders.perform_cmd({
-                let url = format!("/api/days");
+                let url = "/api/days".to_string();
                 let request = Request::new(url)
                     .method(Method::Get);
                 async {
@@ -229,7 +229,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
 
                         if !model.limitation.iter().any(|ta| ta.day.id == d.id) {
                             let hours = vec![true; ctx_group.group.hour as usize];
-                            model.limitation.push(ClassAvailable { day: d.clone(), hours: hours });
+                            model.limitation.push(ClassAvailable { day: d.clone(), hours });
                             changed = true;
                         }
                         if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
@@ -258,11 +258,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     }
                 }
                 Err(_)=>{
-                    if model.limitation.len()==0{
+                    if model.limitation.is_empty(){
                         for d in model.days.iter() {
                             if !model.limitation.iter().any(|ta| ta.day.id == d.id) {
                                 let hours = vec![false; ctx_group.group.hour as usize];
-                                model.limitation.push(ClassAvailable { day: d.clone(), hours: hours })
+                                model.limitation.push(ClassAvailable { day: d.clone(), hours })
                             }
                             if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
                                 let hours = vec![false; ctx_group.group.hour as usize];

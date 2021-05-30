@@ -51,8 +51,6 @@ pub struct Model{
 }
 
 pub fn init(class: i32, orders: &mut impl Orders<Msg>, ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext)-> Model{
-    let mut model = Model::default();
-    model.group = ctx_group.group.clone();
     orders.perform_cmd({
         let url = format!("/api/schools/{}/groups/{}/classes/{}", ctx_school.school.id, &ctx_group.group.id, &class);
         let request = Request::new(url)
@@ -83,9 +81,8 @@ pub fn init(class: i32, orders: &mut impl Orders<Msg>, ctx_school: &mut SchoolCo
             }.await)
         }
     });
-
     orders.perform_cmd({
-        let url = format!("/api/days");
+        let url = "/api/days".to_string();
         let request = Request::new(url)
             .method(Method::Get);
         async {
@@ -99,7 +96,7 @@ pub fn init(class: i32, orders: &mut impl Orders<Msg>, ctx_school: &mut SchoolCo
             }.await)
         }
     });
-    model
+    Model {group: ctx_group.group.to_owned(), ..Default::default() }
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext) {
@@ -110,30 +107,24 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             model.activities.append(&mut act.unwrap());
         }
         Msg::FetchClass(class)=>{
-            match class{
-                Ok(cls) => {
-                    model.class = cls;
-                    orders.perform_cmd({
-                        let url = format!("/api/schools/{}/subjects", ctx_school.school.id);
-                        let request = Request::new(url)
-                            .method(Method::Get);
-                        async {
-                            Msg::FetchSubjects(async {
-                                request
-                                    .fetch()
-                                    .await?
-                                    .check_status()?
-                                    .json()
-                                    .await
-                            }.await)
-                        }
-                    });
-                }
-                Err(e) => {
-                    log!(e);
-                }
+            if let Ok(cls) = class {
+                model.class = cls;
+                orders.perform_cmd({
+                    let url = format!("/api/schools/{}/subjects", ctx_school.school.id);
+                    let request = Request::new(url)
+                        .method(Method::Get);
+                    async {
+                        Msg::FetchSubjects(async {
+                            request
+                                .fetch()
+                                .await?
+                                .check_status()?
+                                .json()
+                                .await
+                        }.await)
+                    }
+                });
             }
-
         }
         Msg::FetchDays(days)=>{
             model.days=days.unwrap();
@@ -156,24 +147,18 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             }
         }
         Msg::FetchSubjects(subjects)=>{
-            match subjects{
-                Ok(sbjcts) => {
-                    //log!(&sbjcts);
-                    model.subjects = sbjcts.clone().into_iter().filter(|s| s.kademe == model.class.kademe).collect();
-                    if model.subjects.len() > 0 {
-                        model.act_form.subject = model.subjects[0].id;
-                    }
-                    if ctx_school.teachers.len() > 0 {
-                        model.act_form.teacher = ctx_school.teachers[0].id;
-                    }
+            if let Ok(sbjcts) = subjects {
+                model.subjects = sbjcts.into_iter().filter(|s| s.kademe == model.class.kademe).collect();
+                if model.subjects.is_empty() {
+                    model.act_form.subject = model.subjects[0].id;
                 }
-                Err(_) => {
-                    //log!(e);
+                if ctx_school.teachers.is_empty() {
+                    model.act_form.teacher = ctx_school.teachers[0].id;
                 }
             }
         }
         Msg::FetchActivities(acts)=>{
-            model.activities = acts.unwrap_or(vec![]);
+            model.activities = acts.unwrap_or_default();
         }
         Msg::DeleteActivity(id)=>{
             let i =id.parse::<i32>().unwrap();
@@ -193,20 +178,17 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             });
         }
         Msg::FetchDeleteAct(id)=>{
-            match id{
-                Ok(i)=>{
-                    model.activities.retain(|a| a.id != i.parse::<i32>().unwrap())
-                }
-                Err(_)=>{}
+            if let Ok(i) = id {
+                model.activities.retain(|a| a.id != i.parse::<i32>().unwrap())
             }
 
         }
         Msg::SubmitActivity=>{
-            if model.act_form.classes.len() == 0{
+            if model.act_form.classes.is_empty(){
                 model.act_form.classes.push(model.class.id);
             }
             model.act_form.split = false;
-            if model.act_form.teacher != 0 && model.act_form.subject != 0 && model.act_form.hour !=""{
+            if model.act_form.teacher != 0 && model.act_form.subject != 0 && !model.act_form.hour.is_empty(){
                 orders.perform_cmd({
                     let url = format!("/api/schools/{}/groups/{}/activities", ctx_school.school.id, &ctx_group.group.id);
                     let request = Request::new(url)

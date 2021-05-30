@@ -38,7 +38,7 @@ pub enum Msg{
 pub enum Pages{
     Home,
     Students(students::Model),
-    Activity(activities::Model),
+    Activity(Box<activities::Model>),
     Limitations(limitations::Model),
     Timetables(timetables::Model),
     //NotFound
@@ -65,7 +65,7 @@ pub fn init(mut url: Url, _orders: &mut impl Orders<Msg>, ctx_school: &mut Schoo
     //let classes: Vec<Class> = ctx_group.classes.clone().into_iter().filter(|c| c.group_id == class.1.group_id).collect();
     let class = ctx_group.classes.iter().enumerate().find(|c| c.1.id == class.parse::<i32>().unwrap()).unwrap();
     model.class = class.1.clone();
-    if class.0 > ctx_group.classes.len() || ctx_group.classes.len() == 0{
+    if class.0 > ctx_group.classes.len() || ctx_group.classes.is_empty(){
         model.next_class = None;
         model.prev_class = None
     }
@@ -75,7 +75,7 @@ pub fn init(mut url: Url, _orders: &mut impl Orders<Msg>, ctx_school: &mut Schoo
     else {
         model.next_class = Some(ctx_group.classes[class.0+1].id);
     }
-    if class.0 <= 0 {
+    if class.0 < 1 {
         model.prev_class = None
     }
     else {
@@ -91,7 +91,7 @@ pub fn init(mut url: Url, _orders: &mut impl Orders<Msg>, ctx_school: &mut Schoo
             model.tab = "limitations".to_string();
         }
         Some("activities") => {
-            model.page = Pages::Activity(activities::init(model.class.id,&mut _orders.proxy(Msg::Activity), ctx_school, ctx_group));
+            model.page = Pages::Activity(Box::new(activities::init(model.class.id,&mut _orders.proxy(Msg::Activity), ctx_school, ctx_group)));
             model.tab = "activities".to_string();
         }
         Some("timetables") => {
@@ -134,13 +134,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             }
         }
         Msg::FetchGroup(group) => {
-            match group{
-                Ok(g) => {
-                    ctx_school.groups.push(g)
-                }
-                Err(_) => {
-                    //model.group = None
-                }
+            if group.is_ok(){
             }
         }
     }

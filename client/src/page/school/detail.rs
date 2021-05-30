@@ -6,17 +6,17 @@ use crate::model::school::{SchoolDetail, UpdateSchoolForm};
 use crate::model::user::Teacher;
 use crate::model::class::Class;
 use crate::model::post::SchoolPost;
-use crate::page::school::group::group;
-use crate::page::school::{students, subjects, class_rooms, library};
+use crate::page::school::group::home;
+use crate::page::school::{students, subjects, class_rooms};
+use crate::model::student::Student;
+use crate::model::class_room::Classroom;
+use crate::model::subject::Subject;
 
 
 #[derive(Debug, Default)]
 pub struct Model{
     url: Url,
-    menu: Vec<SchoolMenu>,
     page: Pages,
-    school: SchoolDetail,
-    //role: i16,
     groups: Vec<ClassGroups>,
     form: UpdateSchoolForm,
     group_form: GroupForm,
@@ -34,7 +34,7 @@ pub struct GroupForm{
 pub enum Pages{
     Home,
     Detail(SchoolDetail),
-    Group(group::Model),
+    Group(Box<home::Model>),
     Students(students::Model),
     Subjects(subjects::Model),
     Classrooms(class_rooms::Model),
@@ -52,7 +52,7 @@ pub enum Msg{
     //Timetable(timetable::Msg),
     //Teachers(teachers::Msg),
     Home,
-    Group(group::Msg),
+    Group(home::Msg),
     Students(students::Msg),
     Subjects(subjects::Msg),
     Classrooms(class_rooms::Msg),
@@ -75,6 +75,8 @@ pub enum Msg{
 pub fn init(url: Url, orders: &mut impl Orders<Msg>, _ctx: &mut Context) ->Model {
     let mut model = Model::default();
     let id = &url.path()[1];
+    //log!(&_ctx.schools);
+    model.ctx_school = _ctx.schools.clone().into_iter().find(|s| s.school.id == id.parse::<i32>().unwrap()).unwrap();
     orders.perform_cmd({
         let adres = format!("/api/schools/{}/detail", &id);
         let request = Request::new(adres)
@@ -94,30 +96,19 @@ pub fn init(url: Url, orders: &mut impl Orders<Msg>, _ctx: &mut Context) ->Model
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context) {
-    let _menu = &mut model.menu;
     let ctx_school = &mut model.ctx_school;
     //ctx_school.school =
     match msg{
         Msg::Home => {
         }
-        Msg::FetchTeachers(t)=>{
-            match t{
-                Ok(teacher)=>{
-                    ctx_school.teachers = teacher;
-                    //orders.send_msg(Msg::ChangePage);
-                }
-                Err(_)=>{}
+        Msg::FetchTeachers(teacher)=>{
+            if let Ok(t) = teacher {
+                ctx_school.teachers = t;
             }
         }
         Msg::FetchPosts(posts) => {
-            match posts{
-                Ok(p) => {
-                    model.posts = p;
-                    //model.page = Pages::Home
-                }
-                Err(_) => {
-                    //model.page = Pages::NotFound
-                }
+            if let Ok(p) = posts {
+                model.posts = p;
             }
         }
         Msg::UpdateSubmit=>{
@@ -144,9 +135,22 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::UpdateFetch(s)=>{
             match s{
                 Ok(school) => {
-                    LocalStorage::insert("libredu-school", &school).expect("");
-                    _ctx.school.retain(|s| s.id != model.school.id);
-                    _ctx.school.push(school);
+                    //_ctx.schools.retain(|s| s.school.id != model.school.id);
+
+                    orders.perform_cmd({
+                        let adres = format!("/api/schools/{}/detail", &school.id);
+                        let request = Request::new(adres)
+                            .method(Method::Get);
+                        async { Msg::FetchDetail(async {
+                            request
+                                .fetch()
+                                .await?
+                                .check_status()?
+                                .json()
+                                .await
+                        }.await)}
+                    });
+                    //SessionStorage::insert("schools", &school).expect("");
                 }
                 Err(_) => {
                     model.form = UpdateSchoolForm{
@@ -164,52 +168,41 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             model.form.name = name;
         }
         Msg::FetchClassGroups(groups) => {
-            match groups{
-                Ok(g) => {
-                    model.groups = g.clone();
-                    ctx_school.groups = g;
-                    match model.url.next_path_part(){
-                        Some("")  | None => {
-                            model.page = Pages::Home;
-                        },
-                        Some("students") => {
-                            model.page = Pages::Students(students::init(model.url.clone(),&mut orders.proxy(Msg::Students),ctx_school));
-                        },
-                        Some("groups") => {
-                            match model.url.next_path_part(){
-                                _ => {
-                                    model.page = Pages::Group(group::init(model.url.clone(), ctx_school, &mut orders.proxy(Msg::Group)));
-                                }
-                            }
-
-                        },
-                        Some("subjects") => {
-                            model.page = Pages::Subjects(subjects::init(&mut orders.proxy(Msg::Subjects), ctx_school))
-                        }/*
-                        Some("teachers") => {
-                            model.page = Pages::Teachers(teachers::init(model.url.clone(), &mut orders.proxy(Msg::Teachers), _ctx, ctx_school))
-                        }*/
-                        Some("detail") => {
-                            model.page = Pages::Detail(SchoolDetail::default())
-                        },
-                        Some("class_rooms") => {
-                            model.page = Pages::Classrooms(class_rooms::init(&mut orders.proxy(Msg::Classrooms), ctx_school))
-                        }
-                        //Some("library") => {
-                          //  model.page = Pages::Library(library::home::init(&mut model.url, &mut orders.proxy(Msg::Library), ctx_school))
-                        //}
-                        _ => {
-                            model.page = Pages::NotFound
-                        }
-                    };
-
-                }
-                Err(_) => {}
+            if let Ok(g) = groups {
+                model.groups = g;
+                //ctx_school.groups = g;
+                match model.url.next_path_part() {
+                    Some("") | None => {
+                        model.page = Pages::Home;
+                    },
+                    Some("students") => {
+                        model.page = Pages::Students(students::init(model.url.clone(), &mut orders.proxy(Msg::Students), ctx_school));
+                    },
+                    Some("groups") => {
+                        let _url = model.url.next_path_part();
+                        model.page = Pages::Group(Box::new(home::init(model.url.clone(), ctx_school, &mut orders.proxy(Msg::Group))));
+                    },
+                    Some("subjects") => {
+                        model.page = Pages::Subjects(subjects::init(&mut orders.proxy(Msg::Subjects), ctx_school))
+                    }
+                    Some("detail") => {
+                        model.page = Pages::Detail(SchoolDetail::default())
+                    },
+                    Some("class_rooms") => {
+                        model.page = Pages::Classrooms(class_rooms::init(&mut orders.proxy(Msg::Classrooms), ctx_school))
+                    }
+                    //Some("library") => {
+                    //  model.page = Pages::Library(library::home::init(&mut model.url, &mut orders.proxy(Msg::Library), ctx_school))
+                    //}
+                    _ => {
+                        model.page = Pages::NotFound
+                    }
+                };
             }
         }
         Msg::Group(msg)=>{
             if let Pages::Group(m)= &mut model.page{
-                group::update(msg, m, &mut orders.proxy(Msg::Group), _ctx, ctx_school)
+                home::update(msg, m, &mut orders.proxy(Msg::Group), _ctx, ctx_school)
             }
         }
         Msg::Students(msg)=>{
@@ -233,6 +226,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             }
         }*/
         Msg::FetchDetail(Ok(school))=> {
+            //_ctx.schools.push(school);
             ctx_school.school = school.1.clone();
             ctx_school.role = school.0;
             model.form = UpdateSchoolForm{
@@ -242,27 +236,23 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 city: ctx_school.school.city.clone(),
                 town: ctx_school.school.town.clone()
             };
-            match _ctx.user{
-                Some(_) => {
-                    orders.perform_cmd({
-                        let adres = format!("/api/schools/{}/teachers", &ctx_school.school.id);
-                        let request = Request::new(adres)
-                            .method(Method::Get);
-                        async {
-                            Msg::FetchTeachers(async {
-                                request
-                                    .fetch()
-                                    .await?
-                                    .check_status()?
-                                    .json()
-                                    .await
-                            }.await)
-                        }
-                    });
-                }
-                None => {}
+            if _ctx.user.is_some() {
+                orders.perform_cmd({
+                    let adres = format!("/api/schools/{}/teachers", &ctx_school.school.id);
+                    let request = Request::new(adres)
+                        .method(Method::Get);
+                    async {
+                        Msg::FetchTeachers(async {
+                            request
+                                .fetch()
+                                .await?
+                                .check_status()?
+                                .json()
+                                .await
+                        }.await)
+                    }
+                });
             }
-
             orders.perform_cmd({
                 let adres = format!("/api/schools/{}/groups", model.ctx_school.school.id);
                 let request = Request::new(adres)
@@ -293,36 +283,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     }.await)
                 }
             });
-            model.menu = vec![
-                SchoolMenu {
-                    link: "".to_string(),
-                    name: "Anasayfa".to_string()
-                },
-                SchoolMenu {
-                    link: "detail".to_string(),
-                    name: "Okul Bilgiler".to_string()
-                },
-                SchoolMenu {
-                    link: "students".to_string(),
-                    name: "Öğrenciler".to_string()
-                },
-                SchoolMenu {
-                    link: "subjects".to_string(),
-                    name: "Dersler".to_string()
-                },
-                SchoolMenu {
-                    link: "class_rooms".to_string(),
-                    name: "Derslikler".to_string()
-                },
-                //SchoolMenu {
-                //    link: "library".to_string(),
-                //    name: "Kütüphane".to_string()
-                //}
-            ]
         }
         Msg::FetchDetail(Err(_))=>{
-            model.menu = vec![
-                ];
             model.page = Pages::NotFound
         }
         Msg::TelChanged(tel) => {
@@ -345,12 +307,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             }
         }
         Msg::FetchGroup(group) => {
-            match group {
-                Ok(g) => {
-                    log!("eklendi");
-                    ctx_school.groups.push(g);
-                }
-                Err(_) => {}
+            if group.is_ok() {
             }
         }
         Msg::AddGroup => {
@@ -384,13 +341,13 @@ pub fn view(model: &Model, ctx: &Context)-> Node<Msg>{
                     C!{"menu-label"},
                     &model.ctx_school.school.name
                 ],
-                menus(&model.menu, ctx, ctx_school, model),
+                menus(ctx, ctx_school, model),
                 p![
                     C!{"menu-label"},
                     "Gruplar",
                     ul![
                         C!{"menu-list"},
-                        model.ctx_school.groups.iter().map(|g|
+                        model.groups.iter().map(|g|
                             li![
                                 a![
                                     attrs!{
@@ -435,7 +392,7 @@ pub fn view(model: &Model, ctx: &Context)-> Node<Msg>{
                 detail_page(model, ctx)
             }
             Pages::Group(m) => {
-                group::view(m, ctx, &ctx_school).map_msg(Msg::Group)
+                home::view(m, ctx, &ctx_school).map_msg(Msg::Group)
             }
             Pages::NotFound => not_found(),
             Pages::Home => {
@@ -457,10 +414,11 @@ pub fn view(model: &Model, ctx: &Context)-> Node<Msg>{
     ]
 }
 
-pub fn menus(menu: &Vec<SchoolMenu>, ctx: &Context, ctx_school: &SchoolContext, model: &Model) -> Node<Msg>{
+pub fn menus(ctx: &Context, ctx_school: &SchoolContext, model: &Model) -> Node<Msg>{
+    use crate::model::school::LIST;
     ul![
         C!{"menu-list"},
-        menu.iter().map(|m|
+        LIST.iter().map(|m|
             li![
                 a![
                     C!{
@@ -468,7 +426,7 @@ pub fn menus(menu: &Vec<SchoolMenu>, ctx: &Context, ctx_school: &SchoolContext, 
                     },
                     &m.name,
                     attrs![
-                        At::Href=> crate::Urls::new(&ctx.base_url).school_pages(ctx_school.school.id, &m.link)
+                        At::Href=> crate::Urls::new(&ctx.base_url).school_pages(ctx_school.school.id, m.link)
                     ]
                 ]
             ]
@@ -476,23 +434,22 @@ pub fn menus(menu: &Vec<SchoolMenu>, ctx: &Context, ctx_school: &SchoolContext, 
     ]
 }
 
-fn active_menu (page: &Pages, menu: &SchoolMenu) -> bool{
+fn active_menu (page: &Pages, menu: &crate::model::school::SchoolMenu) -> bool{
     match page{
         Pages::Detail(_m) => {
-            if menu.link == "detail"{
-                true
-            }
-            else {
-                false
-            }
+            menu.link == "detail"
+        }
+        Pages::Students(_) => {
+            menu.link == "students"
+        }
+        Pages::Classrooms(_) => {
+            menu.link == "class_rooms"
+        }
+        Pages::Subjects(_) => {
+            menu.link == "subjects"
         }
         Pages::Home => {
-            if menu.link == ""{
-                true
-            }
-            else {
-                false
-            }
+            menu.link.is_empty()
         }
         _ => {
             false
@@ -626,7 +583,7 @@ fn detail_page(model: &Model, ctx: &Context)-> Node<Msg> {
                 label![C!{"label"}, "İli:"],
                 p![C!{"control has-icons-left"},
                     label![C!{"label"},
-                        &model.school.city.name,
+                        &model.ctx_school.school.city.name,
                     ]
                 ]
             ],
@@ -634,7 +591,7 @@ fn detail_page(model: &Model, ctx: &Context)-> Node<Msg> {
                 label![C!{"label"}, "İlçesi:"],
                 p![C!{"control has-icons-left"},
                     label![C!{"label"},
-                        &model.school.town.name,
+                        &model.ctx_school.school.town.name,
                     ]
                 ]
             ],
@@ -723,19 +680,14 @@ fn detail_page(model: &Model, ctx: &Context)-> Node<Msg> {
     }
 }
 
-fn disabled(model: &Model, ctx: &Context) -> bool{
+fn disabled(_: &Model, ctx: &Context) -> bool{
     if ctx.user.is_none(){
-        return true
+        return true;
     }
     else if ctx.user.as_ref().unwrap().is_admin {
-        return false
+        return false;
     }
-    else if ctx.school.iter().any(|s| s.id == model.school.id) {
-        return false
-    }
-    else {
-        return true
-    }
+    !ctx.schools.iter().any(|s| s.school.id == 1)
 }
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct City {
@@ -750,16 +702,20 @@ pub struct Town {
     pub name: String,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct SchoolContext{
     pub teachers: Vec<Teacher>,
     pub role: i16,
     //pub classes: Vec<Class>,
-    pub groups: Vec<ClassGroups>,
-    pub school: SchoolDetail
+    pub groups: Option<Vec<ClassGroups>>,
+    pub school: SchoolDetail,
+    pub students: Option<Vec<Student>>,
+    pub subjects: Option<Vec<Subject>>,
+    pub class_rooms: Option<Vec<Classroom>>,
+    pub menu: Vec<SchoolMenu>
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default,Clone)]
 pub struct SchoolMenu{
     pub link: String,
     pub name: String,

@@ -12,7 +12,7 @@ use crate::model::class::Class;
 pub enum Pages{
     Home,
     Classes(classes::Model),
-    Teachers(teachers::Model),
+    Teachers(Box<teachers::Model>),
     Schedules(schedules::Model),
     CommonExam(common_exam::Model),
     Timetables(timetable::Model),
@@ -64,17 +64,18 @@ pub enum Msg{
 }
 
 pub fn init(url: Url, ctx_school: &mut SchoolContext, orders: &mut impl Orders<Msg>) -> Model{
-    let mut model = Model::default();
-    model.url = url.clone();
-    let group_id = &url.path()[3];
-    let group = ctx_school.groups.iter().find(|g| g.id == group_id.parse::<i32>().unwrap());
+    let mut model = Model{
+        url: url.clone(), ..Default::default()
+    };
+    let _group_id = &url.path()[3];
+    let group = ctx_school.groups.as_ref();
     match group{
-        Some(g) =>{
-            model.ctx_group.group = g.clone();
-            model.form.hour = g.hour.clone();
-            model.form.name = g.name.clone();
+        Some(_) =>{
+            //model.ctx_group.group = "g.clone()".to_string();
+            //model.form.hour = g.hour.clone();
+            //model.form.name = g.name.clone();
             model.menu = vec![
-                Menu{ link: "".to_string(), title: g.name.clone() },
+                Menu{ link: "".to_string(), title: "g.name.clone()".to_string() },
                 Menu{ link: "schedules".to_string(), title: "Zaman Çizelgesi".to_string() },
                 Menu{ link: "classes".to_string(), title: "Sınıflar".to_string() },
                 Menu{ link: "teachers".to_string(), title: "Öğretmenler".to_string() },
@@ -82,7 +83,7 @@ pub fn init(url: Url, ctx_school: &mut SchoolContext, orders: &mut impl Orders<M
                 Menu{ link: "timetables".to_string(), title: "Ders Programı".to_string() },
             ];
             orders.perform_cmd({
-                let adres = format!("/api/schools/{}/groups/{}/classes", &ctx_school.school.id, group_id);
+                let adres = format!("/api/schools/{}/groups/{}/classes", &ctx_school.school.id, 0);
                 let request = Request::new(adres)
                     .method(Method::Get);
                 async { Msg::FetchClasses(async {
@@ -111,19 +112,18 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchClasses(classes) => {
             match classes{
                 Ok(cls) =>{
-                    ctx_group.classes = cls.clone().into_iter().filter(|c| c.group_id == ctx_group.group.id).collect();
+                    ctx_group.classes = cls.into_iter().filter(|c| c.group_id == ctx_group.group.id).collect();
                     match model.url.next_path_part(){
                         Some("") | None => model.page = Pages::Home,
                         Some("schedules") => model.page = Pages::Schedules(schedules::init(model.url.clone(),ctx_school, &ctx_group.group, &mut orders.proxy(Msg::Schedules))),
                         Some("common_exam") => model.page = Pages::CommonExam(common_exam::init(model.url.clone(),ctx_school, &mut orders.proxy(Msg::CommonExam), ctx_group)),
                         Some("classes") => model.page = Pages::Classes(classes::init(model.url.clone(),&mut orders.proxy(Msg::Classes),ctx_school, ctx_group)),
-                        Some("teachers") => model.page = Pages::Teachers(teachers::init(model.url.clone(),&mut orders.proxy(Msg::Teachers),_ctx, ctx_school, ctx_group)),
+                        Some("teachers") => model.page = Pages::Teachers(Box::new(teachers::init(model.url.clone(),&mut orders.proxy(Msg::Teachers),_ctx, ctx_school, ctx_group))),
                         Some("timetables") => model.page = Pages::Timetables(timetable::init(&mut orders.proxy(Msg::Timetables), ctx_school, ctx_group)),
                         _ => model.page = Pages::NotFound
                     }
                 }
-                Err(e) => {
-                    log!(e);
+                Err(_) => {
                     model.page = Pages::NotFound
                 }
             }
@@ -142,21 +142,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             model.form.name = name;
         }
         Msg::ChangeHour(hour) => {
-            match hour.parse::<i32>(){
-                Ok(h) => {
-                    model.form.hour = h
-                }
-                Err(_) => {}
+            if let Ok(h) = hour.parse::<i32>() {
+                model.form.hour = h
             }
-
         }
         Msg::FetchUpdateGroup(group) => {
-            match group {
-                Ok(g) => {
-                    ctx_school.groups.retain(|gg| gg.id != g.id);
-                    ctx_school.groups.push(g);
-                }
-                Err(_) => {}
+            if group.is_ok() {
             }
         }
         Msg::UpdateGroup => {
@@ -193,11 +184,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             });
         }
         Msg::FetchDelGroup(group) => {
-            match group {
-                Ok(g) => {
-                    ctx_school.groups.retain(|gg| gg.id != g.id);
-                }
-                Err(_) => {}
+            if group.is_ok() {
             }
         }
         Msg::Classes(msg)=>{

@@ -97,43 +97,34 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 let select2 = model.select2.get().unwrap().selected_options();
                 for s2 in 0..select2.length() {
                     let item2 = select2.item(s2);//.unwrap().dyn_into::<HtmlOptionElement>().unwrap();
-                    match item2 {
-                        Some(i2) => {
-                            if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
-                                i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
-                                orders.send_msg(Msg::ChangeGroup2("".to_string()));
-                                break;
-                            }
+                    if let Some(i2) = item2 {
+                        if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
+                            i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
+                            orders.send_msg(Msg::ChangeGroup2("".to_string()));
+                            break;
                         }
-                        None => {}
                     }
                 }
                 let select2 = model.select3.get().unwrap().selected_options();
                 for s2 in 0..select2.length() {
                     let item2 = select2.item(s2);//.unwrap().dyn_into::<HtmlOptionElement>().unwrap();
-                    match item2 {
-                        Some(i2) => {
-                            if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
-                                i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
-                                orders.send_msg(Msg::ChangeGroup3("".to_string()));
-                                break
-                            }
+                    if let Some(i2) = item2 {
+                        if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
+                            i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
+                            orders.send_msg(Msg::ChangeGroup3("".to_string()));
+                            break
                         }
-                        None => {}
                     }
                 }
                 let select2 = model.select4.get().unwrap().selected_options();
                 for s2 in 0..select2.length() {
                     let item2 = select2.item(s2);//.unwrap().dyn_into::<HtmlOptionElement>().unwrap();
-                    match item2 {
-                        Some(i2) => {
-                            if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
-                                i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
-                                orders.send_msg(Msg::ChangeGroup4("".to_string()));
-                                break
-                            }
+                    if let Some(i2) = item2 {
+                        if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
+                            i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
+                            orders.send_msg(Msg::ChangeGroup4("".to_string()));
+                            break
                         }
-                        None => {}
                     }
                 }
             }
@@ -148,43 +139,34 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 let select2 = model.select1.get().unwrap().selected_options();
                 for s2 in 0..select2.length() {
                     let item2 = select2.item(s2);//.unwrap().dyn_into::<HtmlOptionElement>().unwrap();
-                    match item2 {
-                        Some(i2) => {
-                            if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
-                                i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
-                                orders.send_msg(Msg::ChangeGroup1("".to_string()));
-                                break
-                            }
+                    if let Some(i2) = item2 {
+                        if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
+                            i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
+                            orders.send_msg(Msg::ChangeGroup1("".to_string()));
+                            break
                         }
-                        None => {}
                     }
                 }
                 let select2 = model.select3.get().unwrap().selected_options();
                 for s2 in 0..select2.length() {
                     let item2 = select2.item(s2);//.unwrap().dyn_into::<HtmlOptionElement>().unwrap();
-                    match item2 {
-                        Some(i2) => {
-                            if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
-                                i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
-                                orders.send_msg(Msg::ChangeGroup3("".to_string()));
-                                break
-                            }
+                    if let Some(i2) = item2 {
+                        if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
+                            i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
+                            orders.send_msg(Msg::ChangeGroup3("".to_string()));
+                            break
                         }
-                        None => {}
                     }
                 }
                 let select2 = model.select4.get().unwrap().selected_options();
                 for s2 in 0..select2.length() {
                     let item2 = select2.item(s2);//.unwrap().dyn_into::<HtmlOptionElement>().unwrap();
-                    match item2 {
-                        Some(i2) => {
-                            if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
-                                i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
-                                orders.send_msg(Msg::ChangeGroup4("".to_string()));
-                                break
-                            }
+                    if let Some(i2) = item2 {
+                        if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
+                            i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
+                            orders.send_msg(Msg::ChangeGroup4("".to_string()));
+                            break
                         }
-                        None => {}
                     }
                 }
             }
@@ -198,43 +180,34 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 let select2 = model.select1.get().unwrap().selected_options();
                 for s2 in 0..select2.length() {
                     let item2 = select2.item(s2);//.unwrap().dyn_into::<HtmlOptionElement>().unwrap();
-                    match item2 {
-                        Some(i2) => {
-                            if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
-                                i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
-                                orders.send_msg(Msg::ChangeGroup1("".to_string()));
-                                break
-                            }
+                    if let Some(i2) = item2 {
+                        if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
+                            i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
+                            orders.send_msg(Msg::ChangeGroup1("".to_string()));
+                            break
                         }
-                        None => {}
                     }
                 }
                 let select2 = model.select2.get().unwrap().selected_options();
                 for s2 in 0..select2.length() {
                     let item2 = select2.item(s2);//.unwrap().dyn_into::<HtmlOptionElement>().unwrap();
-                    match item2 {
-                        Some(i2) => {
-                            if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
-                                i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
-                                orders.send_msg(Msg::ChangeGroup2("".to_string()));
-                                break
-                            }
+                    if let Some(i2) = item2 {
+                        if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
+                            i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
+                            orders.send_msg(Msg::ChangeGroup2("".to_string()));
+                            break
                         }
-                        None => {}
                     }
                 }
                 let select2 = model.select4.get().unwrap().selected_options();
                 for s2 in 0..select2.length() {
                     let item2 = select2.item(s2);//.unwrap().dyn_into::<HtmlOptionElement>().unwrap();
-                    match item2 {
-                        Some(i2) => {
-                            if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
-                                i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
-                                orders.send_msg(Msg::ChangeGroup4("".to_string()));
-                                break
-                            }
+                    if let Some(i2) = item2 {
+                        if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
+                            i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
+                            orders.send_msg(Msg::ChangeGroup4("".to_string()));
+                            break
                         }
-                        None => {}
                     }
                 }
             }
@@ -248,43 +221,34 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 let select2 = model.select1.get().unwrap().selected_options();
                 for s2 in 0..select2.length() {
                     let item2 = select2.item(s2);//.unwrap().dyn_into::<HtmlOptionElement>().unwrap();
-                    match item2 {
-                        Some(i2) => {
-                            if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
-                                i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
-                                orders.send_msg(Msg::ChangeGroup1("".to_string()));
-                                break
-                            }
+                    if let Some(i2) = item2 {
+                        if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
+                            i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
+                            orders.send_msg(Msg::ChangeGroup1("".to_string()));
+                            break
                         }
-                        None => {}
                     }
                 }
                 let select2 = model.select2.get().unwrap().selected_options();
                 for s2 in 0..select2.length() {
                     let item2 = select2.item(s2);//.unwrap().dyn_into::<HtmlOptionElement>().unwrap();
-                    match item2 {
-                        Some(i2) => {
-                            if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
-                                i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
-                                orders.send_msg(Msg::ChangeGroup2("".to_string()));
-                                break
-                            }
+                    if let Some(i2) = item2 {
+                        if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
+                            i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
+                            orders.send_msg(Msg::ChangeGroup2("".to_string()));
+                            break
                         }
-                        None => {}
                     }
                 }
                 let select2 = model.select3.get().unwrap().selected_options();
                 for s2 in 0..select2.length() {
                     let item2 = select2.item(s2);//.unwrap().dyn_into::<HtmlOptionElement>().unwrap();
-                    match item2 {
-                        Some(i2) => {
-                            if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
-                                i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
-                                orders.send_msg(Msg::ChangeGroup3("".to_string()));
-                                break
-                            }
+                    if let Some(i2) = item2 {
+                        if item.value() == i2.clone().dyn_into::<HtmlOptionElement>().unwrap().value() {
+                            i2.dyn_into::<HtmlOptionElement>().unwrap().set_selected(false);
+                            orders.send_msg(Msg::ChangeGroup3("".to_string()));
+                            break
                         }
-                        None => {}
                     }
                 }
             }
@@ -297,7 +261,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 let room = model.class_rooms.iter().find(|c| c.id == item.value().parse::<i32>().unwrap()).unwrap();
                 model.selected_class_rooms.push(room.clone());
             }
-            if model.selected_class_rooms.len() == 0 {
+            if model.selected_class_rooms.is_empty() {
                 model.test = "Derslik seçmediniz".to_string()
             }
         }
@@ -357,7 +321,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             for cls in &model.selected_class_rooms{
                 t += cls.rw*cls.cl;
             }
-            if model.selected_class_rooms.len() == 0{
+            if model.selected_class_rooms.is_empty(){
                 model.test = "Herhangi bir derslik seçmediniz".to_string()
             }
             else if model.group1_pool.len() > t as usize{
@@ -461,11 +425,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
     }
 }
 
-fn find_desk(class_room_design: &Vec<ClassRoomDesing>, group1: &Vec<SimpleStudent>) -> (bool, usize, usize){
+fn find_desk(class_room_design: &[ClassRoomDesing], group1: &[SimpleStudent]) -> (bool, usize, usize){
     let mut id = 0;
     let mut wdt = 0;
     let mut placed = false;
-    for crd in 0..class_room_design.len(){
+    for (crd, _) in class_room_design.iter().enumerate(){
         //placed = false;
         if class_room_design[crd].width.iter().all(|w| w.is_none()){
             //log!("group1");

@@ -79,17 +79,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchCity(Err(_e))=>{
         }
         Msg::FetchSchoolType(types)=>{
-            match types{
-                Ok(t)=>{
-                    model.types = t;
-
-                }
-                Err(_)=>{}
+            if let Ok(t) = types {
+                model.types = t;
             }
-
         }
         Msg::SubmitSchool=>{
-           log!("{:?}", model.form);
             orders.perform_cmd({
                 let request = Request::new("/api/schools/add")
                     .method(Method::Post)
@@ -105,7 +99,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             });
         },
         Msg::FetchSchool(Ok(school))=>{
-            _ctx.school.push(school.clone());
+            //_ctx.schools.push(school.clone());
             orders.notify(
                 subs::UrlRequested::new(crate::Urls::new(&_ctx.base_url).school_detail(school.id))
             );
@@ -148,7 +142,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
 }
 
 fn add(model: &Model, ctx: &Context)-> Node<Msg>{
-    if ctx.school.len() == 0 && !ctx.user.is_none(){
+    if ctx.schools.is_empty() && ctx.user.is_some(){
         div![
         div![C!{"columns"},
             div![C!{"column is-2"}],

@@ -70,35 +70,28 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
 
         }
         Msg::FetchTeacher(t) => {
-            match t{
-                Ok(teacher) => {
-                    model.teacher = teacher;
-                    orders.perform_cmd({
-                        let url = format!("/api/schools/{}/groups/{}/teachers/{}/activities", ctx_school.school.id, ctx_group.group.id, model.teacher.id);
-                        let request = Request::new(url)
-                            .method(Method::Get);
-                        async {
-                            Msg::FetchActivities(async {
-                                request
-                                    .fetch()
-                                    .await?
-                                    .check_status()?
-                                    .json()
-                                    .await
-                            }.await)
-                        }
-                    });
-                }
-                Err(_) => {}
+            if let Ok(teacher) = t {
+                model.teacher = teacher;
+                orders.perform_cmd({
+                    let url = format!("/api/schools/{}/groups/{}/teachers/{}/activities", ctx_school.school.id, ctx_group.group.id, model.teacher.id);
+                    let request = Request::new(url)
+                        .method(Method::Get);
+                    async {
+                        Msg::FetchActivities(async {
+                            request
+                                .fetch()
+                                .await?
+                                .check_status()?
+                                .json()
+                                .await
+                        }.await)
+                    }
+                });
             }
-
         }
         Msg::FetchAct(act)=>{
-            match act{
-                Ok(mut a) => {
-                    model.activities.append(&mut a);
-                }
-                Err(_) => {}
+            if let Ok(mut a) = act {
+                model.activities.append(&mut a);
             }
         }
         Msg::ChangeActClass(_value)=>{
@@ -128,32 +121,22 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             model.act_form.subject = s.parse::<i32>().unwrap();
         }
         Msg::FetchSubjects(subjects)=>{
-            match subjects{
-                Ok(s) => {
-                    model.subjects = s.clone();
-                    model.selected_subjects = s.clone();
-                    if s.len() > 0{
-                        model.act_form.subject = model.subjects[0].id;
-                    }
-                    else {
-                        model.error = "Ders ekleyin.".to_string()
-                    }
+            if let Ok(s) = subjects {
+                model.subjects = s.clone();
+                model.selected_subjects = s.clone();
+                if !s.is_empty() {
+                    model.act_form.subject = model.subjects[0].id;
+                } else {
+                    model.error = "Ders ekleyin.".to_string()
                 }
-                Err(_) => {
-                }
-             }
+            }
 
         }
         Msg::FetchActivities(acts)=>{
-            match acts{
-                Ok(a) => {
-                    model.activities = a.clone().into_iter().filter(|a|
-                        ctx_group.classes.iter().any(|c| a.classes.iter().any(|a2| a2.id == c.id))
-                    ).collect()
-                }
-                Err(e) => {
-                    //log!(e);
-                }
+            if let Ok(a) = acts {
+                model.activities = a.into_iter().filter(|a|
+                    ctx_group.classes.iter().any(|c| a.classes.iter().any(|a2| a2.id == c.id))
+                ).collect()
             }
             orders.perform_cmd({
                 let url = format!("/api/schools/{}/subjects", ctx_school.school.id);
@@ -172,45 +155,36 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             });
         }
         Msg::DeleteActivity(id)=>{
-            let i =id.parse::<i32>().unwrap();
-            orders.perform_cmd({
-                let url = format!("/api/schools/{}/groups/{}/teachers/{}/activities/{}", ctx_school.school.id, ctx_group.group.id, model.teacher.id, i);
-                let request = Request::new(url)
-                    .method(Method::Delete);
-                async {
-                    Msg::FetchDeleteAct(async {
-                        request
-                            .fetch()
-                            .await?
-                            .text()
-                            .await
-                    }.await)
-                }
-            });
+            if let Ok(i) = id.parse::<i32>() {
+                orders.perform_cmd({
+                    let url = format!("/api/schools/{}/groups/{}/teachers/{}/activities/{}", ctx_school.school.id, ctx_group.group.id, model.teacher.id, i);
+                    let request = Request::new(url)
+                        .method(Method::Delete);
+                    async {
+                        Msg::FetchDeleteAct(async {
+                            request
+                                .fetch()
+                                .await?
+                                .text()
+                                .await
+                        }.await)
+                    }
+                });
+            }
         }
         Msg::FetchDeleteAct(id)=>{
-            match id{
-                Ok(i)=>{
-                    // This should change. It search all vec and remove but it does not stop when it find the right element.
-                    //log!(&i);
-                    let a = model.activities.iter().enumerate().find(|a| a.1.id == i.parse::<i32>().unwrap());
-                    match a{
-                        Some(aa) => {
-                            model.activities.remove(aa.0);
-                        }
-                        None => {}
-                    }
-
+            if let Ok(i) = id {
+                let a = model.activities.to_owned().into_iter().enumerate().find(|a| a.1.id == i.parse::<i32>().unwrap());
+                if let Some(aa) = a {
+                    model.activities.remove(aa.0);
                 }
-                Err(_)=>{}
             }
 
         }
         Msg::SubmitActivity=>{
             model.act_form.teacher = model.teacher.id;
             model.act_form.split = false;
-            if ctx_group.classes.len() > 0 && model.subjects.len() > 0{
-                if model.act_form.classes.len() != 0 && model.act_form.subject != 0 && model.act_form.hour != ""{
+            if !ctx_group.classes.is_empty() && !model.subjects.is_empty() && !model.act_form.classes.is_empty() && model.act_form.subject != 0 && !model.act_form.hour.is_empty(){
                     orders.perform_cmd({
                         let url = format!("/api/schools/{}/groups/{}/activities", ctx_school.school.id, ctx_group.group.id);
                         let request = Request::new(url)
@@ -227,7 +201,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                             }.await)
                         }
                     });
-                }
             }
 
         }
@@ -270,7 +243,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
     }
 }
 
-pub fn view(model: &Model, ctx_group: &GroupContext, ctx_school:&SchoolContext)->Node<Msg>{
+pub fn view(model: &Model, ctx_group: &GroupContext, _ctx_school:&SchoolContext)->Node<Msg>{
     div![
         C!{"columns"},
         div![

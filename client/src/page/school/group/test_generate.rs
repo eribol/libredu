@@ -1,10 +1,9 @@
 use serde::*;
 use crate::model;
 use crate::page::school::detail;
-use crate::page::school::group::timetable::{Activity, ClassAvailable, NewClassTimetable};
+use crate::page::school::group::timetable::{Activity, ClassAvailable};
 use crate::model::user::Teacher;
 use crate::model::class::Class;
-use crate::page::school::group::generate::put_activity;
 use crate::page::school::detail::GroupContext;
 
 
@@ -35,13 +34,13 @@ pub struct ActTeacher{
 }
 
 pub fn tests(
-    acts: &Vec<Activity>,
+    acts: &[Activity],
     max_day_hour: i32,
     tests: &mut Tests,
     ctx_school: &mut detail::SchoolContext,
     ctx_group: &mut GroupContext,
-    tat: &Vec<model::teacher::TeacherAvailableForTimetables>,
-    cat: &Vec<ClassAvailable>
+    tat: &[model::teacher::TeacherAvailableForTimetables],
+    cat: &[ClassAvailable]
 ){
     let _fail_acts: Vec<Activity> = acts.iter().cloned().filter(|a| a.hour > max_day_hour as i16).collect();
     tests.classes.clear();
@@ -75,7 +74,7 @@ pub fn tests(
                 }
             }
         }
-        if total_act_hour > total_available_hour || tat.len() == 0{
+        if total_act_hour > total_available_hour || tat.is_empty(){
             tests.teachers.push(teacher.clone())
         }
     }
@@ -91,7 +90,7 @@ pub fn tests(
                 }
             }
         }
-        if total_act_hour > total_available_hour || cat.len() == 0{
+        if total_act_hour > total_available_hour || cat.is_empty(){
             tests.classes.push(class.clone())
         }
     }

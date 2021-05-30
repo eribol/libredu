@@ -38,7 +38,7 @@ pub trait Auth{
     async fn user(&self)->sqlx_core::Result<AuthUser>;
     async fn is_auth(&self)-> bool;
     async fn get_school(&self)-> sqlx_core::Result<SchoolDetail>;
-    async fn get_schools(&self)-> sqlx_core::Result<Vec<SchoolDetail>>;
+    async fn get_schools(&self)-> sqlx_core::Result<Vec<(i32, SchoolDetail)>>;
     async fn get_school_auth(&self)-> i32;
     async fn get_group(&self)-> sqlx_core::Result<ClassGroups>;
     async fn get_class(&self)-> Option<Class>;
@@ -51,12 +51,17 @@ pub trait Auth{
 impl Auth for Request<AppState>{
     async fn user(&self)->sqlx_core::Result<AuthUser> {
         use sqlx_core::postgres::PgQueryAs;
-        let user_id = self.cookie("libredu-user").expect("User not found");
-        let user: AuthUser = sqlx::query_as("SELECT * FROM users WHERE id = $1")
-            .bind(user_id.value().parse::<i32>().expect("Id bulunamadı"))
-            //.bind(hash(&f.password))
-            .fetch_one(&self.state().db_pool).await?;
-        Ok(user)
+        let user_id = self.cookie("libredu-user");
+        if let Some(id) = user_id{
+            if let Ok(i) = id.value().parse::<i32>(){
+                let user: AuthUser = sqlx::query_as("SELECT * FROM users WHERE id = $1")
+                    .bind(i)
+                    //.bind(hash(&f.password))
+                    .fetch_one(&self.state().db_pool).await?;
+                return Ok(user)
+            }
+        }
+        Err(sqlx_core::Error::ColumnNotFound(Box::from("Kullanıcı bulunamadı")))
     }
     async fn is_auth(&self)-> bool{
         let user_id = self.cookie("libredu-user");
@@ -89,14 +94,19 @@ impl Auth for Request<AppState>{
         }
     }
     async fn get_school(&self)-> sqlx_core::Result<SchoolDetail> {
-        let school_id = self.param("school").ok().expect("Kurum bulunamadı").parse::<i32>().expect("Kurum Bulunamadı");
-        SchoolDetail::get(&self, school_id).await
+        let school_id = self.param("school");
+        if let Ok(id) = school_id{
+            if let Ok(i) = id.parse::<i32>(){
+                return SchoolDetail::get(&self, i).await
+            }
+        }
+        Err(sqlx_core::Error::ColumnNotFound(Box::from("Kurum bulunamadı")))
     }
-    async fn get_schools(&self)-> sqlx_core::Result<Vec<SchoolDetail>> {
+    async fn get_schools(&self)-> sqlx_core::Result<Vec<(i32, SchoolDetail)>> {
         use sqlx::Cursor;
         let user = self.user().await?;
-        let mut s: Vec<SchoolDetail> = vec![];
-        let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
+        let mut s: Vec<(i32, SchoolDetail)> = vec![];
+        let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name, school_users.role \
                     FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk \
                     inner join school_users on school_users.school_id = school.id WHERE school_users.user_id = $1")
             .bind(&user.id)
@@ -104,7 +114,7 @@ impl Auth for Request<AppState>{
         while let Some(row) = query.next().await? {
             use sqlx::Row;
             let school = SchoolDetail::get(&self, row.get(0)).await?;
-            s.push(school)
+            s.push((row.get(8), school))
         }
         Ok(s)
     }

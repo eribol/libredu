@@ -1,4 +1,4 @@
 mod activities;
-pub(crate) mod teacher;
+pub(crate) mod home;
 mod limitations;
 mod timetables;

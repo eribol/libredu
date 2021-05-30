@@ -128,14 +128,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     for d in model.days.iter() {
                         if !model.limitation.iter().any(|ta| ta.day.id == d.id) {
                             let hours = vec![true; ctx_group.group.hour as usize];
-                            model.limitation.push(teacher::TeacherAvailable { day: d.clone(), hours: hours, group_id: None });
+                            model.limitation.push(teacher::TeacherAvailable { day: d.clone(), hours, group_id: None });
                             changed = true;
-                        } else {
-                            if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
-                                let hours = vec![true; ctx_group.group.hour as usize];
-                                model.limitation[(d.id - 1) as usize].hours = hours;
-                                changed = true;
-                            }
+                        }
+                        else if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
+                            let hours = vec![true; ctx_group.group.hour as usize];
+                            model.limitation[(d.id - 1) as usize].hours = hours;
+                            changed = true;
                         }
                     }
                     if changed{
@@ -158,16 +157,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     }
                 }
                 Err(_)=>{
-                    if model.limitation.len()==0 {
+                    if model.limitation.is_empty() {
                         for d in model.days.iter() {
                             if !model.limitation.iter().any(|ta| ta.day.id == d.id) {
                                 let hours = vec![true; ctx_group.group.hour as usize];
-                                model.limitation.push(teacher::TeacherAvailable { day: d.clone(), hours: hours, group_id: None })
-                            } else {
-                                if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
-                                    let hours = vec![true; ctx_group.group.hour as usize];
-                                    model.limitation[(d.id - 1) as usize].hours = hours;
-                                }
+                                model.limitation.push(teacher::TeacherAvailable { day: d.clone(), hours, group_id: None })
+                            }
+                            else if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
+                                let hours = vec![true; ctx_group.group.hour as usize];
+                                model.limitation[(d.id - 1) as usize].hours = hours;
                             }
                         }
                         orders.perform_cmd({
@@ -239,7 +237,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::FetchTeacher(teacher)=>{
             model.teacher = teacher.unwrap();
             orders.perform_cmd({
-                let url = format!("/api/days");
+                let url = "/api/days".to_string();
                 let request = Request::new(url)
                     .method(Method::Get);
                 async {
