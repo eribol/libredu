@@ -5,10 +5,8 @@ use crate::model::user::AuthUser;
 use bcrypt::verify;
 //use async_trait::async_trait;
 use crate::model::school::{School, SchoolDetail};
-use crate::model::city::{City, Town};
 use crate::model::group::ClassGroups;
 use crate::model::class::Class;
-use anyhow::anyhow;
 use crate::model::teacher::Teacher;
 
 
@@ -247,8 +245,6 @@ impl Auth for Request<AppState>{
     }
      */
     async fn get_teacher(&self) -> sqlx_core::Result<crate::model::teacher::Teacher> {
-        use sqlx::Cursor;
-        use sqlx::Row;
         let teacher_id: i32 = self.param("teacher_id").expect("Id bulunamadı").parse().expect("Id bulunamadı");
         let school_id: i32 = self.param("school").expect("Id bulunamadı").parse().expect("Id bulunamadı");
         Teacher::get(&self, school_id, teacher_id).await
