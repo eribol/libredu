@@ -52,9 +52,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
         }
         Msg::FetchAct(act)=>{
             let teacher_ctx = school_ctx.get_mut_teacher(&model.url);
-            if let Ok(mut a) = act {
+            if let Ok(a) = act {
                 if let Some(activities) = &mut teacher_ctx.activities{
-                    activities.append(&mut a);
+                    activities.append(&mut a.clone());
+                }
+                else{
+                    teacher_ctx.activities = Some(a);
                 }
             }
         }
@@ -126,7 +129,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             }
         }
         Msg::FetchDeleteAct(id)=>{
-            if let Ok(_) = id {
+            if let Ok(i) = id {
+                let teacher_ctx = school_ctx.get_mut_teacher(&model.url);
+                if let Some(activities) = &mut teacher_ctx.activities{
+                    activities.retain(|a| a.id != i.parse::<i32>().unwrap());
+                }
             }
         }
         Msg::SubmitActivity=>{
@@ -188,9 +195,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                         }.await)
                     }
                 });
-            }
-            else{
-                model.act_form.subject = school_ctx.subjects.as_ref().unwrap()[0].id;
             }
         }
         /*Msg::PatchActivity(_id) => {
@@ -339,19 +343,28 @@ pub fn view(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
                     C!{"control"},
                     span![
                         C!{"select is-multiple"},
-                        select![
-                            //el_ref(&model.select),
-                            attrs!{
-                                At::from("multiple") => true.as_at_value()
-                            },
-                            group_ctx.get_classes().iter().map(|c|
-                                option![
-                                    attrs!{At::Value=>&c.class.id},
-                                    format!("{}/{} Sınıfı", &c.class.kademe.to_string(), &c.class.sube)
-                                ]
-                            ),
-                            input_ev(Ev::Change, Msg::ChangeActClass)
-                        ]
+                        group_ctx.classes.as_ref().map_or(
+                            select![
+                                el_ref(&model.select),
+                                attrs!{
+                                    At::from("multiple") => true.as_at_value()
+                                }
+                            ],
+                            |classes|
+                            select![
+                                el_ref(&model.select),
+                                attrs!{
+                                    At::from("multiple") => true.as_at_value()
+                                },
+                                classes.iter().map(|c|
+                                    option![
+                                        attrs!{At::Value=>&c.class.id},
+                                        format!("{}/{} Sınıfı", &c.class.kademe.to_string(), &c.class.sube)
+                                    ]
+                                ),
+                                input_ev(Ev::Change, Msg::ChangeActClass)
+                            ]
+                        )
                     ]
                 ]
             ],

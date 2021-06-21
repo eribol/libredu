@@ -25,68 +25,12 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     let mut ctx = Context {
         base_url: url.to_base_url(),
         user: None,
-        schools: vec![]
+        schools: vec![],
+        loaded: false
     };
-    let session = SessionStorage::get("session").unwrap_or(false);
-    if session {
-        if let Ok(user) = SessionStorage::get("user"){
-            ctx.user = Some(user);
-            if let Ok(ss) = SessionStorage::get("schools") {
-                ctx.schools = ss;
-                orders.send_msg(Msg::Loading);
-            }
-            else {
-                orders.perform_cmd({
-                    let request = Request::new("/api/schools")
-                        .method(Method::Get);
-
-                    async { Msg::GetSchools(async {
-                        request
-                            .fetch()
-                            .await?
-                            .check_status()?
-                            .json()
-                            .await
-                    }.await)}
-                });
-            }
-        }
-        else {
-            orders.perform_cmd({
-                let request = Request::new("/api/login")
-                    .method(Method::Get);
-
-                async {
-                    Msg::GetUser(async {
-                        request
-                            .fetch()
-                            .await?
-                            .check_status()?
-                            .json()
-                            .await
-                    }.await)
-                }
-            });
-        }
-    }
-    else {
-        SessionStorage::insert("session", &true).expect("Session not loaded");
-        orders.perform_cmd({
-            let request = Request::new("/api/login")
-                .method(Method::Get);
-
-            async {
-                Msg::GetUser(async {
-                    request
-                        .fetch()
-                        .await?
-                        .check_status()?
-                        .json()
-                        .await
-                }.await)
-            }
-        });
-    }
+    ctx.user = SessionStorage::get("user").unwrap_or_default();
+    ctx.schools =  SessionStorage::get("schools").unwrap_or_default();
+    //
     orders.send_msg(Msg::Loading);
     orders.subscribe(Msg::UrlChanged);
     let page = Page::Loading;
@@ -96,7 +40,8 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         posts: vec![],
         form: NewPost::default(),
         navbar: "".to_string(),
-        url
+        url,
+        loaded: false
     }
 }
 
@@ -110,7 +55,8 @@ struct Model {
     posts: Vec<SchoolPost>,
     form: NewPost,
     navbar: String,
-    url: Url
+    url: Url,
+    loaded: bool
 }
 
 #[derive(Debug, Clone)]
@@ -118,6 +64,7 @@ pub struct Context {
     pub base_url: Url,
     pub user: Option<UserDetail>,
     pub schools: Vec<SchoolContext>,
+    pub loaded: bool
 }
 
 pub enum Page {
@@ -144,7 +91,7 @@ impl Page {
             Some(RESET) => Self::Reset(page::reset::init()),
             Some("help") => Self::Help,
             Some("admin") => Self::Admin(admin::home::init(url.clone(),&mut orders.proxy(Msg::Admin))),
-            _ => Self::Home(page::home::init(&mut orders.proxy(Msg::Home))),
+            _ => Self::NotFound,
         }
     }
 }
@@ -203,7 +150,39 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     let ctx = &mut model.ctx;
     match msg {
         Msg::Loading => {
+            if ctx.user.is_none() && !ctx.loaded{
+                orders.perform_cmd({
+                    let request = Request::new("/api/login")
+                        .method(Method::Get);
+
+                    async {
+                        Msg::GetUser(async {
+                            request
+                                .fetch()
+                                .await?
+                                .check_status()?
+                                .json()
+                                .await
+                        }.await)
+                    }
+                });
+                orders.perform_cmd({
+                    let request = Request::new("/api/schools")
+                        .method(Method::Get);
+
+                    async { Msg::GetSchools(async {
+                        request
+                            .fetch()
+                            .await?
+                            .check_status()?
+                            .json()
+                            .await
+                    }.await)}
+                });
+            }
+            ctx.loaded= true;
             model.page = Page::init(model.url.clone(), orders, ctx);
+            //
         }
         Msg::Home(msg) => {
             if let Page::Home(model) = &mut model.page {
@@ -212,25 +191,32 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::UrlChanged(subs::UrlChanged(url)) => {
             model.navbar = "".to_string();
+            if !ctx.loaded{
+                orders.send_msg(Msg::Loading);
+            }
             model.page = Page::init(url, orders, ctx);
         }
         Msg::GetSchools(schools)=> {
             if let Ok(schools) = schools {
-                for s in schools {
-                    let ctx_school = SchoolContext {
-                        teachers: None,
-                        role: s.0,
-                        groups: None,
-                        school: s.1,
-                        students: None,
-                        subjects: None,
-                        class_rooms: None,
-                        menu: vec![]
-                    };
-                    ctx.schools.push(ctx_school);
+                if !model.loaded{
+                    for s in schools {
+                        let ctx_school = SchoolContext {
+                            teachers: None,
+                            role: s.0,
+                            groups: None,
+                            school: s.1,
+                            students: None,
+                            subjects: None,
+                            class_rooms: None,
+                            menu: vec![]
+                        };
+                        ctx.schools.push(ctx_school);
+                    }
                 }
+
             }
-            orders.send_msg(Msg::Loading);
+            model.loaded= true;
+            //orders.send_msg(Msg::Loading);
             SessionStorage::insert("schools", &ctx.schools).expect("Okullar eklenemedi");
         }
         Msg::Logout => {
@@ -443,6 +429,7 @@ fn view(model: &Model) -> Node<Msg> {
             Page::SignIn(model) => {
                 page::signin::view(model).map_msg(Msg::SignIn)
             },
+            Page::Loading => div!["loading"],
             _ => div!["404"]
         }
     ]

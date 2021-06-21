@@ -279,24 +279,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                     ctx_grps.push(ctx_group);
                 }
                 school_ctx.groups = Some(ctx_grps);
-                if school_ctx.teachers.is_none(){
-                    orders.perform_cmd({
-                        let adres = format!("/api/schools/{}/teachers", &school_ctx.school.id);
-                        let request = Request::new(adres)
-                            .method(Method::Get);
-                        async {
-                            Msg::FetchTeachers(async {
-                                request
-                                    .fetch()
-                                    .await?
-                                    .check_status()?
-                                    .json()
-                                    .await
-                            }.await)
-                        }
-                    });
-                }
-                model.page = Pages::init(model.url.clone(), orders, school_ctx);
             }
             else {
                 model.page = Pages::NotFound;
@@ -434,7 +416,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                     }
                 });
             }
-            if school_ctx.teachers.is_none(){
+            if school_ctx.teachers.is_none() {
                 orders.perform_cmd({
                     let adres = format!("/api/schools/{}/teachers", &school_ctx.school.id);
                     let request = Request::new(adres)
@@ -451,9 +433,25 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                     }
                 });
             }
-            else {
-                model.page = Pages::init(model.url.clone(), orders, school_ctx);
+            if school_ctx.subjects.is_none() {
+                orders.perform_cmd({
+                    let adres = format!("/api/schools/{}/teachers", &school_ctx.school.id);
+                    let request = Request::new(adres)
+                        .method(Method::Get);
+                    async {
+                        Msg::FetchTeachers(async {
+                            request
+                                .fetch()
+                                .await?
+                                .check_status()?
+                                .json()
+                                .await
+                        }.await)
+                    }
+                });
             }
+
+            model.page = Pages::init(model.url.clone(), orders, school_ctx);
         }
     }
 }

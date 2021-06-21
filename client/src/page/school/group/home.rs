@@ -231,7 +231,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
         }
         Msg::Loading => {
             let group_ctx = school_ctx.get_mut_group(&model.url);
-            if group_ctx.classes.is_none(){
+            if group_ctx.classes.is_none() {
                 orders.perform_cmd({
                     let adres = format!("/api/schools/{}/groups/{}/classes", model.url.path()[1], model.url.path()[3]);
                     let request = Request::new(adres)
@@ -248,9 +248,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                     }
                 });
             }
-            else {
-                model.page = Pages::init(model.url.clone(), orders, school_ctx);
-            }
+            model.page = Pages::init(model.url.clone(), orders, school_ctx);
         }
         Msg::Timetables(msg)=>{
             if let Pages::Timetables(m)= &mut model.page{
