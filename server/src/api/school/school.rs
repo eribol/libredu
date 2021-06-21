@@ -13,6 +13,7 @@ use crate::model::student::{NewStudent, Student};
 use crate::model::{subject, library, class_room};
 use multer::Multipart;
 use crate::model::user::SimpleUser;
+use crate::model::teacher::Teacher;
 
 
 pub async fn schools(req: Request<AppState>) -> tide::Result {
@@ -235,14 +236,17 @@ pub async fn teachers(mut req: Request<AppState>) -> tide::Result {
                         WHERE school_users.user_id = $1")
                     .bind(&add_user.id)
                     .fetch(&req.state().db_pool);
-                let mut teacher: user::Teacher;
+                let mut teacher: Teacher;
                 while let Some(row) = tchrs.next().await? {
-                    teacher = user::Teacher {
+                    teacher = Teacher {
                         id: row.get(0),
                         first_name: row.get(1),
                         last_name: row.get(2),
                         role_id: row.get(3),
-                        role_name: row.get(4)
+                        role_name: row.get(4),
+                        is_active: false,
+                        email: None,
+                        tel: None
                     };
                     res.set_body(Body::from_json(&teacher)?);
                 }
@@ -518,7 +522,6 @@ pub async fn library(mut req: Request<AppState>) -> tide::Result {
         }
     }
 }
-
 pub async fn patch_library(mut req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
     use sqlx::prelude::PgQueryAs;
@@ -550,27 +553,22 @@ pub async fn patch_library(mut req: Request<AppState>) -> tide::Result {
         }
     }
 }
-
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct Students{
     file: Vec<u8>,
     group: i32
 }
-
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 struct ClassGroups{
     id: i32,
     name: String,
     hour: i32
 }
-
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 struct AddGroup{
     name: String,
     hour: i32
 }
-
-
 pub async fn get_posts(req: Request<AppState>) -> tide::Result {
     use crate::model::post::Post;
     let mut res = tide::Response::new(StatusCode::Ok);

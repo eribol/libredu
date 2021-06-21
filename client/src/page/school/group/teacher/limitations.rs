@@ -1,18 +1,15 @@
 use seed::{*, prelude::*};
-use crate::{Context};
-use crate::model::{teacher, subject};
+use crate::model::{teacher};
 use crate::model::timetable;
-use crate::model::activity;
 use crate::page::school::detail;
-use crate::model::teacher::TeacherTimetable;
+use crate::model::teacher::{TeacherTimetable, TeacherGroupContext};
 use serde::*;
-use crate::page::school::detail::{SchoolContext, GroupContext};
+use crate::page::school::detail::{SchoolContext};
 
 #[derive(Debug)]
 pub enum Msg{
     Home,
     FetchDays(fetch::Result<Vec<timetable::Day>>),
-    FetchTeacher(fetch::Result<Teacher>),
     FetchLimitation(fetch::Result<Vec<teacher::TeacherAvailable>>),
     ChangeHour((usize,usize)),
     SubmitLimitation,
@@ -21,37 +18,22 @@ pub enum Msg{
     ChangeAllDay(usize),
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
-pub struct Teacher{
-    pub id: i32,
-    pub first_name: String,
-    pub last_name: String,
-    pub is_active: bool,
-    pub email: Option<String>,
-    pub tel: Option<String>
-}
-
 
 #[derive(Debug, Default, Clone)]
 pub struct Model{
-    pub teacher: Teacher,
-    pub act_form: activity::NewActivity,
-    pub activities: Vec<activity::Activity>,
-    subjects: Vec<subject::Subject>,
-    pub timetable: Vec<TeacherTimetable>,
     days: Vec<timetable::Day>,
     pub limitation: Vec<teacher::TeacherAvailable>,
+    url: Url
 }
 
-pub fn init(teacher: i32, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx_school: &mut SchoolContext, ctx_group: &GroupContext)-> Model{
-    let model = Model::default();
-    //model.classes = &ctx_school.classes;
+pub fn init(url: Url, orders: &mut impl Orders<Msg>)-> Model{
+    let model = Model{url: url, ..Default::default()};
     orders.perform_cmd({
-        let url = format!("/api/schools/{}/groups/{}/teachers/{}", ctx_school.school.id, ctx_group.group.id, teacher);
+        let url = "/api/days".to_string();
         let request = Request::new(url)
             .method(Method::Get);
         async {
-            Msg::FetchTeacher(async {
+            Msg::FetchDays(async {
                 request
                     .fetch()
                     .await?
@@ -61,161 +43,97 @@ pub fn init(teacher: i32, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx
             }.await)
         }
     });
-
     model
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx_school: &mut detail::SchoolContext, ctx_group: &mut GroupContext) {
-
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school_ctx: &mut detail::SchoolContext) {
+    let sc2 = school_ctx.clone();
+    let hours = school_ctx.get_group(&model.url).group.hour;
     match msg {
         Msg::Home => {
         }
         Msg::ChangeAllHour(index) => {
-            let mut all = true;
-            for l in &model.limitation{
-                if !l.hours[index]{
-                    all = false;
-                    break;
-                }
-            }
-            if all{
-                for d in 0..7{
-                    model.limitation[d].hours[index] = false;
-                }
-            }
-            else {
-                for d in 0..7{
-                    model.limitation[d].hours[index] = true;
+            let teacher_ctx = &mut school_ctx.get_mut_teacher(&model.url);
+            let teacher_group = &mut teacher_ctx.group.iter_mut().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap());
+            if let Some(tg) = teacher_group {
+                if let Some(lm) = &mut tg.limitations {
+                    let mut all = true;
+                    for l in &*lm{
+                        if !l.hours[index]{
+                            all = false;
+                            break;
+                        }
+                    }
+                    if all{
+                        for d in 0..7{
+                            lm[d].hours[index] = false;
+                        }
+                    }
+                    else {
+                        for d in 0..7{
+                            lm[d].hours[index] = true;
+                        }
+                    }
                 }
             }
         }
         Msg::ChangeAllDay(index) => {
-            if model.limitation[index].hours.iter().any(|h| !*h){
-                for h in 0..ctx_group.group.hour{
-                    model.limitation[index].hours[h as usize] = true;
-                }
-            }
-            else {
-                for h in 0..ctx_group.group.hour{
-                    model.limitation[index].hours[h as usize] = false;
+            let teacher_ctx = &mut school_ctx.get_mut_teacher(&model.url);
+            let teacher_group = &mut teacher_ctx.group.iter_mut().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap());
+            if let Some(tg) = teacher_group {
+                if let Some(lm) = &mut tg.limitations {
+                    if lm[index].hours.iter().any(|h| !*h){
+                        for h in 0..hours{
+                            lm[index].hours[h as usize] = true;
+                        }
+                    }
+                    else {
+                        for h in 0..hours{
+                            lm[index].hours[h as usize] = false;
+                        }
+                    }
                 }
             }
         }
         Msg::FetchDays(days)=>{
+            let teacher_ctx = &mut school_ctx.get_mut_teacher(&model.url);
+            let teacher_group = &mut teacher_ctx.group.iter_mut().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap());
             model.days=days.unwrap();
-            orders.perform_cmd({
-                let url = format!("/api/schools/{}/groups/{}/teachers/{}/limitations", ctx_school.school.id, ctx_group.group.id, model.teacher.id);
-                let request = Request::new(url)
-                    .method(Method::Get);
-                async {
-                    Msg::FetchLimitation(async {
-                        request
-                            .fetch()
-                            .await?
-                            .check_status()?
-                            .json()
-                            .await
-                    }.await)
-                }
-            });
-        }
-        Msg::FetchLimitation(json)=>{
-            match json {
-                Ok(mut l) => {
-                    l.sort_by(|a, b| a.day.id.cmp(&b.day.id));
-                    model.limitation = l;
-                    let mut changed = false;
-                    for d in model.days.iter() {
-                        if !model.limitation.iter().any(|ta| ta.day.id == d.id) {
-                            let hours = vec![true; ctx_group.group.hour as usize];
-                            model.limitation.push(teacher::TeacherAvailable { day: d.clone(), hours, group_id: None });
-                            changed = true;
+            if let Some(tg) = teacher_group{
+                if tg.limitations.is_none(){
+                    orders.perform_cmd({
+                        let url = format!("/api/schools/{}/groups/{}/teachers/{}/limitations", school_ctx.school.id, model.url.path()[3], model.url.path()[5]);
+                        let request = Request::new(url)
+                            .method(Method::Get);
+                        async {
+                            Msg::FetchLimitation(async {
+                                request
+                                    .fetch()
+                                    .await?
+                                    .check_status()?
+                                    .json()
+                                    .await
+                            }.await)
                         }
-                        else if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
-                            let hours = vec![true; ctx_group.group.hour as usize];
-                            model.limitation[(d.id - 1) as usize].hours = hours;
-                            changed = true;
-                        }
-                    }
-                    if changed{
-                        orders.perform_cmd({
-                            let url = format!("/api/schools/{}/groups/{}/teachers/{}/limitations", ctx_school.school.id, ctx_group.group.id, model.teacher.id);
-                            let request = Request::new(url)
-                                .method(Method::Post)
-                                .json(&model.limitation);
-                            async {
-                                Msg::FetchLimitation(async {
-                                    request?
-                                        .fetch()
-                                        .await?
-                                        .check_status()?
-                                        .json()
-                                        .await
-                                }.await)
-                            }
-                        });
-                    }
-                }
-                Err(_)=>{
-                    if model.limitation.is_empty() {
-                        for d in model.days.iter() {
-                            if !model.limitation.iter().any(|ta| ta.day.id == d.id) {
-                                let hours = vec![true; ctx_group.group.hour as usize];
-                                model.limitation.push(teacher::TeacherAvailable { day: d.clone(), hours, group_id: None })
-                            }
-                            else if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
-                                let hours = vec![true; ctx_group.group.hour as usize];
-                                model.limitation[(d.id - 1) as usize].hours = hours;
-                            }
-                        }
-                        orders.perform_cmd({
-                            let url = format!("/api/schools/{}/teachers/{}/limitations/{}", ctx_school.school.id, model.teacher.id, ctx_group.group.id);
-                            let request = Request::new(url)
-                                .method(Method::Post)
-                                .json(&model.limitation);
-                            async {
-                                Msg::FetchLimitation(async {
-                                    request?
-                                        .fetch()
-                                        .await?
-                                        .check_status()?
-                                        .json()
-                                        .await
-                                }.await)
-                            }
-                        });
-                    }
+                    });
                 }
             }
-        }
-        Msg::SubmitLimitation=>{
-            orders.perform_cmd({
-                let url = format!("/api/schools/{}/groups/{}/teachers/{}/limitations", ctx_school.school.id, ctx_group.group.id, model.teacher.id);
-                let request = Request::new(url)
-                    .method(Method::Post)
-                    .json(&model.limitation);
-                async {
-                    Msg::FetchLimitation(async {
-                        request?
-                            .fetch()
-                            .await?
-                            .check_status()?
-                            .json()
-                            .await
-                    }.await)
-                }
-            });
-        }
-        Msg::SubmitAllLimitation => {
-            for t in &ctx_school.teachers{
+            else{
+                *teacher_group = Some(
+                    &mut TeacherGroupContext{
+                        group: model.url.path()[3].parse().unwrap(),
+                        activities: None,
+                        limitations: None,
+                        timetables: None
+                    }
+                );
                 orders.perform_cmd({
-                    let url = format!("/api/schools/{}/groups/{}/teachers/{}/limitations", ctx_school.school.id, ctx_group.group.id, t.id);
+                    let url = format!("/api/schools/{}/groups/{}/teachers/{}/limitations", school_ctx.school.id, model.url.path()[3], model.url.path()[5]);
                     let request = Request::new(url)
-                        .method(Method::Post)
-                        .json(&model.limitation);
+                        .method(Method::Get);
                     async {
                         Msg::FetchLimitation(async {
-                            request?
+                            request
                                 .fetch()
                                 .await?
                                 .check_status()?
@@ -225,37 +143,165 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     }
                 });
             }
+
+        }
+        Msg::FetchLimitation(json)=>{
+            let teacher_ctx = &mut school_ctx.get_mut_teacher(&model.url);
+            let teacher_group = &mut teacher_ctx.group.iter_mut().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap());
+            match json {
+                Ok(mut l) => {
+                    l.sort_by(|a, b| a.day.id.cmp(&b.day.id));
+                    if let Some(tg) = teacher_group{
+                        if let Some(lm) = &mut tg.limitations{
+                            *lm = l;
+                            let mut changed = false;
+                            for d in model.days.iter() {
+                                if !lm.iter().any(|ta| ta.day.id == d.id) {
+                                    let hours = vec![true; hours as usize];
+                                    lm.push(teacher::TeacherAvailable { day: d.clone(), hours, group_id: None });
+                                    changed = true;
+                                }
+                                else if lm[(d.id - 1) as usize].hours.len() != hours as usize {
+                                    let hours = vec![true; hours as usize];
+                                    lm[(d.id - 1) as usize].hours = hours;
+                                    changed = true;
+                                }
+                            }
+                            if changed{
+                                orders.perform_cmd({
+                                    let url = format!("/api/schools/{}/groups/{}/teachers/{}/limitations", model.url.path()[1], model.url.path()[3], model.url.path()[5]);
+                                    let request = Request::new(url)
+                                        .method(Method::Post)
+                                        .json(&lm);
+                                    async {
+                                        Msg::FetchLimitation(async {
+                                            request?
+                                                .fetch()
+                                                .await?
+                                                .check_status()?
+                                                .json()
+                                                .await
+                                        }.await)
+                                    }
+                                });
+                            }
+                        }
+                        else {
+                            tg.limitations = Some(l);
+                        }
+                    }
+                }
+                Err(_)=>{
+                    if let Some(tg) = teacher_group {
+                        if let Some(lm) = &mut tg.limitations {
+                            if lm.is_empty() {
+                                for d in model.days.iter() {
+                                    if !lm.iter().any(|ta| ta.day.id == d.id) {
+                                        let hours = vec![true; hours as usize];
+                                        lm.push(teacher::TeacherAvailable { day: d.clone(), hours, group_id: None })
+                                    }
+                                    else if lm[(d.id - 1) as usize].hours.len() != hours as usize {
+                                        let hours = vec![true; hours as usize];
+                                        lm[(d.id - 1) as usize].hours = hours;
+                                    }
+                                }
+                                orders.perform_cmd({
+                                    let url = format!("/api/schools/{}/teachers/{}/limitations/{}", school_ctx.school.id, model.url.path()[5], model.url.path()[3]);
+                                    let request = Request::new(url)
+                                        .method(Method::Post)
+                                        .json(&model.limitation);
+                                    async {
+                                        Msg::FetchLimitation(async {
+                                            request?
+                                                .fetch()
+                                                .await?
+                                                .check_status()?
+                                                .json()
+                                                .await
+                                        }.await)
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                }
+            }
+        }
+        Msg::SubmitLimitation=>{
+            let teacher_ctx = &mut school_ctx.get_mut_teacher(&model.url);
+            let teacher_group = &mut teacher_ctx.group.iter_mut().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap());
+            if let Some(tg) = teacher_group {
+                if let Some(lm) = &mut tg.limitations {
+                    orders.perform_cmd({
+                        let url = format!("/api/schools/{}/groups/{}/teachers/{}/limitations", model.url.path()[1], model.url.path()[3], model.url.path()[5]);
+                        let request = Request::new(url)
+                            .method(Method::Post)
+                            .json(&lm);
+                        async {
+                            Msg::FetchLimitation(async {
+                                request?
+                                    .fetch()
+                                    .await?
+                                    .check_status()?
+                                    .json()
+                                    .await
+                            }.await)
+                        }
+                    });
+                }
+            }
+
+        }
+        Msg::SubmitAllLimitation => {
+            let teacher_ctx = &mut school_ctx.get_mut_teacher(&model.url);
+            let teacher_group = &mut teacher_ctx.group.iter_mut().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap());
+            if let Some(tg) = teacher_group {
+                if let Some(lm) = &mut tg.limitations {
+                    if let Some(teachers) = &sc2.teachers{
+                        for t in teachers{
+                            orders.perform_cmd({
+                                let url = format!("/api/schools/{}/groups/{}/teachers/{}/limitations", model.url.path()[1], model.url.path()[3], t.teacher.id);
+                                let request = Request::new(url)
+                                    .method(Method::Post)
+                                    .json(&lm);
+                                async {
+                                    Msg::FetchLimitation(async {
+                                        request?
+                                            .fetch()
+                                            .await?
+                                            .check_status()?
+                                            .json()
+                                            .await
+                                    }.await)
+                                }
+                            });
+                        }
+                    }
+                }
+            }
         }
         Msg::ChangeHour(ids)=>{
-            if model.limitation[ids.0].hours[ids.1]{
-                model.limitation[ids.0].hours[ids.1]=false;
-            }
-            else{
-                model.limitation[ids.0].hours[ids.1]=true;
-            }
-        }
-        Msg::FetchTeacher(teacher)=>{
-            model.teacher = teacher.unwrap();
-            orders.perform_cmd({
-                let url = "/api/days".to_string();
-                let request = Request::new(url)
-                    .method(Method::Get);
-                async {
-                    Msg::FetchDays(async {
-                        request
-                            .fetch()
-                            .await?
-                            .check_status()?
-                            .json()
-                            .await
-                    }.await)
+            let teacher_ctx = &mut school_ctx.get_mut_teacher(&model.url);
+            let teacher_group = &mut teacher_ctx.group.iter_mut().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap());
+            if let Some(tg) = teacher_group {
+                if let Some(lm) = &mut tg.limitations {
+                    if lm[ids.0].hours[ids.1]{
+                        lm[ids.0].hours[ids.1]=false;
+                    }
+                    else{
+                        lm[ids.0].hours[ids.1]=true;
+                    }
                 }
-            });
+            }
         }
     }
 }
 
-pub fn view(model: &Model, _ctx_school: &detail::SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
+pub fn view(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
+    let group_ctx = school_ctx.get_group(&model.url);
+    let teacher_ctx = school_ctx.get_teacher(&model.url);
+    let teacher_group = teacher_ctx.group.iter().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap()).unwrap();
     div![
         C!{"column is-12"},
         table![
@@ -264,7 +310,7 @@ pub fn view(model: &Model, _ctx_school: &detail::SchoolContext, ctx_group: &Grou
                 td![
                     "Günler/Saatler"
                 ],
-                (0..ctx_group.group.hour).map(|h|
+                (0..group_ctx.group.hour).map(|h|
                     td![
                         &h+1,
                         {
@@ -276,37 +322,42 @@ pub fn view(model: &Model, _ctx_school: &detail::SchoolContext, ctx_group: &Grou
                     ]
                 )
             ],
-            model.limitation.iter().enumerate().map(|d|
-                tr![
-                    td![
-                        &d.1.day.name,
-                        {
-                            let day_index = d.0;
-                            ev(Ev::Click, move |_event|
-                                Msg::ChangeAllDay(day_index)
+            teacher_group.limitations.as_ref().map_or(
+                tbody![],
+                |lm|
+                tbody![
+                    lm.iter().enumerate().map(|d|
+                        tr![
+                            td![
+                                &d.1.day.name,
+                                {
+                                    let day_index = d.0;
+                                    ev(Ev::Click, move |_event|
+                                        Msg::ChangeAllDay(day_index)
+                                    )
+                                }
+                            ],
+                            d.1.hours.iter().enumerate().map(|h|
+                                td![
+                                    if *h.1 {
+                                        style!{
+                                            St::Background=>"blue"
+                                        }
+                                    }
+                                    else{
+                                        style!{
+                                            St::Background=>"gray"
+                                        }
+                                    },
+                                    {
+                                        let hour_index = h.0;
+                                        let day_index = d.0;
+                                        ev(Ev::Click, move |_event|
+                                            Msg::ChangeHour((day_index, hour_index))
+                                        )
+                                    }
+                                ]
                             )
-                        }
-                    ],
-                    d.1.hours.iter().enumerate().map(|h|
-                        td![
-
-                            if *h.1 {
-                                style!{
-                                    St::Background=>"blue"
-                                }
-                            }
-                            else{
-                                style!{
-                                    St::Background=>"gray"
-                                }
-                            },
-                            {
-                                let hour_index = h.0;
-                                let day_index = d.0;
-                                ev(Ev::Click, move |_event|
-                                    Msg::ChangeHour((day_index, hour_index))
-                                )
-                            }
                         ]
                     )
                 ]

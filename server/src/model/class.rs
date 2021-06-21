@@ -82,7 +82,6 @@ pub struct ClassAvailableForTimetables{
 
 impl Class{
     pub async fn del(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<i32>{
-        use sqlx::prelude::PgQueryAs;
         self.del_acts(req).await?;
         let _ = sqlx::query(r#"delete from classes where id = $1 "#)
             .bind(self.id)

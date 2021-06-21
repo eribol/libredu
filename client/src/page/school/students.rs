@@ -1,13 +1,13 @@
 use seed::{*, prelude::*};
 use serde::*;
 use crate::page::school::detail::SchoolContext;
+use crate::model::student::Student;
 
 
 #[derive(Debug, Default, Clone)]
 pub struct Model{
     form: NewStudent,
     form2: NewStudents,
-    students: Vec<Student>,
     unused_numbers: Vec<i32>
 }
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
@@ -20,14 +20,6 @@ pub struct NewStudent{
 pub struct NewStudents{
     file: Option<web_sys::File>,
     group: i32
-}
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct Student{
-    id: i32,
-    first_name: String,
-    last_name: String,
-    school: i32,
-    school_number: i32,
 }
 #[derive(Debug)]
 pub enum Msg{
@@ -47,45 +39,52 @@ pub enum Msg{
 
 pub fn init(_url: Url, orders: &mut impl Orders<Msg>, school_ctx: &SchoolContext) ->Model{
     let model = Model::default();
-    orders.perform_cmd({
-        let request = Request::new(format!("/api/schools/{}/students", school_ctx.school.id))
-            .method(Method::Get);
-        async { Msg::FetchStudents(async {
-            request
-                .fetch()
-                .await?
-                .check_status()?
-                .json()
-                .await
-        }.await)}
-    });
-    orders.perform_cmd({
-        let request = Request::new(format!("/api/schools/{}/unused_numbers", school_ctx.school.id))
-            .method(Method::Get);
-        async { Msg::FetchNumbers(async {
-            request
-                .fetch()
-                .await?
-                .check_status()?
-                .json()
-                .await
-        }.await)}
-    });
+    if school_ctx.students.is_none(){
+        orders.perform_cmd({
+            let request = Request::new(format!("/api/schools/{}/students", school_ctx.school.id))
+                .method(Method::Get);
+            async { Msg::FetchStudents(async {
+                request
+                    .fetch()
+                    .await?
+                    .check_status()?
+                    .json()
+                    .await
+            }.await)}
+        });
+    }
     model
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolContext) {
-
+    
     match msg{
         Msg::FetchStudents(ss) => {
             if let Ok(s) = ss {
-                model.students = s
+                school_ctx.students = Some(s);
+                orders.perform_cmd({
+                    let request = Request::new(format!("/api/schools/{}/unused_numbers", school_ctx.school.id))
+                        .method(Method::Get);
+                    async { Msg::FetchNumbers(async {
+                        request
+                            .fetch()
+                            .await?
+                            .check_status()?
+                            .json()
+                            .await
+                    }.await)}
+                });
+            }
+            else {
+                school_ctx.students = Some(vec![]);
             }
         }
         Msg::FetchStudent(student) => {
             if let Ok(s) = student {
-                model.students.push(s.clone());
-                model.unused_numbers.retain(|n| n != &s.school_number)
+                model.unused_numbers.retain(|n| n != &s.school_number);
+                if let Some(students) = school_ctx.students.iter_mut().next(){
+                    students.push(s);
+                }
             }
         }
         Msg::DelStudent(id) => {
@@ -103,9 +102,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             });
         }
         Msg::FetchDelStudent(number) => {
-            if let Ok(n) = number {
-                model.students.retain(|s| s.id != n);
-            }
+            //if let Ok(n) = number {
+            //    model.students.retain(|s| s.id != n);
+            //}
         }
         Msg::FetchNumbers(numbers) => {
             model.unused_numbers = numbers.unwrap_or_default()
@@ -300,30 +299,37 @@ pub fn view(model: &Model, ctx_school: &SchoolContext)-> Node<Msg>{
                             ]
                         ]
                     ],
-                    model.students.iter().map(|s|
-                        tr![
-                            td![
-                                a![&s.first_name]
-                            ],
-                            td![
-                                a![&s.last_name]
-                            ],
-                            td![
-                                a![&s.school_number.to_string()]
-                            ],
-                            td![
-                                button![
-                                    "Sil",
-                                    {
-                                        let id = s.id;
-                                        ev(Ev::Click, move |_event| {
-                                            Msg::DelStudent(id)
-                                        })
-                                    }
+                    ctx_school.students.as_ref().map_or(tbody![tr![]],
+                        |students|
+                        tbody![
+                            students.iter().map(|s|
+                                tr![
+                                    td![
+                                        a![&s.first_name]
+                                    ],
+                                    td![
+                                        a![&s.last_name]
+                                    ],
+                                    td![
+                                        a![&s.school_number.to_string()]
+                                    ],
+                                    td![
+                                        button![
+                                            "Sil",
+                                            {
+                                                let id = s.id;
+                                                ev(Ev::Click, move |_event| {
+                                                    Msg::DelStudent(id)
+                                                })
+                                            },
+                                            attrs!{
+                                            //At::Disabled => (ctx_school.role > 5)
+                                            }
+                                        ]
+                                    ]
                                 ]
-                            ]
+                            )
                         ]
-
                     )
                 ]
             ]

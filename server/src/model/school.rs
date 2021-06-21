@@ -2,7 +2,6 @@ use serde::*;
 use crate::model::city::{City, Town};
 use crate::AppState;
 use crate::model::{class, subject, group, teacher, library};
-use tide::StatusCode;
 use crate::request::Auth;
 
 
@@ -93,7 +92,7 @@ impl SchoolDetail{
         }
         Err(sqlx_core::Error::ColumnNotFound(Box::from("Öğretmen bulunamadı")))
     }
-    pub async fn del_teacher(&self, req: &tide::Request<AppState>, teacher_id: i32) -> sqlx_core::Result<i32>{
+    pub async fn _del_teacher(&self, req: &tide::Request<AppState>, teacher_id: i32) -> sqlx_core::Result<i32>{
         let teacher = req.get_teacher().await?;
         teacher.del(req).await?;
         Ok(teacher_id)

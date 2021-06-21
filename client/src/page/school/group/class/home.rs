@@ -1,9 +1,9 @@
 use serde::*;
 use seed::{*, prelude::*};
-use crate::{Context};
-use crate::model::class::{Class};
-use crate::page::school::detail::{SchoolContext, ClassGroups, GroupContext};
-use crate::page::school::group::class::{limitations, activities, timetables, students};
+use crate::model::class::{Class, ClassContext};
+use crate::page::school::detail::SchoolContext;
+use crate::page::school::group::class::{activities, limitations, timetables, students};
+use crate::model::group::ClassGroups;
 
 //use crate::page::school::class::class::Pages::Limitations;
 
@@ -41,110 +41,103 @@ pub enum Pages{
     Activity(Box<activities::Model>),
     Limitations(limitations::Model),
     Timetables(timetables::Model),
-    //NotFound
+    NotFound
 }
 impl Default for Pages{
     fn default()->Self{
-        Self::Home
+        Self::NotFound
     }
 }
 #[derive(Debug, Default, Clone)]
 pub struct Model{
-    pub class: Class,
     pub page: Pages,
     pub tab: String,
-    pub next_class: Option<i32>,
-    pub prev_class: Option<i32>,
+    pub url: Url
 }
 
-pub fn init(mut url: Url, _orders: &mut impl Orders<Msg>, ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext)-> Model{
-    let mut model = Model::default();
-    let class = &url.path()[5];
-    //model.school_hour = school_hour;
-    //let class = ctx_group.classes.iter().enumerate().find(|c| c.1.id == class.parse::<i32>().unwrap()).unwrap();
-    //let classes: Vec<Class> = ctx_group.classes.clone().into_iter().filter(|c| c.group_id == class.1.group_id).collect();
-    let class = ctx_group.classes.iter().enumerate().find(|c| c.1.id == class.parse::<i32>().unwrap()).unwrap();
-    model.class = class.1.clone();
-    if class.0 > ctx_group.classes.len() || ctx_group.classes.is_empty(){
-        model.next_class = None;
-        model.prev_class = None
-    }
-    if class.0 >= ctx_group.classes.len()-1{
-        model.next_class = None
-    }
-    else {
-        model.next_class = Some(ctx_group.classes[class.0+1].id);
-    }
-    if class.0 < 1 {
-        model.prev_class = None
-    }
-    else {
-        model.prev_class = Some(ctx_group.classes[class.0-1].id);
-    }
-    match url.next_path_part(){
+pub fn init(url: Url, _orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolContext)-> Model {
+    let mut model = Model{url: url, ..Default::default()};
+
+    match model.url.next_path_part() {
         Some("") | None => {
             model.page = Pages::Home;
             model.tab = "".to_string();
         }
-        Some("limitations") => {
-            model.page = Pages::Limitations(limitations::init(model.class.id,&mut _orders.proxy(Msg::Limitations),ctx_school, ctx_group));
-            model.tab = "limitations".to_string();
-        }
         Some("activities") => {
-            model.page = Pages::Activity(Box::new(activities::init(model.class.id,&mut _orders.proxy(Msg::Activity), ctx_school, ctx_group)));
+            model.page = Pages::Activity(Box::new(activities::init(model.url.clone(), &mut _orders.proxy(Msg::Activity), school_ctx)));
             model.tab = "activities".to_string();
         }
+
+        Some("limitations") => {
+            model.page = Pages::Limitations(limitations::init(model.url.clone(), &mut _orders.proxy(Msg::Limitations), school_ctx));
+            model.tab = "limitations".to_string();
+        }
         Some("timetables") => {
-            model.page = Pages::Timetables(timetables::init(model.class.id,&mut _orders.proxy(Msg::Timetables), ctx_school, ctx_group));
+            model.page = Pages::Timetables(timetables::init(model.url.clone(), &mut _orders.proxy(Msg::Timetables), school_ctx));
             model.tab = "timetables".to_string();
         }
+
         Some("students") => {
-            model.page = Pages::Students(students::init(model.class.id,&mut _orders.proxy(Msg::Students), ctx_school, ctx_group));
+            model.page = Pages::Students(students::init(model.url.clone(), &mut _orders.proxy(Msg::Students), school_ctx));
             model.tab = "students".to_string();
         }
+
         _ => {
-            //model.page = Pages::Activity
+            model.page = Pages::Home
         }
     }
+    //}
+
+    //let classes: Vec<Class> = ctx_group.classes.clone().into_iter().filter(|c| c.group_id == class.1.group_id).collect();
+    //let class = ctx_group.classes.iter().enumerate().find(|c| c.1.id == class.parse::<i32>().unwrap()).unwrap();
+    //model.class = class.1.clone();
     model
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolContext) {
+    let group_ctx = school_ctx.get_mut_group(&model.url);
     match msg {
         Msg::Home => {
         }
-        Msg::Limitations(msg) => {
-            if let Pages::Limitations(m)= &mut model.page{
-                limitations::update(msg, m, &mut orders.proxy(Msg::Limitations), _ctx, ctx_school, ctx_group)
-            }
-        }
         Msg::Activity(msg) => {
             if let Pages::Activity(m)= &mut model.page{
-                activities::update(msg, m, &mut orders.proxy(Msg::Activity), _ctx, ctx_school, ctx_group)
+                activities::update(msg, m, &mut orders.proxy(Msg::Activity), school_ctx)
             }
         }
-        Msg::Students(msg) => {
-            if let Pages::Students(m)= &mut model.page{
-                students::update(msg, m, &mut orders.proxy(Msg::Students), _ctx, ctx_school, ctx_group)
+        Msg::Limitations(msg) => {
+            if let Pages::Limitations(m)= &mut model.page{
+                limitations::update(msg, m, &mut orders.proxy(Msg::Limitations), school_ctx)
             }
         }
         Msg::Timetables(msg) => {
             if let Pages::Timetables(m)= &mut model.page{
-                timetables::update(msg, m, &mut orders.proxy(Msg::Timetables), _ctx, ctx_school, ctx_group)
+                timetables::update(msg, m, &mut orders.proxy(Msg::Timetables), school_ctx)
             }
         }
+        Msg::Students(msg) => {
+            if let Pages::Students(m)= &mut model.page{
+                students::update(msg, m, &mut orders.proxy(Msg::Students), school_ctx)
+            }
+        }
+        _ => {}
+        /*
+
+
         Msg::FetchGroup(group) => {
             if group.is_ok(){
             }
         }
+
+         */
     }
 }
-pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
-    context(model, ctx, ctx_school, ctx_group)
-}
-pub fn context(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
+
+pub fn view(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
+    let group_ctx = school_ctx.get_group(&model.url);
+    let class_ctx = school_ctx.get_group(&model.url).get_class(&model.url);
     div![
         C!{"columns"},
+        /*
         div![
             C!{"column is-2 is-hidden-mobile is-hidden-tablet"},
             div![
@@ -159,14 +152,14 @@ pub fn context(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_gro
                         ]
                     ],
                     tbody![
-                        ctx_group.classes.iter().enumerate().map(|c|
+                        group_ctx.get_classes().iter().enumerate().map(|c|
                             tr![
                                 C!{"table-light"},
                                 td![
                                     a![
-                                        &c.1.kademe.to_string(), "/", &c.1.sube, " Sınıfı",
+                                        &c.1.class.kademe.to_string(), "/", &c.1.class.sube, " Sınıfı",
                                         attrs!{
-                                            At::Href=> format!("/schools/{}/groups/{}/classes/{}/{}", &ctx_school.school.id, &ctx_group.group.id, c.1.id, &model.tab)
+                                            At::Href=> format!("/schools/{}/groups/{}/classes/{}/{}", &school_ctx.school.id, &group_ctx.group.id, c.1.class.id, &model.tab)
                                         }
                                     ]
                                 ]
@@ -176,35 +169,27 @@ pub fn context(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_gro
                 ]
             ]
         ],
+         */
         match &model.page{
-            Pages::Home=>{
-                div![
-                    //C!["column"],
-                        div![
-                            C!{"column"},
-                            div![
-                                C!{"tabs is-centered"},
-                                tabs(model, ctx, ctx_school, ctx_group),
-                            ]
-                        ],
-                    home(&model.class)
-                ]
+            Pages::Home => home(&class_ctx),
+            Pages::Activity(m) => {
+                activities::activities(m, school_ctx).map_msg(Msg::Activity)
             }
-            Pages::Activity(m)=>{
-                div![
-                    div![
-                        C!{"columns"},
-                        div![
-                            C!{"column is-12"},
-                            div![
-                                C!{"tabs is-centered"},
-                                activities::tabs(m, ctx_school, ctx_group).map_msg(Msg::Activity),
-                            ]
-                        ]
-                    ],
-                    activities::activities(m, ctx_school).map_msg(Msg::Activity)
-                ]
+            Pages::Limitations(m) => {
+                limitations::limitations(m, group_ctx).map_msg(Msg::Limitations)
             }
+            Pages::NotFound => {
+                div![]
+            }
+            Pages::Timetables(m) => {
+                timetables::timetable(m, school_ctx).map_msg(Msg::Timetables)
+            }
+            Pages::Students(m) => {
+                students::view(m, school_ctx).map_msg(Msg::Students)
+            }
+        }
+        /*
+        match &model.page{
             Pages::Students(m)=>{
                 div![
                     div![
@@ -220,22 +205,7 @@ pub fn context(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_gro
                     students::view(m, ctx_school, ctx_group).map_msg(Msg::Students)
                 ]
             }
-            Pages::Limitations(m) => {
-                div![
-                    C!{"table-container"},
-                    div![
-                        C!{"columns"},
-                        div![
-                            C!{"column is-12"},
-                            div![
-                                C!{"tabs is-centered"},
-                                limitations::tabs(m, ctx_school, ctx_group).map_msg(Msg::Limitations),
-                            ]
-                        ]
-                    ],
-                    limitations::limitations(m, ctx_group).map_msg(Msg::Limitations)
-                ]
-            }
+
             Pages::Timetables(m) => {
                 div![
                     div![
@@ -248,13 +218,16 @@ pub fn context(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_gro
                             ]
                         ]
                     ],
-                    timetables::view(m, ctx_school, ctx_group).map_msg(Msg::Timetables)
+
                 ]
             }
+
+
         }
+        */
     ]
 }
-fn home(class: &Class)->Node<Msg>{
+fn home(class_ctx: &ClassContext)->Node<Msg>{
     div![
         C!{"column is-full"},
         div![C!{"field"},
@@ -266,7 +239,7 @@ fn home(class: &Class)->Node<Msg>{
                         At::Name=>"kademe",
                         At::Id=>"kademe",
                         At::Disabled => true,
-                        At::Value => &class.kademe,
+                        At::Value => &class_ctx.class.kademe,
                     },
                 ],
             ]
@@ -280,56 +253,9 @@ fn home(class: &Class)->Node<Msg>{
                         At::Name=>"sube",
                         At::Id=>"sube",
                         At::Disabled => true,
-                        At::Value => &class.sube,
+                        At::Value => &class_ctx.class.sube,
                     },
                 ],
-            ]
-        ]
-    ]
-}
-
-pub fn tabs(model: &Model, _ctx: &Context, ctx_school: &SchoolContext, ctx_group: &GroupContext)->Node<Msg> {
-    ul![
-        li![
-            C!{"is-active"},
-            a![
-                attrs!{
-                    At::Href => format!("/schools/{}/groups/{}/classes/{}", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
-                },
-               "Bilgiler"
-            ]
-        ],
-        li![
-            //C!{"is-active"},
-            a![
-                attrs!{
-                    At::Href => format!("/schools/{}/groups/{}/classes/{}/students", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
-                },
-               "Öğrenciler"
-            ]
-        ],
-        li![
-            a![
-                attrs!{
-                    At::Href => format!("/schools/{}/groups/{}/classes/{}/activities", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
-                },
-                "Aktiviteler"
-            ]
-        ],
-        li![
-            a![
-                attrs!{
-                    At::Href => format!("/schools/{}/groups/{}/classes/{}/limitations", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
-                },
-                "Kısıtlamalar"
-            ]
-        ],
-        li![
-            a![
-                attrs!{
-                    At::Href => format!("/schools/{}/groups/{}/classes/{}/timetables", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
-                },
-                "Ders Tablosu"
             ]
         ]
     ]

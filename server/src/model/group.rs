@@ -3,7 +3,6 @@ use serde::*;
 use crate::AppState;
 use crate::model::{teacher, timetable, class, activity};
 use crate::request::Auth;
-use crate::model::class::Class;
 //use tide::Error;
 
 

@@ -24,9 +24,6 @@ pub struct SimpleAct{
 
 pub async fn get_activities(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
-    //let school_id: i32 = req.param("school")?.parse()?;
-
-    use sqlx_core::postgres::PgQueryAs;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role <= 4 {
         let teacher = req.get_teacher().await?;

@@ -67,10 +67,10 @@ pub async fn get_group(req: Request<AppState>) -> tide::Result {
 
 pub async fn get_classes(req: Request<AppState>) -> tide::Result {
     let mut res = tide::Response::new(StatusCode::Ok);
-    //let school_id: i32 = req.param("school")?.parse()?;
-    //let group_id: i32 = req.param("group_id")?.parse()?;
-    let school_auth: &SchoolAuth = req.ext().unwrap();
-    let classes = school_auth.school.get_classes(&req).await?;
+    let school_id: i32 = req.param("school")?.parse()?;
+    let group_id: i32 = req.param("group_id")?.parse()?;
+    let classes = crate::model::group::get_group(school_id, group_id, &req).await?.get_classes(&req).await?;
+    //classes.retain(|c| c.group_id != group_id);
     res.set_body(Body::from_json(&classes)?);
     Ok(res)
 }

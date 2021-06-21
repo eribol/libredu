@@ -127,10 +127,10 @@ fn get_act(teacher_timetable: &[TeacherTimetable], day: &Day, hour: i32) -> Node
     }
 }
 
-fn get_classes(cls: &[class::Class]) -> String{
+fn get_classes(cls: &[class::ClassContext]) -> String{
     let mut class = "".to_string();
     for c in cls{
-        class = class + &c.kademe.to_string() + "/" + &c.sube + "\n"
+        class = class + &c.class.kademe.to_string() + "/" + &c.class.sube + "\n"
     }
     class
 }

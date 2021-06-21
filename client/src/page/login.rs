@@ -94,7 +94,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
         Msg::FetchSchool(Ok(schools))=> {
             for s in schools {
                 let ctx_school = SchoolContext {
-                    teachers: vec![],
+                    teachers: None,
                     role: s.0,
                     groups: None,
                     school: s.1,

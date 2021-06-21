@@ -2,9 +2,9 @@ use serde::*;
 use crate::model;
 use crate::page::school::detail;
 use crate::page::school::group::timetable::{Activity, ClassAvailable};
-use crate::model::user::Teacher;
+use crate::model::teacher::Teacher;
 use crate::model::class::Class;
-use crate::page::school::detail::GroupContext;
+use seed::Url;
 
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -37,10 +37,10 @@ pub fn tests(
     acts: &[Activity],
     max_day_hour: i32,
     tests: &mut Tests,
-    ctx_school: &mut detail::SchoolContext,
-    ctx_group: &mut GroupContext,
+    school_ctx: &mut detail::SchoolContext,
     tat: &[model::teacher::TeacherAvailableForTimetables],
-    cat: &[ClassAvailable]
+    cat: &[ClassAvailable],
+    url: Url
 ){
     let _fail_acts: Vec<Activity> = acts.iter().cloned().filter(|a| a.hour > max_day_hour as i16).collect();
     tests.classes.clear();
@@ -50,52 +50,64 @@ pub fn tests(
     tests.test5.clear();
     for a in acts{
         if a.hour > max_day_hour as i16 && max_day_hour != 0{
-            let teacher = ctx_school.teachers.iter().find(|t| Some(t.id) == a.teacher).unwrap();
-            let class = ctx_group.classes.iter().find(|c| a.classes.iter().any(|a2| a2 == &c.id)).unwrap();
-            let act = Act{
-                teacher: ActTeacher{
-                    first_name: teacher.first_name.clone(),
-                    last_name: teacher.last_name.clone()
-                },
-                class: ActClass{ kademe: class.kademe.clone(), sube: class.sube.clone() }
-            };
-            tests.activity.push(act);
+            let group_ctx = school_ctx.get_group(&url);
+            if let Some(teachers) = &school_ctx.teachers{
+                if let Some(classes) = &group_ctx.classes{
+                    let teacher = teachers.iter().find(|t| Some(t.teacher.id) == a.teacher).unwrap();
+                    let class = classes.iter().find(|c| a.classes.iter().any(|a2| a2 == &c.class.id)).unwrap();
+                    let act = Act{
+                        teacher: ActTeacher{
+                            first_name: teacher.teacher.first_name.clone(),
+                            last_name: teacher.teacher.last_name.clone()
+                        },
+                        class: ActClass{ kademe: class.class.kademe.clone(), sube: class.class.sube.clone() }
+                    };
+                    tests.activity.push(act);
+                }
+            }
+
         }
     }
-    for teacher in &ctx_school.teachers{
-        let total_act_hour = acts.iter().fold(0,|a, b| if b.teacher==Some(teacher.id){a+b.hour} else{a});
-        let mut total_available_hour = 0;
-        for t in tat{
-            if t.user_id == teacher.id{
-                for h in &t.hours{
-                    if *h{
-                        total_available_hour += 1;
+    if let Some(teachers ) = &school_ctx.teachers{
+        for teacher in teachers{
+            let total_act_hour = acts.iter().fold(0,|a, b| if b.teacher==Some(teacher.teacher.id){a+b.hour} else{a});
+            let mut total_available_hour = 0;
+            for t in tat{
+                if t.user_id == teacher.teacher.id{
+                    for h in &t.hours{
+                        if *h{
+                            total_available_hour += 1;
+                        }
                     }
                 }
             }
-        }
-        if total_act_hour > total_available_hour || tat.is_empty(){
-            tests.teachers.push(teacher.clone())
+            if total_act_hour > total_available_hour || tat.is_empty(){
+                tests.teachers.push(teacher.teacher.clone())
+            }
         }
     }
-    for class in &ctx_group.classes{
-        let total_act_hour = acts.iter().fold(0,|a, b| if b.classes.iter().any(|b2| b2 == &class.id){a+b.hour} else{a});
-        let mut total_available_hour = 0;
-        for c in cat{
-            if c.class_id == class.id{
-                for h in &c.hours{
-                    if *h{
-                        total_available_hour += 1;
+    let group_ctx = school_ctx.get_group(&url);
+    if let Some(classes) = &group_ctx.classes{
+        for class in classes{
+            let total_act_hour = acts.iter().fold(0,|a, b| if b.classes.iter().any(|b2| b2 == &class.class.id){a+b.hour} else{a});
+            let mut total_available_hour = 0;
+            for c in cat{
+                if c.class_id == class.class.id{
+                    for h in &c.hours{
+                        if *h{
+                            total_available_hour += 1;
+                        }
                     }
                 }
             }
-        }
-        if total_act_hour > total_available_hour || cat.is_empty(){
-            tests.classes.push(class.clone())
+            if total_act_hour > total_available_hour || cat.is_empty(){
+                tests.classes.push(class.class.clone())
+            }
         }
     }
+
     /*
-    for teacher in &ctx_school.teachers{
+    for teacher in &school_ctx.teachers{
         use crate::page::school::group::generate::recursive_put;
         use crate::page::school::group::generate::find_timeslot;
         let mut tat2 = tat.clone();

@@ -29,10 +29,44 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     };
     let session = SessionStorage::get("session").unwrap_or(false);
     if session {
-        log!("aaa");
-        ctx.user = SessionStorage::get("user").unwrap_or_default();
-        if let Ok(s) = SessionStorage::get("schools") {
-            ctx.schools = s;
+        if let Ok(user) = SessionStorage::get("user"){
+            ctx.user = Some(user);
+            if let Ok(ss) = SessionStorage::get("schools") {
+                ctx.schools = ss;
+                orders.send_msg(Msg::Loading);
+            }
+            else {
+                orders.perform_cmd({
+                    let request = Request::new("/api/schools")
+                        .method(Method::Get);
+
+                    async { Msg::GetSchools(async {
+                        request
+                            .fetch()
+                            .await?
+                            .check_status()?
+                            .json()
+                            .await
+                    }.await)}
+                });
+            }
+        }
+        else {
+            orders.perform_cmd({
+                let request = Request::new("/api/login")
+                    .method(Method::Get);
+
+                async {
+                    Msg::GetUser(async {
+                        request
+                            .fetch()
+                            .await?
+                            .check_status()?
+                            .json()
+                            .await
+                    }.await)
+                }
+            });
         }
     }
     else {
@@ -53,15 +87,16 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
             }
         });
     }
+    orders.send_msg(Msg::Loading);
     orders.subscribe(Msg::UrlChanged);
-    //orders.send_msg(Msg::SSE);
-    let page = Page::init(url, orders, &mut ctx);
+    let page = Page::Loading;
     Model {
         ctx,
         page,
         posts: vec![],
         form: NewPost::default(),
-        navbar: "".to_string()
+        navbar: "".to_string(),
+        url
     }
 }
 
@@ -75,6 +110,7 @@ struct Model {
     posts: Vec<SchoolPost>,
     form: NewPost,
     navbar: String,
+    url: Url
 }
 
 #[derive(Debug, Clone)]
@@ -84,9 +120,8 @@ pub struct Context {
     pub schools: Vec<SchoolContext>,
 }
 
-
-// ------ Page ------
 pub enum Page {
+    Loading,
     Home(page::home::Model),
     Login(page::login::Model),
     UserDetail(page::users::home::Model),
@@ -104,7 +139,7 @@ impl Page {
             Some("") | None => Self::Home(page::home::init(&mut orders.proxy(Msg::Home))),
             Some(LOGIN) => Self::Login(page::login::init()),
             Some(USER) => Self::UserDetail(page::users::home::init(url, &mut orders.proxy(Msg::UserDetail), ctx)),
-            Some(SCHOOL) => Self::School(Box::new(page::school::init(url, &mut orders.proxy(Msg::School), ctx))),
+            Some(SCHOOL) => Self::School(Box::new(page::school::init(url, &mut orders.proxy(Msg::School), &ctx.user, &mut ctx.schools))),
             Some(SIGN_IN) => Self::SignIn(page::signin::init()),
             Some(RESET) => Self::Reset(page::reset::init()),
             Some("help") => Self::Help,
@@ -113,10 +148,6 @@ impl Page {
         }
     }
 }
-
-// ------ ------
-//     Urls
-// ------ ------
 
 struct_urls!();
 impl<'a> Urls<'a> {
@@ -135,95 +166,59 @@ impl<'a> Urls<'a> {
         self.base_url().add_path_part(SCHOOL).add_path_part(school_id.to_string())
     }
     pub fn group_detail(self, school_id: i32, group_id: i32) -> Url {
-        self.base_url().add_path_part(SCHOOL).add_path_part(school_id.to_string()).add_path_part("groups").add_path_part(group_id.to_string())
+        self.home().add_path_part("schools").add_path_part(school_id.to_string()).add_path_part("groups").add_path_part(group_id.to_string())
     }
     pub fn user_detail(self, user_id: i32) -> Url {
         self.base_url().add_path_part(USER).add_path_part(user_id.to_string())
     }
 }
 
-// ------ ------
-//    Update
-// ------ ------
-
 #[derive(Debug)]
 pub enum Msg {
     Home(page::home::Msg),
     UrlChanged(subs::UrlChanged),
+    GetSchools(fetch::Result<Vec<(i16, SchoolDetail)>>),
+    Logout,
+    FetchLogout(fetch::Result<String>),
+    ChangeNavbar,
     LoginMsg(page::login::Msg),
     SignIn(page::signin::Msg),
     UserDetail(page::users::home::Msg),
     GetUser(fetch::Result<UserDetail>),
-    GetSchools(fetch::Result<Vec<(i16, SchoolDetail)>>),
     ChangeBody(String),
     SendPost,
     DelPost(i32),
     FetchDelPost(fetch::Result<i32>),
     Reset(page::reset::Msg),
-    Logout,
-    FetchLogout(fetch::Result<String>),
     FetchPosts(fetch::Result<Vec<SchoolPost>>),
     FetchPost(fetch::Result<SchoolPost>),
     School(page::school::Msg),
-    ChangeNavbar,
     Sse,
     Notify(fetch::Result<String>),
     Admin(page::admin::home::Msg),
+    Loading
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     let ctx = &mut model.ctx;
     match msg {
+        Msg::Loading => {
+            model.page = Page::init(model.url.clone(), orders, ctx);
+        }
         Msg::Home(msg) => {
-            log!("home");
-            if let Page::Home(model) = &mut model.page{
-                page::home::update(msg, model, &mut orders.proxy(Msg::Home), ctx)
+            if let Page::Home(model) = &mut model.page {
+                page::home::update(msg, model, &mut orders.proxy(Msg::Home), ctx);
             }
         }
         Msg::UrlChanged(subs::UrlChanged(url)) => {
             model.navbar = "".to_string();
             model.page = Page::init(url, orders, ctx);
-            //log!("{:?}", model.page)
-        }
-        Msg::Reset(msg)=>{
-            if let Page::Reset(model) = &mut model.page {
-                page::reset::update(msg, model, &mut orders.proxy(Msg::Reset), ctx)
-            }
-        }
-        Msg::ChangeNavbar => {
-            if model.navbar.is_empty(){
-                model.navbar = "is-active".to_string()
-            }
-            else {
-                model.navbar = "".to_string()
-            }
-        }
-        Msg::GetUser(user)=>{
-            //SessionStorage::insert("user", &user);
-            if let Ok(u) = user {
-                ctx.user = Some(u.clone());
-                SessionStorage::insert("user", &u).expect("Session yüklenemedi");
-            }
-            orders.perform_cmd({
-                let request = Request::new("/api/schools")
-                    .method(Method::Get);
-
-                async { Msg::GetSchools(async {
-                    request
-                        .fetch()
-                        .await?
-                        .check_status()?
-                        .json()
-                        .await
-                }.await)}
-            });
-            //orders.send_msg(Msg::Home);
         }
         Msg::GetSchools(schools)=> {
-            if let Ok(school) = schools {
-                for s in school {
+            if let Ok(schools) = schools {
+                for s in schools {
                     let ctx_school = SchoolContext {
-                        teachers: vec![],
+                        teachers: None,
                         role: s.0,
                         groups: None,
                         school: s.1,
@@ -235,43 +230,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     ctx.schools.push(ctx_school);
                 }
             }
+            orders.send_msg(Msg::Loading);
             SessionStorage::insert("schools", &ctx.schools).expect("Okullar eklenemedi");
-            orders.subscribe(Msg::UrlChanged);
         }
-        Msg::FetchPosts(post)=>{
-            match post{
-                Ok(p) => { model.posts = p}
-                Err(e) => {
-                    log!(e)
-                }
-            }
-            //log!("post");
-            orders.subscribe(Msg::UrlChanged);
-        }
-        Msg::FetchPost(post)=>{
-            match post {
-                Ok(p) => {
-                    model.posts.insert(0, p);
-                }
-                Err(e) => {
-                    log!(e);
-                }
-            }
-            model.form.body = "".to_string();
-        }
-        Msg::ChangeBody(b)=>{
-            model.form.body = b;
-        }
-        Msg::LoginMsg(msg) => {
-            if let Page::Login(model) = &mut model.page {
-                page::login::update(msg, model, &mut orders.proxy(Msg::LoginMsg), ctx)
-            }
-        },
-        Msg::UserDetail(msg) => {
-            if let Page::UserDetail(model) = &mut model.page {
-                page::users::home::update(msg, model, &mut orders.proxy(Msg::UserDetail), ctx)
-            }
-        },
         Msg::Logout => {
             //LocalStorage::remove("libredu-ctx_school").expect("remove saved user")
             orders.perform_cmd({
@@ -291,19 +252,103 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             //orders.skip();
         },
         Msg::FetchLogout(Ok(_s)) => {
-            //log!("aaa");
             SessionStorage::remove(STORAGE_KEY).expect("remove saved user");
             SessionStorage::remove("schools").expect("remove saved schools");
             ctx.user = None;
             ctx.schools = Vec::new();
             //ctx.user = None;
             //ctx.school = vec![];
-            //orders.notify(
-            //    subs::UrlRequested::new(crate::Urls::new(&ctx.base_url).home())
-            //);
+            orders.notify(
+                subs::UrlRequested::new(format!("").parse().unwrap())
+            );
         },
         Msg::FetchLogout(Err(_e)) => {
             Urls::new(&ctx.base_url).home();
+        }
+        Msg::ChangeNavbar => {
+            if model.navbar.is_empty(){
+                model.navbar = "is-active".to_string()
+            }
+            else {
+                model.navbar = "".to_string()
+            }
+        }
+        Msg::SignIn(msg) => {
+            if ctx.user.is_none() {
+                if let Page::SignIn(model) = &mut model.page {
+                    page::signin::update(msg, model, &mut orders.proxy(Msg::SignIn), ctx)
+                }
+            }
+            else{
+                //model.page = Page::Home(page::home::init());
+                Urls::new(&ctx.base_url).home();
+            }
+        },
+        Msg::LoginMsg(msg) => {
+            if let Page::Login(model) = &mut model.page {
+                page::login::update(msg, model, &mut orders.proxy(Msg::LoginMsg), ctx)
+            }
+        },
+        Msg::UserDetail(msg) => {
+            if let Page::UserDetail(model) = &mut model.page {
+                page::users::home::update(msg, model, &mut orders.proxy(Msg::UserDetail), ctx)
+            }
+        },
+        Msg::Reset(msg)=>{
+            if let Page::Reset(model) = &mut model.page {
+                page::reset::update(msg, model, &mut orders.proxy(Msg::Reset), ctx)
+            }
+        }
+        Msg::GetUser(user)=>{
+            //SessionStorage::insert("user", &user);
+            if let Ok(u) = user {
+                log!("user geldi");
+                ctx.user = Some(u.clone());
+                SessionStorage::insert("user", &u).expect("Session yüklenemedi");
+            }
+            orders.perform_cmd({
+                let request = Request::new("/api/schools")
+                    .method(Method::Get);
+
+                async { Msg::GetSchools(async {
+                    request
+                        .fetch()
+                        .await?
+                        .check_status()?
+                        .json()
+                        .await
+                }.await)}
+            });
+            //orders.send_msg(Msg::Home);
+        }
+        Msg::School(msg) => {
+            if let Page::School(model) = &mut model.page {
+                page::school::update(msg, model, &mut orders.proxy(Msg::School), ctx)
+            }
+        }
+        Msg::FetchPosts(post)=>{
+            match post{
+                Ok(p) => { model.posts = p}
+                Err(e) => {
+                    log!(e)
+                }
+            }
+            //log!("post");
+            //orders.subscribe(Msg::UrlChanged);
+        }
+        Msg::FetchPost(post)=>{
+            match post {
+                Ok(p) => {
+                    model.posts.insert(0, p);
+                }
+                Err(e) => {
+                    log!(e);
+                }
+            }
+            model.form.body = "".to_string();
+        }
+        Msg::ChangeBody(b)=>{
+            model.form.body = b;
         }
         Msg::SendPost=>{
             model.form.sender = ctx.user.as_ref().unwrap().id;
@@ -343,22 +388,6 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 model.posts.retain(|p| p.id != i);
             }
         }
-        Msg::SignIn(msg) => {
-            if ctx.user.is_none() {
-                if let Page::SignIn(model) = &mut model.page {
-                    page::signin::update(msg, model, &mut orders.proxy(Msg::SignIn), ctx)
-                }
-            }
-            else{
-                //model.page = Page::Home(page::home::init());
-                Urls::new(&ctx.base_url).home();
-            }
-        },
-        Msg::School(msg) => {
-            if let Page::School(model) = &mut model.page {
-                page::school::update(msg, model, &mut orders.proxy(Msg::School), ctx)
-            }
-        }
         Msg::Sse => {
             //use web_sys::{EventSource};
             //let event_source = EventSource::new("/sse").unwrap();
@@ -382,18 +411,18 @@ fn view(model: &Model) -> Node<Msg> {
             C!{"navbar is-fixed-top"},
 
                 navbar_brand(model),
-                view_navbar_brand(model, ctx)
+                view_navbar_brand(model, &ctx)
             //view_navbar_end(ctx)
         ],
         match &model.page{
-            Page::Home(m) => page::home::view(m, ctx).map_msg(Msg::Home),
+            Page::Home(m) => page::home::view(m, &ctx).map_msg(Msg::Home),
             Page::Help => help(),
             Page::Reset(m) => page::reset::view(m).map_msg(Msg::Reset),
-            Page::Admin(m) => page::admin::home::view(m).map_msg(Msg::Admin),
+            //Page::Admin(m) => page::admin::home::view(m).map_msg(Msg::Admin),
             Page::Login(m) => {
                 if ctx.user.is_none(){
                     div![
-                        page::login::view(m, ctx).map_msg(Msg::LoginMsg)
+                        page::login::view(m, &ctx).map_msg(Msg::LoginMsg)
                     ]
                 }
                 else{
@@ -403,18 +432,18 @@ fn view(model: &Model) -> Node<Msg> {
             Page::UserDetail(user) => {
                 match &ctx.user {
                     Some(_u) => {
-                        page::users::home::view(user, ctx).map_msg(Msg::UserDetail)
+                        page::users::home::view(user, &ctx).map_msg(Msg::UserDetail)
                     },
                     None => div!["Giriş yapınız"]
                 }
             },
             Page::School(school) => {
-                page::school::view(school, ctx).map_msg(Msg::School)
+                page::school::view(school, &ctx).map_msg(Msg::School)
             },
             Page::SignIn(model) => {
                 page::signin::view(model).map_msg(Msg::SignIn)
             },
-            Page::NotFound => div!["404"]
+            _ => div!["404"]
         }
     ]
 }
@@ -465,6 +494,7 @@ fn view_navbar_brand(model: &Model, ctx: &Context) -> Node<Msg>{
                         ],
                         div![
                             C!{"navbar-dropdown"},
+
                             ctx.schools.iter().map(|ctx_s|
                                 a![
                                     C!{"navbar-item"},

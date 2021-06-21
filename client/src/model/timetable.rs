@@ -7,6 +7,42 @@ pub struct Day{
     pub name: String
 }
 
+impl Day{
+    pub fn new() -> Vec<Self>{
+        vec![
+            Self {
+                id: 1,
+                name: "Pazartesi".parse().unwrap()
+            },
+            Self {
+                id: 2,
+                name: "Salı".parse().unwrap()
+            },
+            Self {
+                id: 3,
+                name: "Çarşamba".parse().unwrap()
+            },
+            Self {
+                id: 4,
+                name: "Perşembe".to_string()
+            },
+            Self {
+                id: 5,
+                name: "Cuma".to_string()
+            },
+            Self {
+                id: 6,
+                name: "Cumartesi".to_string()
+            },
+            Self {
+                id: 7,
+                name: "Pazar".to_string()
+            },
+        ]
+
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ClassAvailable{
     pub hours: Vec<bool>,

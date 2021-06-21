@@ -1,6 +1,6 @@
 use serde::*;
-use crate::model::class::Class;
-use crate::model::timetable;
+use crate::model::class::{Class, ClassContext};
+use crate::model::{timetable, activity};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct TeacherAvailable{
@@ -11,6 +11,14 @@ pub struct TeacherAvailable{
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct TeacherTimetable{
+    pub id: i32,
+    pub class_id: Vec<ClassContext>,
+    pub day_id: i32,
+    pub hour: i16,
+    pub subject: String,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct TeacherTimetable2{
     pub id: i32,
     pub class_id: Vec<Class>,
     pub day_id: i32,
@@ -37,3 +45,43 @@ pub struct Teacher{
     pub email: Option<String>,
     pub tel: Option<String>,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct TeacherContext{
+    pub teacher: Teacher,
+    pub group: Vec<TeacherGroupContext>,
+    pub activities: Option<Vec<activity::FullActivity>>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct TeacherGroupContext{
+    pub group: i32,
+    pub activities: Option<Vec<activity::FullActivity>>,
+    pub limitations: Option<Vec<TeacherAvailable>>,
+    pub timetables: Option<Vec<TeacherTimetable2>>
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+pub struct TeacherMenu<'a>{
+    pub link: &'a str,
+    pub name: &'a str,
+}
+
+pub const TEACHER_MENU: &[TeacherMenu] = &[
+    TeacherMenu {
+        link: "",
+        name: "Öğretmen Bilgileri",
+    },
+    TeacherMenu {
+        link: "activities",
+        name: "Aktiviteler",
+    },
+    TeacherMenu {
+        link: "limitations",
+        name: "Kısıtlamalar",
+    },
+    TeacherMenu {
+        link: "timetables",
+        name: "Ders Programı",
+    }
+];

@@ -1,11 +1,12 @@
 pub mod home;
 pub mod schedules;
-pub(crate) mod teachers;
 pub mod class;
-pub mod timetable;
 pub mod generate;
 mod test_generate;
 mod classes;
+mod teachers;
 mod teacher;
-pub mod common_exam;
-pub mod deneme_generate;
+mod timetable;
+//mod teacher;
+//pub mod common_exam;
+//pub mod deneme_generate;

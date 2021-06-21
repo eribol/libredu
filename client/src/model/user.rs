@@ -16,7 +16,8 @@ pub struct Teacher{
     pub first_name: String,
     pub last_name: String,
     pub role_id: i32,
-    pub role_name: String
+    pub role_name: String,
+    pub is_active: bool
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]

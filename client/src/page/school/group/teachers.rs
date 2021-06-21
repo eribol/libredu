@@ -1,11 +1,9 @@
 use serde::*;
 use seed::{*, prelude::*};
-use crate::{Context};
 use crate::page::school::group::teacher::home;
-use crate::model::user::Teacher;
 use crate::page::school::detail;
-use crate::page::school::detail::{SchoolContext, GroupContext};
-use crate::model::school::SchoolDetail;
+use crate::page::school::detail::SchoolContext;
+use crate::model::teacher::{TeacherContext, Teacher, TeacherGroupContext};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct NewTeacher{
@@ -17,10 +15,8 @@ pub struct NewTeacher{
 #[derive(Debug, Default, Clone)]
 pub struct Model{
     pages: Pages,
-    teachers: Vec<Teacher>,
-    school: SchoolDetail,
     form: NewTeacher,
-    //school: SchoolDetail
+    url: Url
 }
 
 #[derive(Debug, Clone)]
@@ -33,31 +29,34 @@ impl Default for Pages{
         Self::Teachers
     }
 }
-pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, ctx: &mut Context, ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext)-> Model {
-    let mut model = Model::default();
-    //log!("teachers:", ctx_school.school);
-    orders.perform_cmd({
-        let adres = format!("/api/schools/{}/teachers", ctx_school.school.id);
-        let request = Request::new(adres)
-            .method(Method::Get);
-        async { Msg::FetchTeachers(async {
-            request
-                .fetch()
-                .await?
-                .check_status()?
-                .json()
-                .await
-        }.await)}
-    });
-    match url.next_path_part(){
-        Some("") | None => {},
-        Some(id) => {
-            model.pages = Pages::Teacher(Box::new(home::init(id.parse::<i32>().unwrap(), &mut orders.proxy(Msg::Teacher), ctx, ctx_school, url, ctx_group)));
+pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolContext)-> Model {
+    let mut model = Model{url: url.clone(), ..Default::default()};
+    if let Some(_teachers) = &mut school_ctx.teachers{
+        match url.next_path_part() {
+            Some("") | None => {
+                model.pages = Pages::Teachers
+            },
+            _ => {
+                model.pages = Pages::Teacher(Box::new(home::init(url, &mut orders.proxy(Msg::Teacher), school_ctx)));
+            }
         }
     }
-    //if _url.path().len()>=4{
-    //
-    //}
+    else {
+        orders.perform_cmd({
+            let adres = format!("/api/schools/{}/teachers", school_ctx.school.id);
+            let request = Request::new(adres)
+                .method(Method::Get);
+            async { Msg::FetchTeachers(async {
+                request
+                    .fetch()
+                    .await?
+                    .check_status()?
+                    .json()
+                    .await
+            }.await)}
+        });
+    }
+    model.form.role = 5;
     model
 }
 
@@ -74,22 +73,60 @@ pub enum Msg{
     Teacher(home::Msg)
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx_school: &mut detail::SchoolContext, ctx_group: &mut GroupContext) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school_ctx: &mut detail::SchoolContext) {
     match msg {
         Msg::FetchTeachers(teachers) => {
-            if let Ok(t) = teachers {
-                model.teachers = t.clone();
-                ctx_school.teachers = t
+            if let Ok(teachers) = teachers {
+                if let Some(tchrs) = &mut school_ctx.teachers {
+                    tchrs.clear();
+                    for t in teachers {
+                        let teacher_ctx = TeacherContext {
+                            teacher: t,
+                            group: vec![
+                                TeacherGroupContext{
+                                    group: model.url.path()[3].parse().unwrap(),
+                                    activities: None,
+                                    limitations: None,
+                                    timetables: None
+                                }
+                            ],
+                            activities: None
+                        };
+
+                        tchrs.push(teacher_ctx)
+                    }
+                }
+                else{
+                    school_ctx.teachers = Some(vec![]);
+                    if let Some(tchrs) = &mut school_ctx.teachers {
+                        for t in teachers {
+                            let teacher_ctx = TeacherContext {
+                                teacher: t,
+                                group: vec![
+                                    TeacherGroupContext{
+                                        group: model.url.path()[3].parse().unwrap(),
+                                        activities: None,
+                                        limitations: None,
+                                        timetables: None
+                                    }
+                                ],
+                                activities: None
+                            };
+                            tchrs.push(teacher_ctx)
+                        }
+                    }
+                }
             }
+
         }
-        Msg::Teacher(msg)=>{
+        Msg::Teacher(msg) => {
             if let Pages::Teacher(m) = &mut model.pages {
-                home::update(msg, m, &mut orders.proxy(Msg::Teacher), _ctx, ctx_school, ctx_group)
+                home::update(msg, m, &mut orders.proxy(Msg::Teacher), school_ctx)
             }
         }
         Msg::AddTeacher=> {
             orders.perform_cmd({
-                let url = format!("/api/schools/{}/teachers", ctx_school.school.id);
+                let url = format!("/api/schools/{}/teachers", school_ctx.school.id);
                 let request = Request::new(url)
                     .method(Method::Post)
                     .json(&model.form);
@@ -106,8 +143,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             });
         }
         Msg::DelTeacher(id)=> {
+            let group_ctx = school_ctx.get_group(&model.url);
             orders.perform_cmd({
-                let url = format!("/api/schools/{}/groups/{}/teachers/{}", ctx_school.school.id, ctx_group.group.id, id);
+                let url = format!("/api/schools/{}/groups/{}/teachers/{}", school_ctx.school.id, group_ctx.group.id, id);
                 let request = Request::new(url)
                     .method(Method::Delete);
                 async {
@@ -124,8 +162,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         }
         Msg::FetchDel(teacher)=>{
             if let Ok(t) = teacher {
-                model.teachers.retain(|tt| tt.id != t);
-                ctx_school.teachers.retain(|tt| tt.id != t);
+                if let Some(teachers) = &mut school_ctx.teachers{
+                    teachers.retain(|tt| tt.teacher.id != t);
+                }
             }
         }
         Msg::ChangeFirstName(name)=>{
@@ -140,99 +179,196 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         }
         Msg::FetchTeacher(t)=>{
             if let Ok(_t) = t {
-                ctx_school.teachers.insert(0, _t);
+                if let Some(teachers) = &mut school_ctx.teachers{
+                    let teacher_ctx = TeacherContext{
+                        teacher: _t,
+                        group: vec![
+                            TeacherGroupContext{
+                                group: model.url.path()[3].parse().unwrap(),
+                                activities: None,
+                                limitations: None,
+                                timetables: None
+                            }
+                        ],
+                        activities: None
+                    };
+                    teachers.insert(0, teacher_ctx);
+                }
+
             }
         }
     }
 }
 
-pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group: &GroupContext)-> Node<Msg>{
+pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
+    let group_ctx = school_ctx.get_group(&model.url);
     div![
-        C!{"column is-full"},
-            match &model.pages{
-                Pages::Teacher(m) => {
-                    home::view(m, ctx_school, ctx_group).map_msg(Msg::Teacher)
-                },
-                Pages::Teachers => {
+        C!{"columns"},
+        match &model.pages{
+            Pages::Teacher(m) => {
+                use crate::model::teacher::TEACHER_MENU;
+                let teacher_ctx = school_ctx.get_teacher(&model.url);
+                div![
+                    C!{"column"},
+                            div![
+                        C!{"columns"},
+                        div![C!{"column is-12"},
+                            nav![
+                                C!{"breadcrumb is-centered"},
+                                attrs!{At::AriaLabel=>"breadcrumbs"},
+                                ul![
+                                    li![
+                                        a![
+                                            attrs!{
+                                                At::Href=> format!("/schools/{}/groups/{}/teachers", &school_ctx.school.id, &group_ctx.group.id)
+                                            },
+                                            "<--Öğretmenler",
+                                        ]
+                                    ],
+                                    match school_ctx.get_prev_teacher(&m.url){
+                                        Some(teacher) => {
+                                            li![
+                                                a![
+                                                    attrs!{
+                                                        At::Href=> format!("/schools/{}/groups/{}/teachers/{}/{}", &school_ctx.school.id, &group_ctx.group.id, teacher.teacher.id, &m.tab)
+                                                    },
+                                                    "Önceki Öğretmen"
+                                                ]
+                                            ]
+                                        },
+                                        None => {
+                                            div![]
+                                        }
+                                    },
+                                    li![
+                                        div![" ", &teacher_ctx.teacher.first_name, " ", &teacher_ctx.teacher.last_name, " "]
+                                    ],
+                                    match school_ctx.get_next_teacher(&m.url){
+                                        Some(teacher) => {
+                                            li![
+                                                a![
+                                                    attrs!{
+                                                        At::Href=> format!("/schools/{}/groups/{}/teachers/{}/{}", &school_ctx.school.id, &group_ctx.group.id, &teacher.teacher.id, &m.tab)
+                                                    },
+                                                    "Sonraki Öğretmen",
+                                                ]
+                                            ]
+                                        },
+                                        None => {
+                                            div![]
+                                        }
+                                    },
+                                ]
+                            ]
+                        ]
+                    ],
                     div![
-                        C!{"field"},
-                        p![
-                            label![C!{"label"}, "Adı:"],
-                            input![
-                                attrs!{
-                                    At::Type=>"text",
-                                    At::Placeholder=>"Adı",
-                                    At::Value=>&model.form.first_name,
-                                    At::Disabled => disabled(ctx, ctx_school).as_at_value()
-                                },
-                                input_ev(Ev::Input, Msg::ChangeFirstName)
+                        C!{"columns"},
+                        div![
+                            C!{"column tabs is-centered"},
+                            ul![
+                                TEACHER_MENU.iter().map(|menu|
+                                    li![
+                                        if m.tab == menu.link{
+                                        C!{"is-active"}} else {C!{""}},
+                                        a![
+                                            menu.name,
+                                            attrs!{
+                                                At::Href => format!("/schools/{}/groups/{}/teachers/{}/{}", &school_ctx.school.id, &group_ctx.group.id, &teacher_ctx.teacher.id, menu.link)
+                                            }
+                                        ]
+                                    ]
+                                )
                             ]
+                        ]
+                    ],
+                    div![
+                        C!{"columns"},
+                        teacher_detail(m, school_ctx)
+                    ]
+                ]
+            },
+            Pages::Teachers => {
+                div![
+                    C!{"field"},
+                    p![
+                        label![C!{"label"}, "Adı:"],
+                        input![
+                            attrs!{
+                                At::Type=>"text",
+                                At::Placeholder=>"Adı",
+                                At::Value=>&model.form.first_name,
+                                At::Disabled => disabled(school_ctx).as_at_value()
+                            },
+                            input_ev(Ev::Input, Msg::ChangeFirstName)
+                        ]
+                    ],
+                    p![
+                        label![C!{"label"},"Soyadı:"],
+                        input![
+                            attrs!{
+                                At::Type=>"text",
+                                At::Placeholder=>"Soyadı",
+                                At::Value=>&model.form.last_name
+                                At::Disabled => disabled(school_ctx).as_at_value()
+                            },
+                            input_ev(Ev::Input, Msg::ChangeLastName)
+                        ]
+                    ],
+                    p![
+                        label![
+                            C!{"label"},"Rol:"
                         ],
-                        p![
-                            label![C!{"label"},"Soyadı:"],
-                            input![
+                        select![
+                            C!{"select"},
+                            attrs!{
+                                At::Name=>"type",
+                                At::Id=>"type",
+                                //At::Value => &model.form2.group,
+                            },
+                            option![
                                 attrs!{
-                                    At::Type=>"text",
-                                    At::Placeholder=>"Soyadı",
-                                    At::Value=>&model.form.last_name
-                                    At::Disabled => disabled(ctx, ctx_school).as_at_value()
+                                    At::Value=> "2"
                                 },
-                                input_ev(Ev::Input, Msg::ChangeLastName)
-                            ]
-                        ],
-                        p![
-                            label![
-                                C!{"label"},"Rol:"
+                                "Müdür Başyardımcısı"
                             ],
-                            select![
-                                C!{"select"},
+                            option![
                                 attrs!{
-                                    At::Name=>"type",
-                                    At::Id=>"type",
-                                    //At::Value => &model.form2.group,
+                                    At::Value=> "3"
                                 },
-                                option![
-                                    attrs!{
-                                        At::Value=> "2"
-                                    },
-                                    "Müdür Başyardımcısı"
-                                ],
-                                option![
-                                    attrs!{
-                                        At::Value=> "3"
-                                    },
-                                    "Müdür Yardımcısı"
-                                ],
-                                option![
-                                    attrs!{
-                                        At::Value=> "4"
-                                    },
-                                    "Rehber Öğretmen"
-                                ],
-                                option![
-                                    attrs!{
-                                        At::Value=> "5"
-                                    },
-                                    "Öğretmen"
-                                ],
-                                input_ev(Ev::Change, Msg::ChangeRole)
-                            ]
-                        ],
-                        p![
-                            input![C!{"button is-primary"},
+                                "Müdür Yardımcısı"
+                            ],
+                            option![
                                 attrs!{
-                                    At::Type=>"button",
-                                    At::Value=>"Ekle",
-                                    At::Id=>"login_button",
-                                    At::Disabled => disabled(ctx, ctx_school).as_at_value()
+                                    At::Value=> "4"
                                 },
-                                ev(Ev::Click, |event| {
-                                    event.prevent_default();
-                                    Msg::AddTeacher
-                                })
-                            ]
-                        ],
-                        table![
+                                "Rehber Öğretmen"
+                            ],
+                            option![
+                                attrs!{
+                                    At::Value=> "5",
+                                    At::Selected => true.as_at_value()
+                                },
+                                "Öğretmen"
+                            ],
+                            input_ev(Ev::Change, Msg::ChangeRole)
+                        ]
+                    ],
+                    p![
+                        input![C!{"button is-primary"},
+                            attrs!{
+                                At::Type=>"button",
+                                At::Value=>"Ekle",
+                                At::Id=>"login_button",
+                                At::Disabled => disabled(school_ctx).as_at_value()
+                            },
+                            ev(Ev::Click, |event| {
+                                event.prevent_default();
+                                Msg::AddTeacher
+                            })
+                        ]
+                    ],
+                    table![
                         C!{"table table-hover"},
                         thead![
                             tr![
@@ -254,96 +390,113 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext, ctx_group:
                                 ]
                             ]
                         ],
-                        tbody![
-                            ctx_school.teachers.iter().map(|t|
-                                tr![
-                                    C!{"table-light"},
-                                    td![
-                                        a![
-                                            &t.first_name,
-                                            attrs!{
-                                                At::Href=> format!("/schools/{}/groups/{}/teachers/{}", &ctx_school.school.id, &ctx_group.group.id, &t.id)
-                                            }
-                                        ]
-                                    ],
-                                    td![
-                                        a![
-                                            &t.last_name,
-                                            attrs!{
-                                                At::Href=> format!("/schools/{}/groups/{}/teachers/{}", &ctx_school.school.id, &ctx_group.group.id, &t.id)
-                                            }
-                                        ]
-                                    ],
-                                    td![
-                                        select![
-                                            C!{"select"},
-                                            attrs!{
-                                                At::Disabled => true
-                                                //At::Value => &model.form2.group,
-                                            },
-                                            option![
-                                                attrs!{
-                                                    At::Value=> "1",
-                                                    At::Selected => (t.role_id == 1).as_at_value(),
-                                                    //At::Disabled => (t.role_id == 1).as_at_value()
-                                                },
-                                                "Müdür"
+                        school_ctx.teachers.as_ref().map_or(
+                            tbody![],
+                            |teachers|
+                            tbody![
+                                teachers.iter().map(|t|
+
+                                        tr![
+                                            C!{"table-light"},
+                                            td![
+                                                a![
+                                                    &t.teacher.first_name,
+                                                    attrs!{
+                                                        At::Href=> format!("/schools/{}/groups/{}/teachers/{}", &school_ctx.school.id, &group_ctx.group.id, &t.teacher.id)
+                                                    }
+                                                ]
                                             ],
-                                            option![
-                                                attrs!{
-                                                    At::Value=> "2",
-                                                    At::Selected => (t.role_id == 2).as_at_value()
-                                                },
-                                                "Müdür Başyardımcısı"
+                                            td![
+                                                a![
+                                                    &t.teacher.last_name,
+                                                    attrs!{
+                                                        At::Href=> format!("/schools/{}/groups/{}/teachers/{}", &school_ctx.school.id, &group_ctx.group.id, &t.teacher.id)
+                                                    }
+                                                ]
                                             ],
-                                            option![
-                                                attrs!{
-                                                    At::Value=> "3",
-                                                    At::Selected => (t.role_id == 3).as_at_value()
-                                                },
-                                                "Müdür Yardımcısı"
+                                            td![
+                                                select![
+                                                    C!{"select"},
+                                                    attrs!{
+                                                        At::Disabled => true
+                                                        //At::Value => &model.form2.group,
+                                                    },
+                                                    option![
+                                                        attrs!{
+                                                            At::Value=> "1",
+                                                            At::Selected => (t.teacher.role_id == 1).as_at_value(),
+                                                            //At::Disabled => (t.role_id == 1).as_at_value()
+                                                        },
+                                                        "Müdür"
+                                                    ],
+                                                    option![
+                                                        attrs!{
+                                                            At::Value=> "2",
+                                                            At::Selected => (t.teacher.role_id == 2).as_at_value()
+                                                        },
+                                                        "Müdür Başyardımcısı"
+                                                    ],
+                                                    option![
+                                                        attrs!{
+                                                            At::Value=> "3",
+                                                            At::Selected => (t.teacher.role_id == 3).as_at_value()
+                                                        },
+                                                        "Müdür Yardımcısı"
+                                                    ],
+                                                    option![
+                                                        attrs!{
+                                                            At::Value=> "4",
+                                                            At::Selected => (t.teacher.role_id == 4).as_at_value()
+                                                        },
+                                                        "Rehber Öğretmen"
+                                                    ],
+                                                    option![
+                                                        attrs!{
+                                                            At::Value=> "5",
+                                                            At::Selected => (t.teacher.role_id == 5).as_at_value()
+                                                        },
+                                                        "Öğretmen"
+                                                    ]
+                                                ]
                                             ],
-                                            option![
-                                                attrs!{
-                                                    At::Value=> "4",
-                                                    At::Selected => (t.role_id == 4).as_at_value()
-                                                },
-                                                "Rehber Öğretmen"
-                                            ],
-                                            option![
-                                                attrs!{
-                                                    At::Value=> "5",
-                                                    At::Selected => (t.role_id == 5).as_at_value()
-                                                },
-                                                "Öğretmen"
+                                            td![
+                                                button![
+                                                    C!{"button"},
+                                                    attrs!{At::Value=>&t.teacher.id},
+                                                    "Sil",
+                                                    {
+                                                        let id = t.teacher.id;
+                                                        ev(Ev::Click, move |_event| {
+                                                            Msg::DelTeacher(id)
+                                                        })
+                                                    }
+                                                ]
                                             ]
                                         ]
-                                    ],
-                                    td![
-                                        button![
-                                            C!{"button"},
-                                            attrs!{At::Value=>&t.id},
-                                            "Sil",
-                                            {
-                                                let id = t.id;
-                                                ev(Ev::Click, move |_event| {
-                                                    Msg::DelTeacher(id)
-                                                })
-                                            }
-                                        ]
-                                    ]
-                                ]
-                            )
-                        ]
+
+                                )
+                            ]
+                        )
                     ]
-                    ]
-                }
+                ]
             }
-        //]
+        }
+    ]
+}
+fn teacher_detail(model: &home::Model, school_ctx: &SchoolContext) ->Node<Msg>{
+    let group_ctx = school_ctx.get_group(&model.url);
+    //let teacher_ctx = school_ctx.get_group(&model.url).get_class(&model.url);
+    div![
+        C!{"column is-12"},
+        div![
+            home::view(model, school_ctx).map_msg(Msg::Teacher),
+        ]
     ]
 }
 
-fn disabled(ctx: &Context, ctx_school: &SchoolContext) -> bool {
+fn disabled(ctx_school: &SchoolContext) -> bool {
+    false
+    /*
     if ctx.user.is_none(){
         return true;
     }
@@ -351,4 +504,6 @@ fn disabled(ctx: &Context, ctx_school: &SchoolContext) -> bool {
         return false;
     }
     !ctx.schools.iter().any(|s| s.school.id == ctx_school.school.id)
+
+     */
 }

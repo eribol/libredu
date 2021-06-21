@@ -1,15 +1,14 @@
 use seed::{*, prelude::*};
-use crate::{Context};
 use crate::page::school::detail;
 use serde::*;
-use crate::page::school::detail::{SchoolContext, GroupContext};
-use crate::page::school::group::teacher::{activities, limitations, timetables};
+use crate::page::school::detail::{SchoolContext};
+//use crate::page::school::group::teacher::{activities, limitations, timetables};
 use crate::model::teacher::Teacher;
+use crate::page::school::group::teacher::{activities, limitations, timetables};
 
 #[derive(Debug)]
 pub enum Msg{
     Home,
-    FetchTeacher(fetch::Result<Teacher>),
     Limitations(limitations::Msg),
     Activities(activities::Msg),
     Timetables(timetables::Msg),
@@ -37,7 +36,7 @@ pub struct UpdateTeacherForm{
 #[derive(Debug, Clone)]
 pub enum Pages{
     Home,
-    Activity(activities::Model),
+    Activity(Box<activities::Model>),
     Limitation(limitations::Model),
     Timetable(timetables::Model)
 }
@@ -49,96 +48,67 @@ impl Default for Pages{
 
 #[derive(Debug, Default, Clone)]
 pub struct Model{
-    pub teacher: Teacher,
     pub page: Pages,
     form: UpdateTeacherForm,
-    back_teacher: Option<crate::model::user::Teacher>,
-    next_teacher: Option<crate::model::user::Teacher>,
-    tab: String
+    pub url: Url,
+    pub tab: String
 }
 
-pub fn init(teacher: i32, orders: &mut impl Orders<Msg>, ctx: &mut Context, ctx_school: &mut SchoolContext, mut url: Url, ctx_group: &mut GroupContext)-> Model{
+pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolContext)-> Model{
     let mut model = Model::default();
+    let teacher_ctx = school_ctx.get_teacher(&url);
+    model.url = url.clone();
+    model.form = UpdateTeacherForm{
+        first_name: teacher_ctx.teacher.first_name.clone(),
+        last_name: teacher_ctx.teacher.last_name.clone(),
+        is_active: teacher_ctx.teacher.is_active,
+        email: teacher_ctx.teacher.email.clone().unwrap_or_default(),
+        tel: "".to_string(),
+        password1: "".to_string(),
+        password2: "".to_string()
+    };
     match url.next_path_part() {
         Some("") | None =>{
             model.page = Pages::Home
         },
         Some("activities") => {
-            model.page = Pages::Activity(activities::init(teacher, &mut orders.proxy(Msg::Activities), ctx, ctx_school, ctx_group));
+            model.page = Pages::Activity(Box::new(activities::init(url.clone(), &mut orders.proxy(Msg::Activities), school_ctx)));
             model.tab = "activities".to_string()
         },
         Some("limitations") =>{
-            model.page = Pages::Limitation(limitations::init(teacher, &mut orders.proxy(Msg::Limitations), ctx, ctx_school, ctx_group));
+            model.page = Pages::Limitation(limitations::init(url.clone(), &mut orders.proxy(Msg::Limitations)));
             model.tab = "limitations".to_string()
         },
         Some("timetables") =>{
-            model.page = Pages::Timetable(timetables::init(teacher, &mut orders.proxy(Msg::Timetables), ctx_school, ctx_group));
+            model.page = Pages::Timetable(timetables::init(url.clone(), &mut orders.proxy(Msg::Timetables), school_ctx));
             model.tab = "timetables".to_string()
         },
         _ =>{
             model.page = Pages::Home
         }
     };
-    //model.classes = &ctx_school.classes;
-    orders.perform_cmd({
-        let url = format!("/api/schools/{}/groups/{}/teachers/{}", ctx_school.school.id, ctx_group.group.id, teacher);
-        let request = Request::new(url)
-            .method(Method::Get);
-        async {
-            Msg::FetchTeacher(async {
-                request
-                    .fetch()
-                    .await?
-                    .check_status()?
-                    .json()
-                    .await
-            }.await)
-        }
-    });
-    let teacher_id = ctx_school.teachers.iter().enumerate().find(|t| t.1.id == teacher);
-    if let Some(t_id) = teacher_id {
-        if t_id.0 > 0 {
-            model.back_teacher = Some(ctx_school.teachers[t_id.0 - 1].clone());
-        }
-        if t_id.0 < ctx_school.teachers.len() - 1 {
-            model.next_teacher = Some(ctx_school.teachers[t_id.0 + 1].clone());
-        }
-    }
     model
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx_school: &mut detail::SchoolContext, ctx_group: &mut GroupContext) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school_ctx: &mut detail::SchoolContext) {
     match msg {
         Msg::Home => {
             //log!("teacher:", ctx_school);
         }
+
         Msg::Activities(msg)=> {
             if let Pages::Activity(m) = &mut model.page {
-                activities::update(msg, m, &mut orders.proxy(Msg::Activities), _ctx, ctx_school, ctx_group)
+                activities::update(msg, m, &mut orders.proxy(Msg::Activities), school_ctx)
             }
         }
         Msg::Limitations(msg)=>{
             if let Pages::Limitation(m)= &mut model.page{
-                limitations::update(msg, m, &mut orders.proxy(Msg::Limitations), _ctx, ctx_school, ctx_group)
+                limitations::update(msg, m, &mut orders.proxy(Msg::Limitations), school_ctx)
             }
         }
         Msg::Timetables(msg)=>{
             if let Pages::Timetable(m)= &mut model.page{
-                timetables::update(msg, m, &mut orders.proxy(Msg::Timetables), _ctx, ctx_school, ctx_group)
-            }
-        }
-        Msg::FetchTeacher(teacher)=>{
-            if let Ok(t) = teacher {
-                model.teacher = t;
-                model.form = UpdateTeacherForm {
-                    first_name: model.teacher.first_name.clone(),
-                    last_name: model.teacher.last_name.clone(),
-                    is_active: model.teacher.is_active,
-                    email: model.teacher.email.clone().unwrap_or_else(|| "".to_string()),
-                    tel: model.teacher.tel.clone().unwrap_or_else(|| "".to_string()),
-                    password1: "".to_string(),
-                    password2: "".to_string()
-                };
+                timetables::update(msg, m, &mut orders.proxy(Msg::Timetables), school_ctx)
             }
         }
         Msg::ChangeFirstName(f_name) => {
@@ -159,9 +129,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::ChangePass2(p2) => {
             model.form.password2 = p2
         }
-        Msg::SubmitUpdate=>{
+        Msg::SubmitUpdate=> {
+            /*
+            let school_id = &model.url.path()[1];
+            let group_id = &model.url.path()[3];
+            let teacher_id = &model.url.path()[5];
             orders.perform_cmd({
-                let url = format!("/api/schools/{}/groups/{}/teachers/{}", ctx_school.school.id, ctx_group.group.id, model.teacher.id);
+                let url = format!("/api/schools/{}/groups/{}/teachers/{}", school_id, group_id, teacher_id);
                 let request = Request::new(url)
                     .method(Method::Patch)
                     .json(&model.form);
@@ -176,126 +150,45 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     }.await)
                 }
             });
+
+             */
         }
     }
 }
 
-pub fn view(model: &Model, ctx_school: &SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
-    div![
-        nav![
-            C!{"breadcrumb is-centered"},
-            attrs!{At::AriaLabel=>"breadcrumbs"},
-            ul![
-                li![
-                    a![
-                        attrs!{
-                            At::Href=> format!("/schools/{}/groups/{}/teachers", &ctx_school.school.id, &ctx_group.group.id)
-                        },
-                        "<--Öğretmenler"
-                    ],
-                ],
-                match &model.back_teacher{
-                    Some(teacher)=>{
-                        a![
-                            attrs!{
-                                At::Href => format!("/schools/{}/groups/{}/teachers/{}/{}", &ctx_school.school.id, &ctx_group.group.id, &teacher.id, &model.tab)
-                            },
-                            li![
-                                &teacher.first_name, " ", &teacher.last_name
-                            ]
-                        ]
-
-                    },
-                    None =>{
-                        a![]
-                    }
-                },
-                strong![
-                    li![
-                        &model.teacher.first_name, " ", &model.teacher.last_name
-                    ]
-                ],
-                match &model.next_teacher{
-                    Some(teacher)=>{
-                        a![
-                            attrs!{
-                                At::Href => format!("/schools/{}/groups/{}/teachers/{}/{}", &ctx_school.school.id, &ctx_group.group.id, &teacher.id, &model.tab)
-                            },
-                            li![
-                                &teacher.first_name, " ", &teacher.last_name
-                            ]
-                        ]
-                    },
-                    None =>{
-                        a![]
-                    }
-                },
-                //li![
-                //    &model.next_teacher.first_name, " ", &model.next_teacher.last_name
-                //],
-            ]
-        ],
-        breadcrumb(model, ctx_school, ctx_group),
-    ]
-}
-
-pub fn breadcrumb(model: &Model, ctx_school: &detail::SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
-    div![
-        div![
-            C!{"tabs is-centered"},
-            tab(model, ctx_school, ctx_group),
-        ],
-        context(model, ctx_school, ctx_group)
-    ]
-
-}
-
-pub fn context(model: &Model, ctx_school: &detail::SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
+pub fn view(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
+    let group_ctx = school_ctx.get_group(&model.url);
     div![
         C!{"columns"},
-        div![
-            C!{"column is-2"},
-            div![
-                table![
-                    C!{"table table-hover"},
-                    tbody![
-                        ctx_school.teachers.iter().map(|t|
-                            tr![
-                                C!{"table-light"},
-                                td![
-                                    a![
-                                        &t.first_name, " ", &t.last_name,
-                                        attrs!{
-                                            At::Href=> format!("/schools/{}/groups/{}/teachers/{}/{}", &ctx_school.school.id, &ctx_group.group.id, t.id, &model.tab)
-                                        }
-                                    ]
-                                ]
-                            ]
-                        )
-                    ]
-                ]
-            ]
-        ],
         match &model.page{
-            Pages::Home=>{
-                home(&model)
-            }
-            Pages::Activity(m)=>{
-                activities::view(m, ctx_group, ctx_school).map_msg(Msg::Activities)
+            Pages::Home => home(model, school_ctx),
+            Pages::Activity(m) => {
+                div![
+                    C!{"column is-full"},
+                    activities::view(m, school_ctx).map_msg(Msg::Activities)
+                ]
             }
             Pages::Limitation(m) => {
-                limitations::view(m, ctx_school, ctx_group).map_msg(Msg::Limitations)
+                limitations::view(m, school_ctx).map_msg(Msg::Limitations)
             }
             Pages::Timetable(m) => {
-                timetables::view(m, ctx_group).map_msg(Msg::Timetables)
+                timetables::view(m, school_ctx).map_msg(Msg::Timetables)
             }
+            /*
+            Pages::NotFound => {
+                div![]
+            }
+            */
         }
     ]
 }
-fn home(model: &Model)->Node<Msg>{
+
+fn home(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
+    let teacher_ctx = school_ctx.get_teacher(&model.url);
     div![
-        C!{"column is-4"},
-        div![C!{"field"},
+        C!{"column is-half"},
+        div![
+            C!{"field"},
             label![C!{"label"}, "Adı:"],
             p![C!{"control has-icons-left"},
                 input![C!{"input"},
@@ -340,7 +233,7 @@ fn home(model: &Model)->Node<Msg>{
                 ]
             ]
         ],
-        if !model.teacher.is_active{
+        if !teacher_ctx.teacher.is_active{
         div![
             div![C!{"field"},
                 label![C!{"label"}, "Telefon numarası:"],
@@ -424,54 +317,4 @@ fn home(model: &Model)->Node<Msg>{
             div![]
         }
     ]
-}
-pub fn tab(model: &Model, ctx_school: &SchoolContext, ctx_group: &GroupContext)->Node<Msg> {
-    ul![
-        li![
-            C!{IF!(active_tab(&model.page, 0)=>"is-active")},
-            a![
-                "Bilgiler",
-                attrs!{
-                    At::Href => format!("/schools/{}/groups/{}/teachers/{}", &ctx_school.school.id, &ctx_group.group.id, model.teacher.id)
-                }
-            ]
-        ],
-        li![
-            C!{IF!(active_tab(&model.page, 1)=>"is-active")},
-            a![
-                "Aktiviteler",
-                attrs!{
-                    At::Href=> format!("/schools/{}/groups/{}/teachers/{}/activities", &ctx_school.school.id, &ctx_group.group.id, model.teacher.id)
-                }
-
-            ]
-        ],
-        li![
-            C!{IF!(active_tab(&model.page, 2)=>"is-active")},
-            a![
-                "Kısıtlamalar",
-                attrs!{
-                    At::Href => format!("/schools/{}/groups/{}/teachers/{}/limitations", &ctx_school.school.id, &ctx_group.group.id, model.teacher.id)
-                }
-            ]
-        ],
-        li![
-            C!{IF!(active_tab(&model.page, 3)=>"is-active")},
-            a![
-                "Ders Tablosu",
-                attrs!{
-                    At::Href => format!("/schools/{}/groups/{}/teachers/{}/timetables", &ctx_school.school.id, &ctx_group.group.id, model.teacher.id)
-                }
-            ]
-        ]
-    ]
-}
-
-fn active_tab(page: &Pages, i: u8)->bool{
-    match page{
-        Pages::Home=>{i == 0},
-        Pages::Activity(_m)=>{i == 1},
-        Pages::Limitation(_m) => {i == 2},
-        Pages::Timetable(_m)=>{i == 3},
-    }
 }

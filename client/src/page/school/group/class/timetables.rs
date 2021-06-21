@@ -1,9 +1,8 @@
-use crate::model::timetable::{Day, ClassAvailable};
+use crate::model::timetable::{Day};
 use serde::*;
 use seed::{*, prelude::*};
-use crate::{Context};
-use crate::model::class::{Class, ClassTimetable, ClassActivity};
-use crate::page::school::detail::{SchoolContext, GroupContext};
+use crate::model::class::{ClassTimetable, ClassActivity, ClassContext, ClassAvailable};
+use crate::page::school::detail::{SchoolContext};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Subject{
@@ -11,22 +10,10 @@ pub struct Subject{
     pub id: i32
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Activity{
-    pub(crate) id: i32,
-    pub(crate) subject: Subject,
-    pub(crate) teacher: i32,
-    pub(crate) class: Class,
-    pub(crate) hour: i16,
-    pub(crate) split: bool,
-    classes: Vec<i32>
-}
-
 #[derive(Debug)]
 pub enum Msg{
     Home,
     FetchDays(fetch::Result<Vec<Day>>),
-    FetchClass(fetch::Result<Class>),
     FetchActivities(fetch::Result<Vec<ClassActivity>>),
     FetchTimetable(fetch::Result<Vec<ClassTimetable>>),
     FetchLimitation(fetch::Result<Vec<ClassAvailable>>),
@@ -38,22 +25,32 @@ pub enum Msg{
 
 #[derive(Debug, Default, Clone)]
 pub struct Model{
-    pub class: Class,
-    pub timetable: Vec<ClassTimetable>,
-    pub activities: Vec<ClassActivity>,
-    pub limitation: Vec<ClassAvailable>,
-    pub classes: Vec<Class>,
+    url: Url,
     days: Vec<Day>,
+    hours: usize,
+    classes: Vec<ClassContext>
 }
 
-pub fn init(class: i32, orders: &mut impl Orders<Msg>, ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext)-> Model{
-    let model = Model::default();
+pub fn init(url: Url, orders: &mut impl Orders<Msg>, school_ctx: &SchoolContext)-> Model{
+    let group_ctx = school_ctx.get_group(&url);
+    //let class_ctx = group_ctx.get_class(&url);
+    let classes = school_ctx.get_group(&url).get_classes();
+    let model = Model{
+        url: url.clone(),
+        hours: group_ctx.group.hour as usize,
+        classes: classes.clone(),
+        ..Default::default()
+    };
+
+    let school_id = &url.path()[1];
+    let group_id = &url.path()[3];
+    let class_id = &url.path()[5];
     orders.perform_cmd({
-        let url = format!("/api/schools/{}/groups/{}/classes/{}", ctx_school.school.id, ctx_group.group.id,class);
+        let url = format!("/api/schools/{}/groups/{}/classes/{}/timetables", school_id, group_id, class_id);
         let request = Request::new(url)
             .method(Method::Get);
         async {
-            Msg::FetchClass(async {
+            Msg::FetchTimetable(async {
                 request
                     .fetch()
                     .await?
@@ -66,30 +63,16 @@ pub fn init(class: i32, orders: &mut impl Orders<Msg>, ctx_school: &mut SchoolCo
     model
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolContext) {
+    let group_id = &model.url.path()[3];
+    let school_id = &model.url.path()[1];
+    let class_ctx = school_ctx.get_mut_group(&model.url).get_mut_class(&model.url);
+    let hours = &model.hours;
     match msg {
         Msg::Home => {
         }
-        Msg::FetchClass(class)=>{
-            model.class = class.unwrap();
-            orders.perform_cmd({
-                let url = format!("/api/schools/{}/groups/{}/classes/{}/timetables", &ctx_school.school.id, &ctx_group.group.id, model.class.id);
-                let request = Request::new(url)
-                    .method(Method::Get);
-                async {
-                    Msg::FetchTimetable(async {
-                        request
-                            .fetch()
-                            .await?
-                            .check_status()?
-                            .json()
-                            .await
-                    }.await)
-                }
-            });
-        }
         Msg::FetchTimetable(tm)=>{
-            model.timetable=tm.unwrap();
+            class_ctx.timetables = Some(tm.unwrap());
             orders.perform_cmd({
                 let url = "/api/days".to_string();
                 let request = Request::new(url)
@@ -108,107 +91,142 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         }
         Msg::FetchDays(days)=>{
             model.days=days.unwrap();
-            orders.perform_cmd({
-                let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", ctx_school.school.id, &ctx_group.group.id, model.class.id);
-                let request = Request::new(url)
-                    .method(Method::Get);
-                async {
-                    Msg::FetchLimitation(async {
-                        request
-                            .fetch()
-                            .await?
-                            .check_status()?
-                            .json()
-                            .await
-                    }.await)
-                }
-            });
+            if class_ctx.limitations.is_none(){
+                orders.perform_cmd({
+                    let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", school_id, group_id, &class_ctx.class.id);
+                    let request = Request::new(url)
+                        .method(Method::Get);
+                    async {
+                        //crate::page::school::group::class::limitations::
+                        Msg::FetchLimitation(async {
+                            request
+                                .fetch()
+                                .await?
+                                .check_status()?
+                                .json()
+                                .await
+                        }.await)
+                    }
+                });
+            }
         }
         Msg::FetchActivities(acts)=>{
-            model.activities = acts.unwrap_or_default();
+            class_ctx.activities = Some(acts.unwrap_or_default());
         }
         Msg::FetchLimitation(json)=>{
             match json {
                 Ok(mut l) => {
-                    l.sort_by_key(|a| a.day.id);
-                    model.limitation = l;
-                    if model.limitation.is_empty(){
-                        for d in model.days.iter() {
-                            if !model.limitation.iter().any(|ta| ta.day.id == d.id) {
-                                let hours = vec![false; ctx_group.group.hour as usize];
-                                model.limitation.push(ClassAvailable { day: d.clone(), hours })
+                    l.sort_by(|a, b| a.day.id.cmp(&b.day.id));
+                    let mut changed = false;
+                    for d in model.days.iter() {
+                        if let Some(limitations) = &mut class_ctx.limitations{
+                            if !limitations.iter().any(|ta| ta.day.id == d.id) {
+                                let hours = vec![true; *hours];
+                                limitations.push(ClassAvailable { day: d.clone(), hours });
+                                changed = true;
                             }
-                            if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
-                                let hours = vec![false; ctx_group.group.hour as usize];
-                                model.limitation[(d.id - 1) as usize].hours = hours;
+                            if limitations[(d.id - 1) as usize].hours.len() != *hours {
+                                let hours = vec![true; *hours];
+                                limitations[(d.id - 1) as usize].hours = hours;
+                                changed = true;
                             }
-
                         }
+                        else {
+                            class_ctx.limitations = Some(l.clone());
+                        }
+                    }
+                    if changed{
+                        orders.perform_cmd({
+                            let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", school_id, group_id , &class_ctx.class.id);
+                            let request = Request::new(url)
+                                .method(Method::Post)
+                                .json(&class_ctx.limitations.as_ref().unwrap());
+                            async {
+                                Msg::FetchLimitation(async {
+                                    request?
+                                        .fetch()
+                                        .await?
+                                        .check_status()?
+                                        .json()
+                                        .await
+                                }.await)
+                            }
+                        });
                     }
                 }
                 Err(_)=>{
-                    if model.limitation.is_empty(){
-                        for d in model.days.iter() {
-                            if !model.limitation.iter().any(|ta| ta.day.id == d.id) {
-                                let hours = vec![false; ctx_group.group.hour as usize];
-                                model.limitation.push(ClassAvailable { day: d.clone(), hours })
-                            }
-                            if model.limitation[(d.id - 1) as usize].hours.len() != ctx_group.group.hour as usize {
-                                let hours = vec![false; ctx_group.group.hour as usize];
-                                model.limitation[(d.id - 1) as usize].hours = hours;
-                            }
+                    //class_ctx.limitations = Some(
+                    //  vec![ClassAvailable{ hours: vec![], day: Default::default() }]
+                    //);
 
+                    if let Some(limitations) = &mut class_ctx.limitations{
+                        for d in model.days.iter() {
+                            if !limitations.iter().any(|ta| ta.day.id == d.id) {
+                                let hours = vec![false; *hours];
+                                limitations.push(ClassAvailable { day: d.clone(), hours })
+                            }
+                            if limitations[(d.id - 1) as usize].hours.len() != *hours {
+                                let hours = vec![false; *hours];
+                                limitations[(d.id - 1) as usize].hours = hours;
+                            }
                         }
                     }
                 }
             }
-
         }
+
         Msg::ChangeHour(ids)=>{
-            if model.limitation[ids.0].hours[ids.1]{
-                model.limitation[ids.0].hours[ids.1]=false;
-            }
-            else{
-                model.limitation[ids.0].hours[ids.1]=true;
+            if let Some(limitations) = &mut class_ctx.limitations{
+                if limitations[ids.0].hours[ids.1]{
+                    limitations[ids.0].hours[ids.1]=false;
+                }
+                else{
+                    limitations[ids.0].hours[ids.1]=true;
+                }
             }
         }
         Msg::ChangeAllHour(index) => {
-            let mut all = true;
-            for l in &model.limitation{
-                if !l.hours[index]{
-                    all = false;
-                    break;
+            if let Some(limitations) = &mut class_ctx.limitations{
+                let mut all = true;
+                for l in limitations.iter_mut(){
+                    if !l.hours[index]{
+                        all = false;
+                        break;
+                    }
                 }
-            }
-            if all{
-                for d in 0..7{
-                    model.limitation[d].hours[index] = false;
+                if all{
+                    for l in limitations.iter_mut().take(7){
+                        l.hours[index] = false;
+                    }
                 }
-            }
-            else {
-                for d in 0..7{
-                    model.limitation[d].hours[index] = true;
+                else {
+                    for l in limitations.iter_mut().take(7){
+                        l.hours[index] = true;
+                    }
                 }
             }
         }
         Msg::ChangeAllDay(index) => {
-            if model.limitation[index].hours.iter().any(|h| !*h){
-                for h in 0..ctx_group.group.hour as usize{
-                    model.limitation[index].hours[h as usize] = true;
+            if let Some(limitations) = &mut class_ctx.limitations{
+                if limitations[index].hours.iter().any(|h| !*h){
+                    for h in 0..model.hours{
+                        limitations[index].hours[h] = true;
+                    }
+                }
+                else {
+                    for h in 0..model.hours{
+                        limitations[index].hours[h] = false;
+                    }
                 }
             }
-            else {
-                for h in 0..ctx_group.group.hour as usize{
-                    model.limitation[index].hours[h as usize] = false;
-                }
-            }
+
         }
         Msg::Submit=>{
             orders.perform_cmd({
-                let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", ctx_school.school.id, &ctx_group.group.id, &model.class.id);
+                let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", school_id, &group_id, &class_ctx.class.id);
                 let request = Request::new(url)
                     .method(Method::Post)
-                    .json(&model.limitation);
+                    .json(&class_ctx.limitations.as_ref().unwrap());
                 async {
                     Msg::FetchLimitation(async {
                         request?
@@ -223,22 +241,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         }
     }
 }
-pub fn view(model: &Model, ctx_school:&SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
+pub fn timetable(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
+    let group_ctx = school_ctx.get_group(&model.url);
+    let class_ctx = group_ctx.get_class(&model.url);
     div![
-        div![
-            C!{"tabs is-centered"},
-            //tabs(model),
-        ],
-        context(model, ctx_school, ctx_group)
-    ]
-
-}
-pub fn context(model: &Model, ctx_school:&SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
-    timetable(model, ctx_school, ctx_group)
-}
-fn timetable(model: &Model, _ctx_school:&SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
-    div![
-        C!{"column"},
+        C!{"column is-10"},
         table![
             C!{"table is-fullwidth is-scrollable"},
             style!{
@@ -246,13 +253,14 @@ fn timetable(model: &Model, _ctx_school:&SchoolContext, ctx_group: &GroupContext
                 //St::Width=>"1050px"
             },
             C!{"table is-bordered"},
+            thead![
             tr![
                 td![
                     "Günler/Saatler"
                 ],
-                (0..ctx_group.group.hour as i32).map(|h|
+                (0..group_ctx.group.hour as i32).map(|h|
                     td![
-                        &h+1,
+                        &h+1, ". Saat",
                         {
                             let hour_index: usize = h as usize;
                             ev(Ev::Click, move |_event|
@@ -261,8 +269,11 @@ fn timetable(model: &Model, _ctx_school:&SchoolContext, ctx_group: &GroupContext
                         }
                     ]
                 )
-            ],
-            model.limitation.iter().enumerate().map(|d|
+            ]],
+            class_ctx.limitations.as_ref().map_or(
+                tbody![tr![]], |limitations|
+                tbody![
+                limitations.iter().enumerate().map(|d|
                 tr![
                     td![
                         &d.1.day.name.to_uppercase(),
@@ -274,10 +285,12 @@ fn timetable(model: &Model, _ctx_school:&SchoolContext, ctx_group: &GroupContext
                         }
                     ],
                     d.1.hours.iter().enumerate().map(|h|
-                        get_timetable_row((d.0+1) as i32, h, &model.timetable)
+                        get_timetable_row((d.0+1) as i32, h, &class_ctx.timetables.as_ref().unwrap_or(&vec![]))
                     )
                 ]
+            )]
             )
+
         ],
         input![
             attrs!{
@@ -360,42 +373,4 @@ fn get_timetable_row(day: i32, hour: (usize, &bool), timetable: &[ClassTimetable
             ]
         }
     }
-}
-
-pub fn tabs(model: &Model, ctx_school: &SchoolContext, ctx_group: &GroupContext)->Node<Msg>{
-    ul![
-        li![
-            a![
-                "Bilgiler",
-                attrs!{
-                    At::Href => format!("/schools/{}/groups/{}/classes/{}", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
-                }
-            ]
-        ],
-        li![
-            a![
-                "Aktiviteler",
-                attrs!{
-                    At::Href => format!("/schools/{}/groups/{}/classes/{}/activities", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
-                }
-            ]
-        ],
-        li![
-            a![
-                attrs!{
-                    At::Href => format!("/schools/{}/groups/{}/classes/{}/limitations", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
-                },
-                "Kısıtlamalar",
-            ]
-        ],
-        li![
-            C!{"is-active"},
-            a![
-                attrs!{
-                    At::Href => format!("/schools/{}/groups/{}/classes/{}/timetables", &ctx_school.school.id, &ctx_group.group.id, &model.class.id)
-                },
-                "Ders Tablosu"
-            ]
-        ]
-    ]
 }

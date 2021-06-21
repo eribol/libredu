@@ -6,7 +6,7 @@ use crate::page::school::group::test_generate;
 use crate::model::timetable::Day;
 use crate::model::teacher::{TeacherTimetable, TeacherAvailableForTimetables};
 use crate::model::class::{ClassTimetable, ClassTimetableActivity};
-use crate::page::school::detail::{SchoolContext, GroupContext};
+use crate::page::school::detail::{SchoolContext};
 use crate::model::group::Schedule;
 use crate::page::school::group::generate;
 use crate::model::{teacher, subject};
@@ -38,7 +38,8 @@ pub struct Model{
     pub test: test_generate::Tests,
     subjects: Vec<subject::Subject>,
     schedules: Vec<Vec<Schedule>>,
-    pub error: String
+    pub error: String,
+    pub url: Url
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
@@ -55,8 +56,6 @@ pub struct NewClassTimetable {
     pub hour: Option<i16>,
     pub activities: Option<i32>
 }
-
-
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct Activity{
@@ -110,7 +109,7 @@ pub enum Msg{
     FetchData(fetch::Result<TimetableData>),
     FetchSchedules(fetch::Result<Vec<Schedule>>),
 }
-pub fn init(orders: &mut impl Orders<Msg>, ctx_school: &detail::SchoolContext, ctx_group: &GroupContext)-> Model{
+pub fn init(url: Url, orders: &mut impl Orders<Msg>, ctx_school: &detail::SchoolContext)-> Model{
     orders.perform_cmd({
         let adres = "/api/days".to_string();
         let request = Request::new(adres)
@@ -140,7 +139,7 @@ pub fn init(orders: &mut impl Orders<Msg>, ctx_school: &detail::SchoolContext, c
         }
     });
     orders.perform_cmd({
-        let adres = format!("/api/schools/{}/groups/{}/timetables", ctx_school.school.id, ctx_group.group.id);
+        let adres = format!("/api/schools/{}/groups/{}/timetables", ctx_school.school.id, &url.path()[3]);
         let request = Request::new(adres)
             .method(Method::Get);
         async { Msg::FetchData(async {
@@ -153,7 +152,7 @@ pub fn init(orders: &mut impl Orders<Msg>, ctx_school: &detail::SchoolContext, c
         }.await)}
     });
     orders.perform_cmd({
-        let url = format!("/api/schools/{}/groups/{}/schedules", ctx_school.school.id, ctx_group.group.id);
+        let url = format!("/api/schools/{}/groups/{}/schedules", ctx_school.school.id, &url.path()[3]);
         let request = Request::new(url)
             .method(Method::Get);
         async {
@@ -167,15 +166,16 @@ pub fn init(orders: &mut impl Orders<Msg>, ctx_school: &detail::SchoolContext, c
             }.await)
         }
     });
-    let mut model = Model{
-        generating: false, ..Default::default()
+    let model = Model{
+        generating: false, url, params: Params{
+            hour: 8,
+            depth: 15,
+            depth2: 2
+        }, ..Default::default()
     };
-    model.params.hour = 8;
-    //model.params.depth2 = 2;
-    model.params.depth = 15;
     model
 }
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, _ctx_school: &mut SchoolContext, ctx_group: &mut GroupContext) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolContext) {
     match msg{
         Msg::Submit => {
             model.generating = true;
@@ -197,7 +197,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             match days{
                 Ok(d) => model.days=d,
                 Err(_) =>{
-                    log!("hata days");
                 }
             }
         }
@@ -226,7 +225,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 let _teacher_lim = model.data.tat.iter().cloned().enumerate().find(|tl| tl.1.day == tt.day_id.unwrap() && _act.teacher.is_some() && tl.1.user_id == _act.teacher.unwrap()).unwrap();
                 model.data.tat[_teacher_lim.0].hours[tt.hour.unwrap() as usize] = false;
             }
-            test_generate::tests(&acts2, model.params.hour, test, _ctx_school, ctx_group, &model.data.tat, &model.data.cat)
+            test_generate::tests(&acts2, model.params.hour, test, school_ctx, &model.data.tat, &model.data.cat, model.url.clone())
         }
         Msg::DepthChanged(d)=>{
             if let Ok(h) = d.parse::<usize>() {
@@ -247,8 +246,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             let tat = &mut model.data.tat;
             let error = &mut model.error;
             //let timetables = &mut model.data.timetables;
-            if model.params.hour >= ctx_group.group.hour {
-                model.params.hour = ctx_group.group.hour  ;
+            let group_ctx = school_ctx.get_group(&model.url);
+            if model.params.hour >= group_ctx.group.hour {
+                model.params.hour = group_ctx.group.hour  ;
             }
             if model.params.hour < 2 {
                 model.params.hour = 2;
@@ -271,7 +271,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     if (model.total_hour as usize - timetables.len()) < 50 && model.data.acts.len() > 100 {
                         second = 1000;
                     }
-                    orders.perform_cmd(cmds::timeout(second, || Msg::Generate));
+                    orders.perform_cmd(cmds::timeout(1, || Msg::Generate));
                 }
             }
             else {
@@ -283,78 +283,87 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             let mut timetables: Vec<(String, String, Vec<TeacherTimetable>)>=Vec::new();
             let acts: Vec<Activity> = model.data.acts.clone();
             let timetables2: Vec<NewClassTimetable> = model.data.timetables.clone().into_iter().filter(|tt| acts.iter().any(|a| a.id == tt.activities.unwrap())).collect();
-            for t in &_ctx_school.teachers{
-                let mut teacher_print: Vec<TeacherTimetable>=Vec::new();
-                let teacher_timetables: Vec<NewClassTimetable> = timetables2.iter().cloned()
-                    .filter(|tt| acts.clone().iter().any(|a| a.teacher.is_some() && a.teacher == Some(t.id) && tt.activities.unwrap() == a.id )).collect();
-                for tt in teacher_timetables{
-                    //let class = _ctx_school.classes.iter().find(|c| c.id == tt.class_id.unwrap()).unwrap();
-                    let act = acts.clone().into_iter().find(|a| a.id == tt.activities.unwrap()).unwrap();
-                    let other_class: Vec<model::class::Class> = ctx_group.classes.clone().into_iter().filter(|c| c.id == tt.class_id.unwrap() || act.classes.clone().into_iter().any(|ca| ca == c.id)).collect();
-                    //other_class.push(class.clone());
-                    let subject = model.subjects.iter().find(|s| s.id == act.subject).unwrap();
-                    let timetable = TeacherTimetable{
-                        id: tt.activities.unwrap(),
-                        class_id: other_class,
-                        day_id: tt.day_id.unwrap(),
-                        hour: tt.hour.unwrap(),
-                        subject: subject.name.clone()
-                    };
-                    teacher_print.push(timetable)
+            if let Some(teachers) = &school_ctx.teachers{
+                for t in teachers{
+                    let mut teacher_print: Vec<TeacherTimetable>=Vec::new();
+                    let teacher_timetables: Vec<NewClassTimetable> = timetables2.iter().cloned()
+                        .filter(|tt| acts.clone().iter().any(|a| a.teacher.is_some() && a.teacher == Some(t.teacher.id) && tt.activities.unwrap() == a.id )).collect();
+                    for tt in teacher_timetables{
+                        //let class = school_ctx.classes.iter().find(|c| c.id == tt.class_id.unwrap()).unwrap();
+                        let group_ctx = school_ctx.get_group(&model.url);
+                        let act = acts.clone().into_iter().find(|a| a.id == tt.activities.unwrap()).unwrap();
+                        let other_class: Vec<model::class::ClassContext> = group_ctx.classes.clone().unwrap().into_iter().filter(|c| c.class.id == tt.class_id.unwrap() || act.classes.clone().into_iter().any(|ca| ca == c.class.id)).collect();
+                        //other_class.push(class.clone());
+                        let subject = model.subjects.iter().find(|s| s.id == act.subject).unwrap();
+                        let timetable = TeacherTimetable{
+                            id: tt.activities.unwrap(),
+                            class_id: other_class,
+                            day_id: tt.day_id.unwrap(),
+                            hour: tt.hour.unwrap(),
+                            subject: subject.name.clone()
+                        };
+                        teacher_print.push(timetable)
+                    }
+                    if !teacher_print.is_empty() {
+                        timetables.push((t.teacher.first_name.clone(), t.teacher.last_name.clone(), teacher_print));
+                    }
                 }
-                if !teacher_print.is_empty() {
-                    timetables.push((t.first_name.clone(), t.last_name.clone(), teacher_print));
-                }
-
             }
-
+            let group_ctx = school_ctx.get_group(&model.url);
             let timetables = serde_json::to_string(&timetables).unwrap();
             let days = serde_json::to_string(&model.days).unwrap();
-            createPDF(&timetables, &days, 0, (ctx_group.group.hour-1) as i16, &serde_json::to_string(&_ctx_school.school).unwrap(), &serde_json::to_string(&model.schedules).unwrap())
+            createPDF(&timetables, &days, 0, (group_ctx.group.hour-1) as i16, &serde_json::to_string(&school_ctx.school).unwrap(), &serde_json::to_string(&model.schedules).unwrap())
         }
         Msg::PrintClass => {
             let mut timetables: Vec<(String, String, Vec<ClassTimetable>)>=Vec::new();
-            for c in &ctx_group.classes{
-                let mut c_print: Vec<ClassTimetable>=Vec::new();
-                let acts: Vec<Activity> = model.data.acts.clone().into_iter().filter(|a| a.classes.iter().any(|c2| c2 == &c.id)).collect();
-                let class_timetables: Vec<NewClassTimetable> = model.data.timetables.iter().cloned()
-                    .filter(|tt| acts.iter().any(|a| a.id == tt.activities.unwrap())).collect();
-                for tt in &class_timetables{
-                    let act = acts.iter().find(|a| a.id == tt.activities.unwrap() && a.teacher.is_some()).unwrap();
-                    let teacher = _ctx_school.teachers.iter().find(|t| act.teacher.is_some() && act.teacher.unwrap() == t.id);
-                    if let Some(t) = teacher {
-                        let subject = model.subjects.iter().find(|s| s.id == act.subject).unwrap();
-                        let timetable = ClassTimetable {
-                            id: 0,
-                            class_id: c.id,
-                            day_id: tt.day_id.unwrap(),
-                            hour: tt.hour.unwrap(),
-                            subject: subject.name.clone(),
-                            activity: ClassTimetableActivity {
-                                id: 0,
-                                teacher: teacher::Teacher {
+            let group_ctx = school_ctx.get_group(&model.url);
+            if let Some(classes) = &group_ctx.classes{
+                for c in classes{
+                    let mut c_print: Vec<ClassTimetable>=Vec::new();
+                    let acts: Vec<Activity> = model.data.acts.clone().into_iter().filter(|a| a.classes.iter().any(|c2| c2 == &c.class.id)).collect();
+                    let class_timetables: Vec<NewClassTimetable> = model.data.timetables.iter().cloned()
+                        .filter(|tt| acts.iter().any(|a| a.id == tt.activities.unwrap())).collect();
+                    for tt in &class_timetables{
+                        let act = acts.iter().find(|a| a.id == tt.activities.unwrap() && a.teacher.is_some()).unwrap();
+                        if let Some(teachers) = &school_ctx.teachers{
+                            let teacher = teachers.iter().find(|t| act.teacher.is_some() && act.teacher.unwrap() == t.teacher.id);
+                            if let Some(t) = teacher {
+                                let subject = model.subjects.iter().find(|s| s.id == act.subject).unwrap();
+                                let timetable = ClassTimetable {
                                     id: 0,
-                                    first_name: t.first_name.clone(),
-                                    last_name: t.last_name.clone(),
-                                    role_id: 0,
-                                    role_name: "".to_string(),
-                                    is_active: false,
-                                    email: None,
-                                    tel: None
-                                }
+                                    class_id: c.class.id,
+                                    day_id: tt.day_id.unwrap(),
+                                    hour: tt.hour.unwrap(),
+                                    subject: subject.name.clone(),
+                                    activity: ClassTimetableActivity {
+                                        id: 0,
+                                        teacher: teacher::Teacher {
+                                            id: 0,
+                                            first_name: t.teacher.first_name.clone(),
+                                            last_name: t.teacher.last_name.clone(),
+                                            role_id: 0,
+                                            role_name: "".to_string(),
+                                            is_active: false,
+                                            email: None,
+                                            tel: None
+                                        }
+                                    }
+                                };
+                                c_print.push(timetable)
                             }
-                        };
-                        c_print.push(timetable)
+                        }
+
+                    }
+                    if !c_print.is_empty(){
+                        timetables.push((c.class.kademe.clone(), c.class.sube.to_string(), c_print));
                     }
                 }
-                if !c_print.is_empty(){
-                    timetables.push((c.kademe.clone(), c.sube.to_string(), c_print));
-                }
             }
-            let last_hour = ctx_group.group.hour-1;
+
+            let last_hour = group_ctx.group.hour-1;
             let timetables = serde_json::to_string(&timetables).unwrap();
             let days = serde_json::to_string(&model.days).unwrap();
-            class_print(&timetables, &days, last_hour as i16, &serde_json::to_string(&_ctx_school.school).unwrap(), &serde_json::to_string(&model.schedules).unwrap())
+            class_print(&timetables, &days, last_hour as i16, &serde_json::to_string(&school_ctx.school).unwrap(), &serde_json::to_string(&model.schedules).unwrap())
         }
         Msg::HourChanged(hour)=>{
 
@@ -370,23 +379,26 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             model.data= d;
             model.clean_cat = model.data.cat.clone();
             model.clean_tat = model.data.tat.clone();
-            for t in &_ctx_school.teachers {
-                let limitations = model.clean_tat.clone().into_iter().filter(|l| l.user_id == t.id).collect::<Vec<TeacherAvailableForTimetables>>();
-                let acts = model.data.acts.clone().into_iter().filter(|a| a.teacher.unwrap() == t.id).collect::<Vec<Activity>>();
-                for l in limitations {
-                    for h in l.hours.iter().enumerate() {
-                        if !*h.1 {
-                            let tt = model.data.timetables.clone().into_iter().enumerate()
-                                .filter(|tt2| tt2.1.day_id.unwrap() == l.day && tt2.1.hour.unwrap() == h.0 as i16 &&
-                                    acts.iter().any(|a| a.id == tt2.1.activities.unwrap())).collect::<Vec<(usize, NewClassTimetable)>>();
-                            if tt.len() == 1 {
-                                model.data.timetables.remove(tt[0].0);
+            if let Some(teachers) = &school_ctx.teachers{
+                for t in teachers {
+                    let limitations = model.clean_tat.clone().into_iter().filter(|l| l.user_id == t.teacher.id).collect::<Vec<TeacherAvailableForTimetables>>();
+                    let acts = model.data.acts.clone().into_iter().filter(|a| a.teacher.unwrap() == t.teacher.id).collect::<Vec<Activity>>();
+                    for l in limitations {
+                        for h in l.hours.iter().enumerate() {
+                            if !*h.1 {
+                                let tt = model.data.timetables.clone().into_iter().enumerate()
+                                    .filter(|tt2| tt2.1.day_id.unwrap() == l.day && tt2.1.hour.unwrap() == h.0 as i16 &&
+                                        acts.iter().any(|a| a.id == tt2.1.activities.unwrap())).collect::<Vec<(usize, NewClassTimetable)>>();
+                                if tt.len() == 1 {
+                                    model.data.timetables.remove(tt[0].0);
+                                }
+                                //
                             }
-                            //
                         }
                     }
                 }
             }
+
             //let acts: Vec<Activity> = model.data.acts.clone().into_iter().filter(|a| ctx_group.classes.iter().any(|c| a.classes.iter().any(|ac| ac == c.id))).collect();
             for act in &model.data.acts{
                 if let Some(_t) = act.teacher {
@@ -427,7 +439,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                 }
             }
             orders.perform_cmd({
-                let adres = format!("/api/schools/{}/groups/{}/timetables", _ctx_school.school.id, &ctx_group.group.id);
+                let adres = format!("/api/schools/{}/groups/{}/timetables", school_ctx.school.id, &model.url.path()[3]);
                 let request = Request::new(adres)
                     .method(Method::Post)
                     .json(&model.data.timetables);
@@ -444,7 +456,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
     }
 }
 
-pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)-> Node<Msg>{
+pub fn view(model: &Model, ctx_school: &SchoolContext)-> Node<Msg>{
     div![
         C!{"columns"},
             div![
@@ -458,7 +470,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)-> Node<Msg
                                 At::Type=>"text",
                                 At::Placeholder=>"Bir öğretmenin bir sınıfa verebileceği günlük maksimum ders sayısı",
                                 At::Value => &model.params.hour,
-                                At::Disabled => disabled(ctx, ctx_school).as_at_value()
+                                //At::Disabled => disabled(ctx, ctx_school).as_at_value()
                             },
                             input_ev(Ev::Input, Msg::HourChanged),
                         ],
@@ -505,7 +517,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)-> Node<Msg
                             At::Type=>"button",
                             At::Value=>"Sil",
                             At::Id=>"login_button",
-                            At::Disabled => disabled(ctx, ctx_school).as_at_value()
+                            //At::Disabled => disabled(ctx, ctx_school).as_at_value()
                         },
                         ev(Ev::Click, |event| {
                             event.prevent_default();
@@ -517,7 +529,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)-> Node<Msg
                             At::Type=>"button",
                             At::Value=>"Test Et",
                             At::Id=>"login_button",
-                            At::Disabled => disabled(ctx, ctx_school).as_at_value()
+                            //At::Disabled => disabled(ctx, ctx_school).as_at_value()
                         },
                         ev(Ev::Click, |event| {
                             event.prevent_default();
@@ -529,7 +541,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)-> Node<Msg
                             At::Type=>"button",
                             At::Value=>"Kaydet",
                             At::Id=>"login_button",
-                            At::Disabled => disabled(ctx, ctx_school).as_at_value()
+                            //At::Disabled => disabled(ctx, ctx_school).as_at_value()
                         },
                         ev(Ev::Click, |event| {
                             event.prevent_default();
@@ -580,7 +592,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)-> Node<Msg
                         At::Type=>"button",
                         At::Value=>"Yazdır(Öğretmenler)",
                         At::Id=>"login_button",
-                        At::Disabled => disabled(ctx, ctx_school).as_at_value()
+                        //At::Disabled => disabled(ctx, ctx_school).as_at_value()
                     },
                     ev(Ev::Click, |event| {
                         event.prevent_default();
@@ -592,7 +604,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)-> Node<Msg
                         At::Type=>"button",
                         At::Value=>"Yazdır(Sınıflar)",
                         At::Id=>"login_button",
-                        At::Disabled => disabled(ctx, ctx_school).as_at_value()
+                        //At::Disabled => disabled(ctx, ctx_school).as_at_value()
                     },
                     ev(Ev::Click, |event| {
                         event.prevent_default();
@@ -603,15 +615,7 @@ pub fn view(model: &Model, ctx: &Context, ctx_school: &SchoolContext)-> Node<Msg
 
     ]
 }
-fn disabled(ctx: &Context, ctx_school: &SchoolContext) -> bool {
-    if ctx.user.is_none(){
-        return true;
-    }
-    else if ctx.user.as_ref().unwrap().is_admin {
-        return false;
-    }
-    !ctx.schools.iter().any(|s| s.school.id == ctx_school.school.id)
-}
+
 fn generate(model: &Model)->Node<Msg>{
     if !model.generating{
         input![C!{"button is-primary"},

@@ -1,5 +1,5 @@
 use seed::{*, prelude::*};
-use crate::model::school::SchoolType;
+//use crate::model::school::SchoolType;
 use serde::*;
 use crate::model::subject::Subject;
 //use crate::{Context, Urls};
@@ -109,6 +109,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     }
 }
 
+/*
 pub fn view(school_types: &[SchoolType], model: &Model) -> Node<Msg> {
     div![
         div![
@@ -199,3 +200,4 @@ pub fn view(school_types: &[SchoolType], model: &Model) -> Node<Msg> {
     ]
 
 }
+*/

@@ -3,13 +3,12 @@ use crate::{Context};
 use crate::model::{activity, subject};
 use crate::page::school::detail;
 use serde::*;
-use crate::page::school::detail::{SchoolContext, GroupContext};
+use crate::page::school::detail::{SchoolContext};
 use web_sys::{HtmlSelectElement, HtmlOptionElement};
 
 #[derive(Debug)]
 pub enum Msg{
     Home,
-    FetchTeacher(fetch::Result<Teacher>),
     FetchActivities(fetch::Result<Vec<activity::FullActivity>>),
     FetchAct(fetch::Result<Vec<activity::FullActivity>>),
     FetchSubjects(fetch::Result<Vec<subject::Subject>>),
@@ -19,8 +18,7 @@ pub enum Msg{
     ChangeActSubject(String),
     DeleteActivity(String),
     FetchDeleteAct(fetch::Result<String>),
-    PatchActivity(String),
-    FetchPatchAct(fetch::Result<String>),
+    Loading
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
@@ -35,71 +33,33 @@ pub struct Teacher{
 
 #[derive(Debug, Default, Clone)]
 pub struct Model{
-    teacher: Teacher,
+    url: Url,
     act_form: activity::NewActivity,
-    activities: Vec<activity::FullActivity>,
-    subjects: Vec<subject::Subject>,
-    selected_subjects: Vec<subject::Subject>,
     select: ElRef<HtmlSelectElement>,
     error: String
 }
 
-pub fn init(teacher: i32, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx_school: &mut SchoolContext, ctx_group: &GroupContext)-> Model{
-    let model = Model::default();
-    orders.perform_cmd({
-        let url = format!("/api/schools/{}/groups/{}/teachers/{}", ctx_school.school.id, ctx_group.group.id, teacher);
-        let request = Request::new(url)
-            .method(Method::Get);
-        async {
-            Msg::FetchTeacher(async {
-                request
-                    .fetch()
-                    .await?
-                    .check_status()?
-                    .json()
-                    .await
-            }.await)
-        }
-    });
+pub fn init(url: Url, orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolContext)-> Model{
+    let model = Model{url: url, ..Default::default()};
+    orders.send_msg(Msg::Loading);
     model
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx_school: &mut detail::SchoolContext, ctx_group: &mut GroupContext) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school_ctx: &mut detail::SchoolContext) {
+
     match msg {
         Msg::Home => {
-
-        }
-        Msg::FetchTeacher(t) => {
-            if let Ok(teacher) = t {
-                model.teacher = teacher;
-                orders.perform_cmd({
-                    let url = format!("/api/schools/{}/groups/{}/teachers/{}/activities", ctx_school.school.id, ctx_group.group.id, model.teacher.id);
-                    let request = Request::new(url)
-                        .method(Method::Get);
-                    async {
-                        Msg::FetchActivities(async {
-                            request
-                                .fetch()
-                                .await?
-                                .check_status()?
-                                .json()
-                                .await
-                        }.await)
-                    }
-                });
-            }
         }
         Msg::FetchAct(act)=>{
+            let teacher_ctx = school_ctx.get_mut_teacher(&model.url);
             if let Ok(mut a) = act {
-                model.activities.append(&mut a);
+                if let Some(activities) = &mut teacher_ctx.activities{
+                    activities.append(&mut a);
+                }
             }
         }
         Msg::ChangeActClass(_value)=>{
-            /*let window = web_sys::window().expect("a");
-            let d = window.document().expect("aa");
-            let classes = d.get_elements_by_name("classes");
-            log!(classes.item(0));
-            log!(classes.get(0).unwrap().selected_index());*/
+            let group_ctx = school_ctx.get_group(&model.url);
             model.act_form.classes = vec![];
             let selected_options = model.select.get().unwrap().selected_options();
             for i in 0..selected_options.length() {
@@ -108,8 +68,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     model.act_form.classes.push(item.value().parse::<i32>().unwrap());
                 }
             }
-            let class= ctx_group.classes.iter().find(|c| c.id == model.act_form.classes[0]).unwrap();
-            model.selected_subjects = model.subjects.clone().into_iter().filter(|s| s.kademe == class.kademe).collect();
+            //let class= group_ctx.classes.iter().find(|c| c.class.id == model.act_form.classes[0]).unwrap();
+            //model.selected_subjects = model.subjects.clone().into_iter().filter(|s| s.kademe == class.kademe).collect();
             //let classes = ctx_group.classes.into_iter()
             //    .filter(|c| c.kademe == class.kademe && model.act_form.classes.iter().any(|c| c)).collect::<Vec<i32>>();
             //model.act_form.classes.push(c.parse::<i32>().unwrap());
@@ -122,10 +82,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         }
         Msg::FetchSubjects(subjects)=>{
             if let Ok(s) = subjects {
-                model.subjects = s.clone();
-                model.selected_subjects = s.clone();
+                if let Some(sbjcts) = &mut school_ctx.subjects{
+                    *sbjcts = s.clone();
+                }
+                else {
+                    school_ctx.subjects = Some(s.clone());
+                }
                 if !s.is_empty() {
-                    model.act_form.subject = model.subjects[0].id;
+                    model.act_form.subject = s[0].id;
                 } else {
                     model.error = "Ders ekleyin.".to_string()
                 }
@@ -133,31 +97,20 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
 
         }
         Msg::FetchActivities(acts)=>{
+            let teacher_ctx = school_ctx.get_mut_teacher(&model.url);
             if let Ok(a) = acts {
-                model.activities = a.into_iter().filter(|a|
-                    ctx_group.classes.iter().any(|c| a.classes.iter().any(|a2| a2.id == c.id))
-                ).collect()
-            }
-            orders.perform_cmd({
-                let url = format!("/api/schools/{}/subjects", ctx_school.school.id);
-                let request = Request::new(url)
-                    .method(Method::Get);
-                async {
-                    Msg::FetchSubjects(async {
-                        request
-                            .fetch()
-                            .await?
-                            .check_status()?
-                            .json()
-                            .await
-                    }.await)
+                if let Some(activities) = &mut teacher_ctx.activities{
+                    *activities = a.clone();
                 }
-            });
+                else{
+                    teacher_ctx.activities = Some(a);
+                }
+            }
         }
         Msg::DeleteActivity(id)=>{
             if let Ok(i) = id.parse::<i32>() {
                 orders.perform_cmd({
-                    let url = format!("/api/schools/{}/groups/{}/teachers/{}/activities/{}", ctx_school.school.id, ctx_group.group.id, model.teacher.id, i);
+                    let url = format!("/api/schools/{}/groups/{}/teachers/{}/activities/{}", school_ctx.school.id, model.url.path()[3], model.url.path()[5], i);
                     let request = Request::new(url)
                         .method(Method::Delete);
                     async {
@@ -173,38 +126,75 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             }
         }
         Msg::FetchDeleteAct(id)=>{
-            if let Ok(i) = id {
-                let a = model.activities.to_owned().into_iter().enumerate().find(|a| a.1.id == i.parse::<i32>().unwrap());
-                if let Some(aa) = a {
-                    model.activities.remove(aa.0);
-                }
+            if let Ok(_) = id {
             }
-
         }
         Msg::SubmitActivity=>{
-            model.act_form.teacher = model.teacher.id;
+            //let teacher_ctx = school_ctx.get_teacher(&model.url);
+            let group_ctx = school_ctx.get_group(&model.url);
+            model.act_form.teacher = model.url.path()[5].parse().unwrap();
             model.act_form.split = false;
-            if !ctx_group.classes.is_empty() && !model.subjects.is_empty() && !model.act_form.classes.is_empty() && model.act_form.subject != 0 && !model.act_form.hour.is_empty(){
-                    orders.perform_cmd({
-                        let url = format!("/api/schools/{}/groups/{}/activities", ctx_school.school.id, ctx_group.group.id);
-                        let request = Request::new(url)
-                            .method(Method::Post)
-                            .json(&model.act_form);
-                        async {
-                            Msg::FetchAct(async {
-                                request?
-                                    .fetch()
-                                    .await?
-                                    .check_status()?
-                                    .json()
-                                    .await
-                            }.await)
-                        }
-                    });
+            if group_ctx.classes.is_some() && school_ctx.subjects.is_some() && !model.act_form.classes.is_empty() && model.act_form.subject != 0 && !model.act_form.hour.is_empty() {
+                orders.perform_cmd({
+                    let url = format!("/api/schools/{}/groups/{}/activities", school_ctx.school.id, model.url.path()[3]);
+                    let request = Request::new(url)
+                        .method(Method::Post)
+                        .json(&model.act_form);
+                    async {
+                        Msg::FetchAct(async {
+                            request?
+                                .fetch()
+                                .await?
+                                .check_status()?
+                                .json()
+                                .await
+                        }.await)
+                    }
+                });
             }
-
         }
-        Msg::PatchActivity(id) => {
+        Msg::Loading => {
+            let teacher_ctx = school_ctx.get_teacher(&model.url);
+            if teacher_ctx.activities.is_none(){
+                orders.perform_cmd({
+                    let url = format!("/api/schools/{}/groups/{}/teachers/{}/activities", school_ctx.school.id, model.url.path()[3], teacher_ctx.teacher.id);
+                    let request = Request::new(url)
+                        .method(Method::Get);
+                    async {
+                        Msg::FetchActivities(async {
+                            request
+                                .fetch()
+                                .await?
+                                .check_status()?
+                                .json()
+                                .await
+                        }.await)
+                    }
+                });
+            }
+            if school_ctx.subjects.is_none(){
+                orders.perform_cmd({
+                    let url = format!("/api/schools/{}/subjects", school_ctx.school.id);
+                    let request = Request::new(url)
+                        .method(Method::Get);
+                    async {
+                        Msg::FetchSubjects(async {
+                            request
+                                .fetch()
+                                .await?
+                                .check_status()?
+                                .json()
+                                .await
+                        }.await)
+                    }
+                });
+            }
+            else{
+                model.act_form.subject = school_ctx.subjects.as_ref().unwrap()[0].id;
+            }
+        }
+        /*Msg::PatchActivity(_id) => {
+            /*
             orders.perform_cmd({
                 let url = format!("/api/schools/{}/teachers/{}/activities/{}", ctx_school.school.id, model.teacher.id, id);
                 let request = Request::new(url)
@@ -220,6 +210,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
                     }.await)
                 }
             });
+            */
         }
         Msg::FetchPatchAct(_act)=>{
             /*
@@ -240,16 +231,20 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
             }
             */
         }
+        */
     }
 }
 
-pub fn view(model: &Model, ctx_group: &GroupContext, _ctx_school:&SchoolContext)->Node<Msg>{
+pub fn view(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
+    let teacher_ctx = school_ctx.get_teacher(&model.url);
+    let group_ctx = school_ctx.get_group(&model.url);
     div![
         C!{"columns"},
         div![
-            C!{"column is-8"},
-            "Toplam Ders saati: ", &model.activities.iter().fold(0, |acc, a| acc+a.hour).to_string(),
+            C!{"column"},
+            "Toplam Ders saati: ", &teacher_ctx.activities.as_ref().map_or(0.to_string(), |acts| acts.iter().fold(0, |acc, a| acc+a.hour).to_string()),
             hr![],
+
             table![
                 C!{"table table-hover"},
                 thead![
@@ -268,106 +263,139 @@ pub fn view(model: &Model, ctx_group: &GroupContext, _ctx_school:&SchoolContext)
                         ]
                     ]
                 ],
-                tbody![
-                    &model.error,
-                    model.activities.iter().map(|a|
-                        tr![
-                            match &a.teacher{
-                                Some(_ab)=>{
-                                    style!{
+                teacher_ctx.activities.as_ref().map_or(tbody![], |acts|
+                    tbody![
+                        acts.iter().map(|a|
+                            tr![
+                                match &a.teacher{
+                                    Some(_ab)=>{
+                                        style!{
+
+                                        }
+                                    }
+                                    None => {
+                                        style!{
+                                            St::BackgroundColor=>"gray"
+                                        }
+                                    }
+                                },
+                                td![
+                                    a.classes.iter().map(|c|
+                                        div![
+                                            c.kademe.to_string()+"/"+&c.sube
+                                        ]
+                                    )
+                                ],
+                                td![
+                                    &a.subject.name
+                                ],
+                                td![
+                                    &a.hour.to_string()
+                                ],
+                                match &a.teacher{
+                                    Some(_) =>{
+                                        td![
+                                            a![
+                                                "Sil",
+                                                //attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Sil"},
+                                                {
+                                                    let id = a.id;
+                                                    ev(Ev::Click, move |_event| {
+                                                        Msg::DeleteActivity(id.to_string())
+                                                    })
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                    None => {
+                                        td![
+                                            input![
+                                                attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Aktar"},
+                                                {
+                                                    let id = a.id;
+                                                    ev(Ev::Click, move |_event| {
+                                                        //Msg::PatchActivity(id.to_string())
+                                                    })
+                                                }
+                                            ]
+                                        ]
                                     }
                                 }
-                                None => {
-                                    style!{
-                                        St::BackgroundColor=>"gray"
-                                    }
-                                }
-                            },
-                            td![
-                                a.classes.iter().map(|c|
-                                    div![
-                                        c.kademe.to_string()+"/"+&c.sube
-                                    ]
-                                )
-                            ],
-                            td![
-                                &a.subject.name
-                            ],
-                            td![
-                                &a.hour.to_string()
-                            ],
-                            match &a.teacher{
-                                Some(_) =>{
-                                    td![
-                                        a![
-                                            "Sil",
-                                            //attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Sil"},
-                                            {
-                                                let id = a.id;
-                                                ev(Ev::Click, move |_event| {
-                                                    Msg::DeleteActivity(id.to_string())
-                                                })
-                                            }
-                                        ]
-                                    ]
-                                }
-                                None => {
-                                    td![
-                                        input![
-                                            attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Aktar"},
-                                            {
-                                                let id = a.id;
-                                                ev(Ev::Click, move |_event| {
-                                                    Msg::PatchActivity(id.to_string())
-                                                })
-                                            }
-                                        ]
-                                    ]
-                                }
-                            }
-                        ]
-                    )
-                ]
+                            ]
+                        )
+                    ]
+                )
             ]
         ],
         div![
             C!{"column"},
-            style!{
-                            //St::Width => "px;"
-            },
             div![
                 C!{"field"},
-                select![
-                    el_ref(&model.select),
-                    attrs!{At::Name=>"classes", At::Multiple => true.as_at_value(), At::Size => "10"},
-                    ctx_group.classes.iter().map(|c|
-                        option![
-                            attrs!{At::Value=>&c.id},
-                            &c.kademe.to_string(), "/", &c.sube," Sınıfı"
+                label![
+                    C!{"label"},
+                    "Aktivite sınıfını/sınıflarını seçin"
+                ],
+                p![
+                    C!{"control"},
+                    span![
+                        C!{"select is-multiple"},
+                        select![
+                            //el_ref(&model.select),
+                            attrs!{
+                                At::from("multiple") => true.as_at_value()
+                            },
+                            group_ctx.get_classes().iter().map(|c|
+                                option![
+                                    attrs!{At::Value=>&c.class.id},
+                                    format!("{}/{} Sınıfı", &c.class.kademe.to_string(), &c.class.sube)
+                                ]
+                            ),
+                            input_ev(Ev::Change, Msg::ChangeActClass)
                         ]
-                    ),
-                    input_ev(Ev::Change, Msg::ChangeActClass)
+                    ]
                 ]
             ],
             div![
                 C!{"field"},
-                select![
-                    C!{"select"},
-                    attrs!{At::Name=>"subject"},
-                    model.selected_subjects.iter().map(|s|
-                        option![
-                            attrs!{At::Value=>&s.id},
-                            &s.name, "(", &s.kademe.to_string(), ")", if s.optional{" Seçmeli"} else{""}
-                        ]
-                    ),
-                    input_ev(Ev::Change, Msg::ChangeActSubject)
+                label![
+                    C!{"label"},
+                    "Aktivitenin dersini(konusunu) seçin"
+                ],
+                p![
+                    C!{"control"},
+                    span![
+                        C!{"select"},
+                        school_ctx.subjects.as_ref().map_or(
+                            select![],
+                            |subjects|
+                            select![
+                                subjects.iter().map(|s|
+                                    option![
+                                        attrs!{At::Value=>&s.id},
+                                        &s.name, "(", &s.kademe.to_string(), ")", if s.optional{" Seçmeli"} else{""}
+                                    ]
+                                ),
+                                input_ev(Ev::Change, Msg::ChangeActSubject)
+                            ]
+                        )
+                    ]
                 ]
+
             ],
             div![
                 C!{"field"},
-                input![
-                    attrs!{At::Type=>"text", At::Name=>"hour"},
-                    input_ev(Ev::Change, Msg::ChangeActHour)
+                label![
+                    C!{"label"},
+                    "Aktivitenin süresini seçin(toplu ekleme için aralarda boşluk bırakın)"
+                ],
+                p![
+                    C!{"control"},
+
+                        input![
+                            attrs!{At::Class => "input", At::Type=>"text", At::Name=>"hour"},
+                            input_ev(Ev::Change, Msg::ChangeActHour)
+                        ]
+
                 ]
             ],
             div![
@@ -380,7 +408,7 @@ pub fn view(model: &Model, ctx_group: &GroupContext, _ctx_school:&SchoolContext)
                         })
                 ]
             ]
-        ],
+        ]
         /*div![
             C!{"column is-2"},
             ctx_school.teachers.iter().map(|t|

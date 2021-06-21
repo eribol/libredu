@@ -121,6 +121,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     }
 }
 
+/*
 pub fn view(model: &Model) -> Node<Msg>{
     div![
         C!{"columns"},
@@ -144,7 +145,8 @@ pub fn view(model: &Model) -> Node<Msg>{
             C!{"column is-4"},
             match &model.pages{
                 Pages::Subjects(m) => {
-                    subjects::view(&model.school_types, m).map_msg(Msg::Subjects)
+                    div![]
+                    //subjects::view(&model.school_types, m).map_msg(Msg::Subjects)
                 }
                 Pages::SchoolTypes => {
                     school_type_view(model)
@@ -197,3 +199,5 @@ fn school_type_view(model: &Model) -> Node<Msg>{
         )
     ]
 }
+
+ */

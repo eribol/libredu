@@ -1,8 +1,8 @@
 use serde::*;
 use seed::{*, prelude::*};
-use crate::{Context};
-use crate::page::school::detail::{ClassGroups, SchoolContext};
+use crate::page::school::detail::SchoolContext;
 use chrono::NaiveTime;
+use crate::model::group;
 
 #[derive(Debug, Clone,Deserialize, Serialize)]
 pub struct Form{
@@ -12,9 +12,10 @@ pub struct Form{
     end_time: NaiveTime
 }
 
-pub fn init(_url: Url, ctx_school: &mut SchoolContext, group: &ClassGroups, orders: &mut impl Orders<Msg>) -> Model{
+pub fn init(url: Url, school_ctx: &SchoolContext, orders: &mut impl Orders<Msg>) -> Model{
+    let group_ctx = &school_ctx.get_group(&url);
     orders.perform_cmd({
-        let url = format!("/api/schools/{}/groups/{}/schedules", ctx_school.school.id, group.id);
+        let url = format!("/api/schools/{}/groups/{}/schedules", group_ctx.group.school, group_ctx.group.id);
         let request = Request::new(url)
             .method(Method::Get);
         async {
@@ -28,14 +29,12 @@ pub fn init(_url: Url, ctx_school: &mut SchoolContext, group: &ClassGroups, orde
             }.await)
         }
     });
-    Model{
-        group: group.clone(), ..Default::default()
-    }
+    Model::default()
 }
 #[derive(Debug, Default, Clone)]
 pub struct Model{
     pub form: Vec<Form>,
-    group: ClassGroups
+    //group: group::ClassGroups
 }
 
 #[derive(Debug)]
@@ -47,7 +46,7 @@ pub enum Msg{
     ChangeEndTime(usize, String)
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: &mut Context, ctx_school: &mut SchoolContext) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, group_ctx: &mut group::GroupContext) {
     match msg {
         Msg::ChangeTime => {
         }
@@ -58,7 +57,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         }
         Msg::UpdateSchedules => {
             orders.perform_cmd({
-                let url = format!("/api/schools/{}/groups/{}/schedules", ctx_school.school.id, model.group.id);
+                let url = format!("/api/schools/{}/groups/{}/schedules", group_ctx.group.school, group_ctx.group.id);
                 let request = Request::new(url)
                     .method(Method::Patch)
                     .json(&model.form);
@@ -77,7 +76,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::ChangeStartTime(u, t) => {
             if model.form.is_empty(){
                 let new = Form{
-                    group_id: model.group.id,
+                    group_id: group_ctx.group.id,
                     hour: (u+1)as i32,
                     start_time: NaiveTime::parse_from_str(&t, "%H:%M").unwrap(),
                     end_time: NaiveTime::parse_from_str("00:00", "%H:%M").unwrap()
@@ -91,7 +90,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, _ctx: 
         Msg::ChangeEndTime(u, t) => {
             if model.form.is_empty(){
                 let new = Form{
-                    group_id: model.group.id,
+                    group_id: group_ctx.group.id,
                     hour: (u+1)as i32,
                     start_time: NaiveTime::parse_from_str("00:00", "%H:%M").unwrap(),
                     end_time: NaiveTime::parse_from_str(&t, "%H:%M").unwrap(),
