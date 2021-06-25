@@ -28,10 +28,22 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         schools: vec![],
         loaded: false
     };
-    ctx.user = SessionStorage::get("user").unwrap_or_default();
-    ctx.schools =  SessionStorage::get("schools").unwrap_or_default();
+    orders.perform_cmd({
+        let request = Request::new("/api/login")
+            .method(Method::Get);
+
+        async {
+            Msg::GetUser(async {
+                request
+                    .fetch()
+                    .await?
+                    .check_status()?
+                    .json()
+                    .await
+            }.await)
+        }
+    });
     //
-    orders.send_msg(Msg::Loading);
     orders.subscribe(Msg::UrlChanged);
     let page = Page::Loading;
     Model {
@@ -150,37 +162,6 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     let ctx = &mut model.ctx;
     match msg {
         Msg::Loading => {
-            if ctx.user.is_none() && !ctx.loaded{
-                orders.perform_cmd({
-                    let request = Request::new("/api/login")
-                        .method(Method::Get);
-
-                    async {
-                        Msg::GetUser(async {
-                            request
-                                .fetch()
-                                .await?
-                                .check_status()?
-                                .json()
-                                .await
-                        }.await)
-                    }
-                });
-                orders.perform_cmd({
-                    let request = Request::new("/api/schools")
-                        .method(Method::Get);
-
-                    async { Msg::GetSchools(async {
-                        request
-                            .fetch()
-                            .await?
-                            .check_status()?
-                            .json()
-                            .await
-                    }.await)}
-                });
-            }
-            ctx.loaded= true;
             model.page = Page::init(model.url.clone(), orders, ctx);
             //
         }
@@ -191,9 +172,6 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::UrlChanged(subs::UrlChanged(url)) => {
             model.navbar = "".to_string();
-            if !ctx.loaded{
-                orders.send_msg(Msg::Loading);
-            }
             model.page = Page::init(url, orders, ctx);
         }
         Msg::GetSchools(schools)=> {
@@ -213,11 +191,10 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                         ctx.schools.push(ctx_school);
                     }
                 }
-
+                SessionStorage::insert("schools", &ctx.schools).expect("Okullar eklenemedi");
+                orders.send_msg(Msg::Loading);
             }
             model.loaded= true;
-            //orders.send_msg(Msg::Loading);
-            SessionStorage::insert("schools", &ctx.schools).expect("Okullar eklenemedi");
         }
         Msg::Logout => {
             //LocalStorage::remove("libredu-ctx_school").expect("remove saved user")
@@ -286,26 +263,27 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
         }
         Msg::GetUser(user)=>{
-            //SessionStorage::insert("user", &user);
-            if let Ok(u) = user {
-                log!("user geldi");
-                ctx.user = Some(u.clone());
-                SessionStorage::insert("user", &u).expect("Session yüklenemedi");
-            }
-            orders.perform_cmd({
-                let request = Request::new("/api/schools")
-                    .method(Method::Get);
+            if let Ok(u) = user{
+                SessionStorage::insert("user", &u);
+                ctx.user = Some(u);
+                orders.perform_cmd({
+                    let request = Request::new("/api/schools")
+                        .method(Method::Get);
 
-                async { Msg::GetSchools(async {
-                    request
-                        .fetch()
-                        .await?
-                        .check_status()?
-                        .json()
-                        .await
-                }.await)}
-            });
-            //orders.send_msg(Msg::Home);
+                    async { Msg::GetSchools(async {
+                        request
+                            .fetch()
+                            .await?
+                            .check_status()?
+                            .json()
+                            .await
+                    }.await)}
+                });
+            }
+            else{
+                orders.send_msg(Msg::Loading);
+            }
+
         }
         Msg::School(msg) => {
             if let Page::School(model) = &mut model.page {

@@ -10,6 +10,7 @@ use crate::model::student::Student;
 use crate::model::class_room::Classroom;
 use crate::model::subject::Subject;
 use crate::model::teacher::{TeacherContext, Teacher, TeacherGroupContext};
+use crate::model::subject;
 
 
 #[derive(Debug, Default)]
@@ -94,8 +95,6 @@ impl Default for Pages{
 
 #[derive(Debug)]
 pub enum Msg{
-    //Timetable(timetable::Msg),
-    //Teachers(teachers::Msg),
     Home,
     Group(group::home::Msg),
     Students(students::Msg),
@@ -115,6 +114,7 @@ pub enum Msg{
     AddGroup,
     FetchGroup(fetch::Result<ClassGroups>),
     FetchTeachers(fetch::Result<Vec<Teacher>>),
+    FetchSubjects(fetch::Result<Vec<subject::Subject>>),
     Loading
 }
 
@@ -122,7 +122,7 @@ pub fn init(url: Url, orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolCont
     let model = Model {
         page: Pages::Loading,
         //page: Pages::init(url.clone(), orders, school_ctx),
-        url: url,
+        url: url.clone(),
         form: UpdateSchoolForm{
             name: school_ctx.school.name.clone(),
             tel: school_ctx.school.tel.clone(),
@@ -141,55 +141,122 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
     match msg{
         Msg::Home => {
         }
+        Msg::Loading => {
+            if school_ctx.groups.is_none() {
+                orders.perform_cmd({
+                    let adres = format!("/api/schools/{}/groups", school_ctx.school.id);
+                    let request = Request::new(adres)
+                        .method(Method::Get);
+                    async {
+                        Msg::FetchClassGroups(async {
+                            request
+                                .fetch()
+                                .await?
+                                .check_status()?
+                                .json()
+                                .await
+                        }.await)
+                    }
+                });
+            }
+            else {
+                model.page = Pages::init(model.url.clone(), orders, school_ctx);
+            }
+        }
         Msg::FetchTeachers(teachers)=>{
             if let Ok(teachers) = teachers {
                 let sc2 = school_ctx.clone();
                 let groups = sc2.get_groups();
-                if let Some(tchrs) = &mut school_ctx.teachers {
-                    tchrs.clear();
-                    for t in teachers {
-                        let mut teacher = TeacherContext {
-                            teacher: t,
-                            group: vec![],
-                            activities: None
-                        };
-                        for g in groups{
-                            teacher.group.push(
-                                TeacherGroupContext{
-                                    group: g.group.id,
-                                    activities: None,
-                                    limitations: None,
-                                    timetables: None
-                                }
-                            );
-                        }
-                        tchrs.push(teacher)
+                let mut tchrs: Vec<TeacherContext> = vec![];
+                for t in teachers {
+                    let mut teacher = TeacherContext {
+                        teacher: t,
+                        group: vec![],
+                        activities: None
+                    };
+                    for g in groups{
+                        teacher.group.push(
+                            TeacherGroupContext{
+                                group: g.group.id,
+                                activities: None,
+                                limitations: None,
+                                timetables: None
+                            }
+                        );
                     }
+                    tchrs.push(teacher);
                 }
-                else{
-                    let mut tchrs: Vec<TeacherContext> = vec![];
-                    for t in teachers {
-                        let mut teacher = TeacherContext {
-                            teacher: t,
-                            group: vec![],
-                            activities: None
-                        };
-                        for g in groups{
-                            teacher.group.push(
-                                TeacherGroupContext{
-                                    group: g.group.id,
-                                    activities: None,
-                                    limitations: None,
-                                    timetables: None
-                                }
-                            );
-                        }
-                        tchrs.push(teacher);
+                school_ctx.teachers = Some(tchrs);
+            }
+            else {
+                school_ctx.teachers = Some(vec![]);
+            }
+            if school_ctx.subjects.is_none() {
+                orders.perform_cmd({
+                    let adres = format!("/api/schools/{}/subjects", &school_ctx.school.id);
+                    let request = Request::new(adres)
+                        .method(Method::Get);
+                    async {
+                        Msg::FetchSubjects(async {
+                            request
+                                .fetch()
+                                .await?
+                                .check_status()?
+                                .json()
+                                .await
+                        }.await)
                     }
-                    school_ctx.teachers = Some(tchrs);
+                });
+            }
+        }
+        Msg::FetchSubjects(subjects)=>{
+            if let Ok(s) = subjects {
+                if let Some(sbjcts) = &mut school_ctx.subjects{
+                    *sbjcts = s.clone();
+                }
+                else {
+                    school_ctx.subjects = Some(s.clone());
                 }
             }
+            else {
+                school_ctx.subjects = Some(vec![]);
+            }
             model.page = Pages::init(model.url.clone(), orders, school_ctx);
+        }
+        Msg::FetchClassGroups(groups) => {
+            if let Ok(g) = groups {
+                let mut ctx_grps: Vec<GroupContext> = vec![];
+                for i in g {
+                    let ctx_group = GroupContext {
+                        group: i,
+                        classes: None
+                    };
+                    ctx_grps.push(ctx_group);
+                }
+                school_ctx.groups = Some(ctx_grps);
+                if school_ctx.teachers.is_none() {
+                    orders.perform_cmd({
+                        let adres = format!("/api/schools/{}/teachers", &school_ctx.school.id);
+                        let request = Request::new(adres)
+                            .method(Method::Get);
+                        async {
+                            Msg::FetchTeachers(async {
+                                request
+                                    .fetch()
+                                    .await?
+                                    .check_status()?
+                                    .json()
+                                    .await
+                            }.await)
+                        }
+                    });
+                }
+
+                model.page = Pages::init(model.url.clone(), orders, school_ctx);
+            }
+            else {
+                school_ctx.groups = Some(vec![]);
+            }
         }
         Msg::FetchPosts(posts) => {
             if let Ok(p) = posts {
@@ -267,22 +334,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
         }
         Msg::NameChanged(name)=>{
             model.form.name = name;
-        }
-        Msg::FetchClassGroups(groups) => {
-            if let Ok(g) = groups {
-                let mut ctx_grps: Vec<GroupContext> = vec![];
-                for i in g{
-                    let ctx_group = GroupContext{
-                        group: i,
-                        classes: None
-                    };
-                    ctx_grps.push(ctx_group);
-                }
-                school_ctx.groups = Some(ctx_grps);
-            }
-            else {
-                model.page = Pages::NotFound;
-            }
         }
         Msg::Group(msg)=>{
             //model.url.next_path_part();
@@ -398,61 +449,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                 }.await)}
             });
         }
-        Msg::Loading => {
-            if school_ctx.groups.is_none() {
-                orders.perform_cmd({
-                    let adres = format!("/api/schools/{}/groups", school_ctx.school.id);
-                    let request = Request::new(adres)
-                        .method(Method::Get);
-                    async {
-                        Msg::FetchClassGroups(async {
-                            request
-                                .fetch()
-                                .await?
-                                .check_status()?
-                                .json()
-                                .await
-                        }.await)
-                    }
-                });
-            }
-            if school_ctx.teachers.is_none() {
-                orders.perform_cmd({
-                    let adres = format!("/api/schools/{}/teachers", &school_ctx.school.id);
-                    let request = Request::new(adres)
-                        .method(Method::Get);
-                    async {
-                        Msg::FetchTeachers(async {
-                            request
-                                .fetch()
-                                .await?
-                                .check_status()?
-                                .json()
-                                .await
-                        }.await)
-                    }
-                });
-            }
-            if school_ctx.subjects.is_none() {
-                orders.perform_cmd({
-                    let adres = format!("/api/schools/{}/teachers", &school_ctx.school.id);
-                    let request = Request::new(adres)
-                        .method(Method::Get);
-                    async {
-                        Msg::FetchTeachers(async {
-                            request
-                                .fetch()
-                                .await?
-                                .check_status()?
-                                .json()
-                                .await
-                        }.await)
-                    }
-                });
-            }
 
-            model.page = Pages::init(model.url.clone(), orders, school_ctx);
-        }
     }
 }
 
@@ -603,7 +600,7 @@ fn active_menu (page: &Pages, menu: &crate::model::school::SchoolMenu) -> bool{
     }
 }
 fn not_found() -> Node<Msg>{
-    div!["Kurum bulunamadı1"]
+    div!["Kurum bulunamadı- Detail Page"]
 }
 fn posts(model: &Model, user_ctx: &Option<UserDetail>) -> Node<Msg>{
     div![

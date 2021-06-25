@@ -18,7 +18,8 @@ pub enum Msg{
     ChangeTel(String),
     ChangePass1(String),
     ChangePass2(String),
-    SubmitUpdate
+    SubmitUpdate,
+    Loading
     //Timetables
 }
 
@@ -38,11 +39,13 @@ pub enum Pages{
     Home,
     Activity(Box<activities::Model>),
     Limitation(limitations::Model),
-    Timetable(timetables::Model)
+    Timetable(timetables::Model),
+    Loading,
+    NotFound
 }
 impl Default for Pages{
     fn default()->Self{
-        Self::Home
+        Self::Loading
     }
 }
 
@@ -56,37 +59,19 @@ pub struct Model{
 
 pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolContext)-> Model{
     let mut model = Model::default();
-    let teacher_ctx = school_ctx.get_teacher(&url);
-    model.url = url.clone();
-    model.form = UpdateTeacherForm{
-        first_name: teacher_ctx.teacher.first_name.clone(),
-        last_name: teacher_ctx.teacher.last_name.clone(),
-        is_active: teacher_ctx.teacher.is_active,
-        email: teacher_ctx.teacher.email.clone().unwrap_or_default(),
-        tel: "".to_string(),
-        password1: "".to_string(),
-        password2: "".to_string()
-    };
-    match url.next_path_part() {
-        Some("") | None =>{
-            model.page = Pages::Home
-        },
-        Some("activities") => {
-            model.page = Pages::Activity(Box::new(activities::init(url.clone(), &mut orders.proxy(Msg::Activities), school_ctx)));
-            model.tab = "activities".to_string()
-        },
-        Some("limitations") =>{
-            model.page = Pages::Limitation(limitations::init(url.clone(), &mut orders.proxy(Msg::Limitations)));
-            model.tab = "limitations".to_string()
-        },
-        Some("timetables") =>{
-            model.page = Pages::Timetable(timetables::init(url.clone(), &mut orders.proxy(Msg::Timetables), school_ctx));
-            model.tab = "timetables".to_string()
-        },
-        _ =>{
-            model.page = Pages::Home
+    model.page = Pages::Loading;
+    if let Some(teachers) = &school_ctx.teachers{
+        if let Some(_) = teachers.iter().find(|t| t.teacher.id == url.path()[5].parse::<i32>().unwrap()) {
+            orders.send_msg(Msg::Loading);
         }
-    };
+        else {
+            model.page = Pages::NotFound;
+        }
+    }
+    else {
+        model.page = Pages::NotFound;
+    }
+    model.url = url.clone();
     model
 }
 
@@ -95,7 +80,38 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
         Msg::Home => {
             //log!("teacher:", ctx_school);
         }
-
+        Msg::Loading => {
+            let teacher_ctx = school_ctx.get_teacher(&model.url);
+            model.form = UpdateTeacherForm{
+                first_name: teacher_ctx.teacher.first_name.clone(),
+                last_name: teacher_ctx.teacher.last_name.clone(),
+                is_active: teacher_ctx.teacher.is_active,
+                email: teacher_ctx.teacher.email.clone().unwrap_or_default(),
+                tel: "".to_string(),
+                password1: "".to_string(),
+                password2: "".to_string()
+            };
+            match model.url.next_path_part() {
+                Some("") | None =>{
+                    model.page = Pages::Home
+                },
+                Some("activities") => {
+                    model.page = Pages::Activity(Box::new(activities::init(model.url.clone(), &mut orders.proxy(Msg::Activities), school_ctx)));
+                    model.tab = "activities".to_string()
+                },
+                Some("limitations") =>{
+                    model.page = Pages::Limitation(limitations::init(model.url.clone(), &mut orders.proxy(Msg::Limitations)));
+                    model.tab = "limitations".to_string()
+                },
+                Some("timetables") =>{
+                    model.page = Pages::Timetable(timetables::init(model.url.clone(), &mut orders.proxy(Msg::Timetables), school_ctx));
+                    model.tab = "timetables".to_string()
+                },
+                _ =>{
+                    model.page = Pages::NotFound
+                }
+            };
+        }
         Msg::Activities(msg)=> {
             if let Pages::Activity(m) = &mut model.page {
                 activities::update(msg, m, &mut orders.proxy(Msg::Activities), school_ctx)
@@ -174,11 +190,10 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
             Pages::Timetable(m) => {
                 timetables::view(m, school_ctx).map_msg(Msg::Timetables)
             }
-            /*
             Pages::NotFound => {
-                div![]
+                div!["Öğretmen veya Sayfa bulunamadı."]
             }
-            */
+            Pages::Loading => div!["Yükleniyor..."]
         }
     ]
 }

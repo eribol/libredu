@@ -101,6 +101,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
         }
         Msg::FetchActivities(acts)=>{
             let teacher_ctx = school_ctx.get_mut_teacher(&model.url);
+            model.act_form.teachers = vec![teacher_ctx.teacher.id];
             if let Ok(a) = acts {
                 if let Some(activities) = &mut teacher_ctx.activities{
                     *activities = a.clone();
@@ -137,11 +138,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             }
         }
         Msg::SubmitActivity=>{
-            //let teacher_ctx = school_ctx.get_teacher(&model.url);
+            log!(&model.act_form.teachers);
             let group_ctx = school_ctx.get_group(&model.url);
+            model.act_form.teachers = vec![model.url.path()[5].parse().unwrap()];
             model.act_form.teacher = model.url.path()[5].parse().unwrap();
             model.act_form.split = false;
-            if group_ctx.classes.is_some() && school_ctx.subjects.is_some() && !model.act_form.classes.is_empty() && model.act_form.subject != 0 && !model.act_form.hour.is_empty() {
+            if group_ctx.classes.is_some() && school_ctx.subjects.is_some() &&
+                !model.act_form.classes.is_empty() &&
+                model.act_form.subject != 0 &&
+                !model.act_form.hour.is_empty() && !model.act_form.teachers.is_empty(){
                 orders.perform_cmd({
                     let url = format!("/api/schools/{}/groups/{}/activities", school_ctx.school.id, model.url.path()[3]);
                     let request = Request::new(url)
@@ -161,23 +166,25 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             }
         }
         Msg::Loading => {
-            let teacher_ctx = school_ctx.get_teacher(&model.url);
-            if teacher_ctx.activities.is_none(){
-                orders.perform_cmd({
-                    let url = format!("/api/schools/{}/groups/{}/teachers/{}/activities", school_ctx.school.id, model.url.path()[3], teacher_ctx.teacher.id);
-                    let request = Request::new(url)
-                        .method(Method::Get);
-                    async {
-                        Msg::FetchActivities(async {
-                            request
-                                .fetch()
-                                .await?
-                                .check_status()?
-                                .json()
-                                .await
-                        }.await)
-                    }
-                });
+            if let Some(t) = school_ctx.teachers.as_ref().map_or(None, |teachers| teachers.iter().find(|t| t.teacher.id == model.url.path()[5].parse::<i32>().unwrap())){
+                let teacher_ctx = school_ctx.get_teacher(&model.url);
+                if teacher_ctx.activities.is_none(){
+                    orders.perform_cmd({
+                        let url = format!("/api/schools/{}/groups/{}/teachers/{}/activities", school_ctx.school.id, model.url.path()[3], teacher_ctx.teacher.id);
+                        let request = Request::new(url)
+                            .method(Method::Get);
+                        async {
+                            Msg::FetchActivities(async {
+                                request
+                                    .fetch()
+                                    .await?
+                                    .check_status()?
+                                    .json()
+                                    .await
+                            }.await)
+                        }
+                    });
+                }
             }
             if school_ctx.subjects.is_none(){
                 orders.perform_cmd({
@@ -195,6 +202,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                         }.await)
                     }
                 });
+            }
+            else if let Some(s) = &school_ctx.subjects{
+                if !s.is_empty() {
+                    model.act_form.subject = s[0].id;
+                }
             }
         }
         /*Msg::PatchActivity(_id) => {
