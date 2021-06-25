@@ -26,6 +26,7 @@ pub enum SchoolPage{
     Home,
     Add(add::Model),
     Detail(Box<detail::Model>),
+    Loading,
     NotFound
 }
 
@@ -34,6 +35,7 @@ pub enum Msg{
     AddSchool(add::Msg),
     DetailSchool(detail::Msg),
     FetchDetail(fetch::Result<(i16, SchoolDetail)>),
+    Loading
 }
 
 pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, user_ctx: &Option<UserDetail>, schools: &mut Vec<SchoolContext>) ->Model{
@@ -60,9 +62,9 @@ pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, user_ctx: &Option<UserD
                     }
                 }
                 else {
-
+                    orders.send_msg(Msg::Loading);
                     Model {
-                        page: SchoolPage::NotFound,
+                        page: SchoolPage::Loading,
                         selected_school: None,
                         url: url.clone()
                     }
@@ -122,6 +124,22 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
                 model.page = SchoolPage::Detail(Box::new(detail::init(model.url.clone(), &mut orders.proxy(Msg::DetailSchool), school)));
             }
         }
+        Msg::Loading => {
+            orders.perform_cmd({
+                let adres = format!("/api/schools/{}/detail", model.url.path()[1]);
+                let request = Request::new(adres)
+                    .method(Method::Get);
+
+                async { Msg::FetchDetail(async {
+                    request
+                        .fetch()
+                        .await?
+                        .check_status()?
+                        .json()
+                        .await
+                }.await)}
+            });
+        }
     }
 }
 
@@ -151,7 +169,8 @@ pub fn view(model: &Model, ctx: &Context)-> Node<Msg>{
                 div!["Kurum bulunamadı2"]
             }
         },
-        SchoolPage::NotFound => div!["Kurum bulunamadı3"]
+        SchoolPage::NotFound => div!["Kurum bulunamadı3"],
+        SchoolPage::Loading => div!["yükleniyor"]
     }
 
 }
