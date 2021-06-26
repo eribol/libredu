@@ -377,8 +377,7 @@ pub fn view(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
                         Msg::SubmitLimitation
                     })
                 ]
-            ]
-            /*
+            ],
             div![
                 C!{"column is-2"},
                 input![
@@ -391,7 +390,7 @@ pub fn view(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
                     })
                 ]
             ]
-            */
+
         ]
     ]
 }

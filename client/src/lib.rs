@@ -372,11 +372,13 @@ fn view(model: &Model) -> Node<Msg> {
     let ctx = &model.ctx;
     div![
         nav![
-            C!{"navbar is-fixed-top"},
-
-                navbar_brand(model),
-                view_navbar_brand(model, &ctx)
+            C!{"main-nav navbar is-fixed-top"},
+            navbar_brand(model),
+            view_navbar_brand(model, &ctx)
             //view_navbar_end(ctx)
+        ],
+        div![
+            C!["columns"]
         ],
         match &model.page{
             Page::Home(m) => page::home::view(m, &ctx).map_msg(Msg::Home),
