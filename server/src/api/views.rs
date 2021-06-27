@@ -227,8 +227,8 @@ pub async fn signin(mut req: Request<AppState>) -> tide::Result {
                             }
                             Err(_)=>{
                                 if req.url().domain().is_none(){
-                                    let add_user = sqlx::query!(r#"INSERT into users (first_name, last_name, email, password, tel, gender, key) values($1,$2, $3, $4, $5, $6, $7)"#,
-                                    &f.first_name, &f.last_name, &f.email, bcrypt::hash(&f.password1, 10).unwrap(), bcrypt::hash(&f.tel, 8).unwrap(), &f.gender, &key)
+                                    let add_user = sqlx::query!(r#"INSERT into users (first_name, last_name, email, password, tel, gender, key, is_active) values($1,$2, $3, $4, $5, $6, $7, $8)"#,
+                                    &f.first_name, &f.last_name, &f.email, bcrypt::hash(&f.password1, 10).unwrap(), bcrypt::hash(&f.tel, 8).unwrap(), &f.gender, &key, true)
                                         //.bind(hash(&f.password))
                                         .execute(&req.state().db_pool).await;
                                     match add_user {

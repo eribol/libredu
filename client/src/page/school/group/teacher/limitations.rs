@@ -390,7 +390,6 @@ pub fn view(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
                     })
                 ]
             ]
-
         ]
     ]
 }

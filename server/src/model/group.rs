@@ -118,6 +118,8 @@ impl ClassGroups {
         let subject = school.get_subjects(&req).await?.into_iter().find(|s| s.id == act.subject).unwrap();
         let group = req.get_group().await?;
         let classes = group.get_classes(&req).await?;
+        let act2 = act.clone();
+        let act_classes =group.get_classes(&req).await?.into_iter().filter(|c| act2.classes.iter().any(|c2| c2 == &c.id)).collect::<Vec<class::Class>>();
         if act.classes.iter().all(|c| classes.iter().any(|c2| &c2.id == c)) && act.teachers.iter().all(|t| teachers.iter().any(|t2| &t2.id == t)) {
             let mut acts: Vec<activity::FullActivity> = vec![];
             for h in act.hour.split(' ').collect::<Vec<&str>>() {
@@ -133,13 +135,14 @@ impl ClassGroups {
                         .bind(&act.teachers)
                         .fetch_one(&req.state().db_pool).await?;
 
+
                     let new_act = activity::FullActivity {
                         id: insert.id,
                         subject: subject.clone(),
                         teacher: teacher.clone(),
                         hour,
                         split: false,
-                        classes: classes.clone(),
+                        classes: act_classes.clone(),
                         teachers: Some(vec![])
                     };
                     acts.push(new_act)

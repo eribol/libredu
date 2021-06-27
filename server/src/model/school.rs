@@ -3,6 +3,7 @@ use crate::model::city::{City, Town};
 use crate::AppState;
 use crate::model::{class, subject, group, teacher, library};
 use crate::request::Auth;
+use sqlx::Error;
 
 
 #[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize)]
@@ -120,6 +121,30 @@ impl SchoolDetail{
             teachers.push(teacher);
         }
         Ok(teachers)
+    }
+    pub async fn get_teacher(&self, req: &tide::Request<AppState>, teacher_id: i32) -> sqlx_core::Result<teacher::Teacher>{
+        use sqlx::Cursor;
+        use sqlx::Row;
+        let mut tchrs = sqlx::query("SELECT users.id, users.first_name, users.last_name, roles.id, roles.name, users.is_active, users.email, users.tel \
+                        FROM school_users inner join users on school_users.user_id = users.id inner join roles on school_users.role = roles.id \
+                        WHERE school_users.school_id = $1 and school_users.user_id = $2 and school_users.role <= 5 order by roles.id, users.first_name")
+            .bind(&self.id)
+            .bind(teacher_id)
+            .fetch(&req.state().db_pool);
+        if let Some(row) = tchrs.next().await? {
+            let teacher = teacher::Teacher {
+                id: row.get(0),
+                first_name: row.get(1),
+                last_name: row.get(2),
+                role_id: row.get(3),
+                role_name: row.get(4),
+                is_active: row.get(5),
+                email: row.get(6),
+                tel: row.get(7)
+            };
+            return Ok(teacher);
+        }
+        Err(Error::RowNotFound)
     }
     pub async fn get_classes_ids(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<Vec<i32>> {
         use sqlx::prelude::PgQueryAs;

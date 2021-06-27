@@ -83,6 +83,8 @@ pub async fn add(mut req: Request<AppState>) -> tide::Result {
                     let _g = sqlx::query!(r#"insert into class_groups (name, school, hour) values($1, $2, $3)"#, &"Varsayılan", s.id, hour)
                         .execute(&req.state().db_pool).await;
                     res.set_body(Body::from_json(&s)?);
+                    let teacher = s.get_teacher(&req, u.id).await?;
+                    teacher.limitations(&mut req, s.id).await?;
                     Ok(res)
                 }
                 Err(_e) => {

@@ -1,9 +1,11 @@
 use serde::*;
-use crate::model::{timetable, activity};
+use crate::model::{timetable, activity, school};
 use crate::model::class::Class;
 use crate::AppState;
 use crate::model::school::SchoolDetail;
 use crate::model::activity::Activity;
+use crate::request::Auth;
+use tide::StatusCode;
 
 #[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct TeacherAvailable{
@@ -174,5 +176,57 @@ impl Teacher{
             //.bind(&school_auth.school.id)
             .fetch_all(&req.state().db_pool).await?;
         Ok(acts)
+    }
+    pub async fn limitations(&self, req: &mut tide::Request<AppState>, school_id: i32) -> tide::Result{
+        let res = tide::Response::new(StatusCode::Ok);
+        let posts = req.body_json::<Vec<TeacherAvailable>>().await;
+        use sqlx::prelude::PgQueryAs;
+        if let Ok(post) = posts{
+            for available in post {
+                let school = req.get_school().await?;
+                let group_id: i32 = req.param("group_id")?.parse()?;
+                let group = school.get_group(&req, group_id).await?;
+                if group.hour as usize == available.hours.len(){
+                    let update: sqlx::Result<school::SchoolTeacher> = sqlx::query_as(r#"update teacher_available set hours = $4 where user_id= $1 and school_id= $2 and day= $3 and group_id = $5 returning school_id, user_id"#)
+                        .bind(&self.id)
+                        .bind(&school.id)
+                        .bind(&available.day.id)
+                        .bind(&available.hours)
+                        .bind(&group_id)
+                        .fetch_one(&req.state().db_pool).await;
+                    match update {
+                        Ok(_s) => {}
+                        Err(_) => {
+                            let _update: school::SchoolTeacher = sqlx::query_as(r#"insert into teacher_available(user_id, school_id, day, hours, group_id)
+                                                        values($1, $2, $3, $4, $5) returning school_id, user_id"#)
+                                .bind(&self.id)
+                                .bind(&school.id)
+                                .bind(&available.day.id)
+                                .bind(&available.hours)
+                                .bind(&group_id)
+                                .fetch_one(&req.state().db_pool).await?;
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            for i in 1..8{
+                let school = SchoolDetail::get(&req, school_id).await?;
+                let groups = school.get_groups(&req).await?;
+                for g in groups{
+                    let hours: Vec<bool> = vec![true; g.hour as usize];
+                    let _update: school::SchoolTeacher = sqlx::query_as(r#"insert into teacher_available(user_id, school_id, day, hours, group_id)
+                                                        values($1, $2, $3, $4, $5) returning school_id, user_id"#)
+                        .bind(&self.id)
+                        .bind(&school_id)
+                        .bind(i as i32)
+                        .bind(&hours)
+                        .bind(&g.id)
+                        .fetch_one(&req.state().db_pool).await?;
+                }
+            }
+        }
+        Ok(res)
     }
 }
