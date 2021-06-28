@@ -124,7 +124,7 @@ pub async fn limitations(mut req: Request<AppState>) -> tide::Result {
             }
             Method::Post => {
                 let post = req.body_json::<Vec<ClassAvailable>>().await?;
-                for available in post {
+                for available in &post {
                     let update: sqlx::Result<InsertClassAvailable> = sqlx::query_as(r#"update class_available set hours = $3 where class_id= $1 and day = $2 returning class_id, hours, day"#)
                         .bind(&class_id)
                         .bind(&available.day.id)
@@ -141,6 +141,7 @@ pub async fn limitations(mut req: Request<AppState>) -> tide::Result {
                         }
                     }
                 }
+                res.set_body(Body::from_json(&post)?);
                 Ok(res)
             }
             _ => {

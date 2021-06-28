@@ -4,7 +4,7 @@ use crate::model::teacher::Teacher;
 use crate::model::student::{SimpleStudent};
 use crate::model::timetable::Day;
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Class{
     pub id: i32,
     pub kademe: String,
@@ -12,13 +12,13 @@ pub struct Class{
     pub school: i32,
     pub group_id: i32
 }
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct ClassAvailable{
     pub hours: Vec<bool>,
     pub(crate) day: Day
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct ClassTimetable{
     pub id: i32,
     pub class_id: i32,
@@ -28,13 +28,13 @@ pub struct ClassTimetable{
     pub activity: ClassTimetableActivity
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct ClassTimetableActivity{
     pub id: i32,
     pub teacher: Teacher
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct ClassActivity{
     pub id: i32,
     pub subject: Subject,
@@ -50,7 +50,7 @@ pub struct NewClass{
     pub group_id: i32
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct UpdateClass{
     pub id: i32,
     pub kademe: String,
@@ -58,7 +58,7 @@ pub struct UpdateClass{
     pub group_id: i32
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct ClassContext{
     pub class: Class,
     pub students: Option<Vec<SimpleStudent>>,

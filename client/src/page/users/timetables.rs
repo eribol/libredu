@@ -10,7 +10,7 @@ use crate::model::class;
 
 //use crate::models::school::SchoolDetail;
 
-#[derive(Debug)]
+#[derive()]
 pub struct Model{
     timetable: Vec<(School, ClassGroups, Vec<TeacherTimetable>)>,
     days: Vec<Day>
@@ -32,7 +32,7 @@ impl Default for Model{
         }
     }
 }
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     FetchTimetable(fetch::Result<Vec<(School, ClassGroups, Vec<TeacherTimetable>)>>)
 }

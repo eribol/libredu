@@ -4,7 +4,7 @@ use crate::{Urls, page};
 use crate::{Context};
 
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     UserUpdateSubmit,
     Fetched(fetch::Result<UserDetail>),
@@ -13,13 +13,13 @@ pub enum Msg{
     ChangePasswordPage(page::users::change_password::Msg)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Menu{
     title: String,
     link: String
 }
 
-#[derive(Debug)]
+#[derive()]
 enum Pages{
     NotUser,
     Home,
@@ -34,7 +34,7 @@ impl Default for Pages{
         Pages::Home
     }
 }
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Model{
     user: Option<UserDetail>,
     menu: Vec<Menu>,

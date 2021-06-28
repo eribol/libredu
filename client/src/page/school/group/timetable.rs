@@ -11,7 +11,7 @@ use crate::model::group::Schedule;
 use crate::page::school::group::generate;
 use crate::model::{teacher, subject};
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct AuthUser{
     pub id: i32,
     pub first_name: Option<String>,
@@ -21,7 +21,7 @@ pub struct AuthUser{
     pub is_admin: bool,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Model{
     params: Params,
     days: Vec<Day>,
@@ -42,14 +42,14 @@ pub struct Model{
     pub url: Url
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 struct Params{
     hour: i32,
     depth: usize,
     depth2: usize
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct NewClassTimetable {
     pub class_id: Option<i32>,
     pub day_id: Option<i32>,
@@ -75,7 +75,7 @@ pub struct Class{
     pub school: i32,
     pub teacher: Option<i32>,
 }
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct TimetableData{
     pub(crate) tat: Vec<model::teacher::TeacherAvailableForTimetables>,
     pub(crate) cat: Vec<ClassAvailable>,
@@ -91,7 +91,7 @@ pub struct ClassAvailable{
     pub(crate) day: i32,
     pub(crate) hours: Vec<bool>
 }
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     Submit,
     DeleteSubmit,
@@ -452,6 +452,19 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                         .await
                 }.await)}
             });
+            if let Some(teachers) = &mut school_ctx.teachers{
+                for t in teachers{
+                    for g in &mut t.group{
+                        g.timetables = None;
+                    }
+                }
+            }
+            let group = school_ctx.get_mut_group(&model.url);
+            let classes = group.get_mut_classes();
+            for c in classes{
+                c.timetables = None
+            }
+
         }
     }
 }

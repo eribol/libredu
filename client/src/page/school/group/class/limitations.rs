@@ -5,13 +5,13 @@ use crate::model::class::{Class, ClassAvailable, ClassContext};
 use crate::model::group::GroupContext;
 use crate::page::school::detail::SchoolContext;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Subject{
     pub name: String,
     pub id: i32
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Activity{
     pub(crate) id: i32,
     pub(crate) subject: Subject,
@@ -22,11 +22,13 @@ pub struct Activity{
     classes: Vec<i32>
 }
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     Home,
     FetchDays(fetch::Result<Vec<Day>>),
     FetchLimitation(fetch::Result<Vec<ClassAvailable>>),
+    FetchGradeLimitation(fetch::Result<Vec<ClassAvailable>>),
+    FetchAllLimitation(fetch::Result<Vec<ClassAvailable>>),
     ChangeHour((usize,usize)),
     ChangeAllHour(usize),
     ChangeAllDay(usize),
@@ -36,7 +38,7 @@ pub enum Msg{
     Print
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Model{
     pub class: Class,
     pub days: Vec<Day>,
@@ -89,11 +91,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
     let school_id = &model.url.path()[1];
     let hours = &model.hours;
     let classes = &model.classes;
-    let class_ctx = school_ctx.get_mut_group(&model.url).get_mut_class(&model.url);
+
     match msg {
         Msg::Home => {
         }
         Msg::ChangeAllHour(index) => {
+            let class_ctx = school_ctx.get_mut_group(&model.url).get_mut_class(&model.url);
             if let Some(limitations) = &mut class_ctx.limitations{
                 let mut all = true;
                 for l in limitations.iter_mut(){
@@ -115,6 +118,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             }
         }
         Msg::ChangeAllDay(index) => {
+            let class_ctx = school_ctx.get_mut_group(&model.url).get_mut_class(&model.url);
             if let Some(limitations) = &mut class_ctx.limitations{
                 if limitations[index].hours.iter().any(|h| !*h){
                     for h in 0..model.hours{
@@ -145,6 +149,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             class_print(&serde_json::to_string(&timetable).unwrap(), &serde_json::to_string(&model.days).unwrap(), first_hour, last_hour, &serde_json::to_string(&model.school).unwrap())*/
         }
         Msg::Submit=>{
+            let class_ctx = school_ctx.get_mut_group(&model.url).get_mut_class(&model.url);
             orders.perform_cmd({
                 let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", &school_id, &group_ctx, &class_ctx.class.id);
                 let request = Request::new(url)
@@ -163,6 +168,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             });
         }
         Msg::SubmitSameGrades => {
+            let class_ctx = school_ctx.get_mut_group(&model.url).get_mut_class(&model.url);
             for c in classes{
                 if c.class.kademe == class_ctx.class.kademe{
                     orders.perform_cmd({
@@ -171,7 +177,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                             .method(Method::Post)
                             .json(&class_ctx.limitations.as_ref().unwrap());
                         async {
-                            Msg::FetchLimitation(async {
+                            Msg::FetchGradeLimitation(async {
                                 request?
                                     .fetch()
                                     .await?
@@ -185,29 +191,30 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             }
         }
         Msg::SubmitAll => {
-            for c in classes{
-                orders.perform_cmd({
-                    let url = format!("/api/schools/{}/groups/{}/classes/{}/limitations", school_id, &group_ctx, &c.class.id);
-                    let request = Request::new(url)
-                        .method(Method::Post)
-                        .json(&class_ctx.limitations.as_ref().unwrap());
-                    async {
-                        Msg::FetchLimitation(async {
-                            request?
-                                .fetch()
-                                .await?
-                                .check_status()?
-                                .json()
-                                .await
-                        }.await)
-                    }
-                });
-            }
+            let class_ctx = school_ctx.get_mut_group(&model.url).get_mut_class(&model.url);
+
+            orders.perform_cmd({
+                let url = format!("/api/schools/{}/groups/{}/classes/limitations", school_id, &group_ctx);
+                let request = Request::new(url)
+                    .method(Method::Post)
+                    .json(&class_ctx.limitations.as_ref().unwrap());
+                async {
+                    Msg::FetchAllLimitation(async {
+                        request?
+                            .fetch()
+                            .await?
+                            .check_status()?
+                            .json()
+                            .await
+                    }.await)
+                }
+            });
         }
         Msg::FetchDays(days)=>{
             model.days=days.unwrap();
         }
         Msg::ChangeHour(ids)=>{
+            let class_ctx = school_ctx.get_mut_group(&model.url).get_mut_class(&model.url);
             if let Some(limitations) = &mut class_ctx.limitations{
                 if limitations[ids.0].hours[ids.1]{
                     limitations[ids.0].hours[ids.1]=false;
@@ -218,6 +225,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             }
         }
         Msg::FetchLimitation(json)=>{
+            let class_ctx = school_ctx.get_mut_group(&model.url).get_mut_class(&model.url);
             match json {
                 Ok(mut l) => {
                     l.sort_by(|a, b| a.day.id.cmp(&b.day.id));
@@ -274,6 +282,81 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                             }
                         }
                     }
+                }
+            }
+        }
+        Msg::FetchGradeLimitation(json)=>{
+            let class_ctx = &model.classes.iter().find(|c| c.class.id == model.url.path()[5].parse::<i32>().unwrap()).unwrap();
+            let classes_ctx = &mut school_ctx.get_mut_group(&model.url).get_mut_classes().iter_mut().filter(|c| c.class.kademe == class_ctx.class.kademe);
+
+            match json {
+                Ok(mut l) => {
+                    l.sort_by(|a, b| a.day.id.cmp(&b.day.id));
+                    while let Some(class_ctx) = classes_ctx.next(){
+                        if let Some(limitations) = &mut class_ctx.limitations{
+                            *limitations = l.clone();
+                        }
+                        else {
+                            class_ctx.limitations = Some(l.clone());
+                        }
+                    }
+                }
+                Err(_)=>{
+                    log!("not worked");
+                    //class_ctx.limitations = Some(
+                    //  vec![ClassAvailable{ hours: vec![], day: Default::default() }]
+                    //);
+                    /*
+                    if let Some(limitations) = &mut class_ctx.limitations{
+                        for d in model.days.iter() {
+                            if !limitations.iter().any(|ta| ta.day.id == d.id) {
+                                let hours = vec![false; *hours];
+                                limitations.push(ClassAvailable { day: d.clone(), hours })
+                            }
+                            if limitations[(d.id - 1) as usize].hours.len() != *hours {
+                                let hours = vec![false; *hours];
+                                limitations[(d.id - 1) as usize].hours = hours;
+                            }
+                        }
+                    }
+
+                     */
+                }
+            }
+        }
+        Msg::FetchAllLimitation(json)=>{
+            let classes_ctx = school_ctx.get_mut_group(&model.url).get_mut_classes();
+            match json {
+                Ok(mut l) => {
+                    l.sort_by(|a, b| a.day.id.cmp(&b.day.id));
+                    for class_ctx in classes_ctx{
+                        if let Some(limitations) = &mut class_ctx.limitations{
+                            *limitations = l.clone()
+                        }
+                        else {
+                            class_ctx.limitations = Some(l.clone());
+                        }
+                    }
+                }
+                Err(_)=>{
+                    //class_ctx.limitations = Some(
+                    //  vec![ClassAvailable{ hours: vec![], day: Default::default() }]
+                    //);
+                    /*
+                    if let Some(limitations) = &mut class_ctx.limitations{
+                        for d in model.days.iter() {
+                            if !limitations.iter().any(|ta| ta.day.id == d.id) {
+                                let hours = vec![false; *hours];
+                                limitations.push(ClassAvailable { day: d.clone(), hours })
+                            }
+                            if limitations[(d.id - 1) as usize].hours.len() != *hours {
+                                let hours = vec![false; *hours];
+                                limitations[(d.id - 1) as usize].hours = hours;
+                            }
+                        }
+                    }
+
+                     */
                 }
             }
         }

@@ -8,7 +8,7 @@ use crate::page::school::group::classes;
 use crate::model::class::{Class, ClassContext};
 use crate::model::group;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Pages{
     Home,
     Classes(Box<classes::Model>),
@@ -38,7 +38,7 @@ impl Pages{
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Model{
     page: Pages,
     form: Form,
@@ -46,19 +46,19 @@ pub struct Model{
     url: Url,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Menu{
     link: String,
     title: String
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct Form{
     name: String,
     hour: i32
 }
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     Home,
     ChangeName(String),

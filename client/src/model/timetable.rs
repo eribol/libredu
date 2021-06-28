@@ -99,7 +99,7 @@ pub struct Class{
     pub school: i32,
     pub teacher: Option<i32>,
 }
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct TimetableData{
     pub(crate) tat: Vec<model::teacher::TeacherAvailableForTimetables>,
     pub(crate) cat: Vec<ClassAvailableForTimetable>,
@@ -109,7 +109,7 @@ pub struct TimetableData{
     timetables: Vec<NewClassTimetable>
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct ClassAvailableForTimetable{
     pub(crate) class_id: i32,
     pub(crate) day: i32,

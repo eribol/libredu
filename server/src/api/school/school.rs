@@ -84,7 +84,7 @@ pub async fn add(mut req: Request<AppState>) -> tide::Result {
                         .execute(&req.state().db_pool).await;
                     res.set_body(Body::from_json(&s)?);
                     let teacher = s.get_teacher(&req, u.id).await?;
-                    teacher.limitations(&mut req, s.id).await?;
+                    teacher.limitations(&req, s.id, None).await?;
                     Ok(res)
                 }
                 Err(_e) => {

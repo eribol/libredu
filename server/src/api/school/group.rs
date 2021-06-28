@@ -10,6 +10,7 @@ use crate::model::timetable;
 use crate::model;
 use crate::model::class;
 use crate::model::student::SimpleStudent;
+use crate::model::timetable::{ClassAvailable, InsertClassAvailable};
 
 
 pub async fn add_class(mut req: Request<AppState>) -> tide::Result {
@@ -374,6 +375,49 @@ pub async fn add_activity(mut req: Request<AppState>) -> tide::Result {
     }
 }
 
+pub async fn limitations(mut req: Request<AppState>) -> tide::Result {
+    let mut res = tide::Response::new(StatusCode::Ok);
+    //let school_id: i32 = req.param("school")?.parse()?;
+    let group_id: i32 = req.param("group_id")?.parse()?;
+    use sqlx_core::postgres::PgQueryAs;
+    use sqlx_core::cursor::Cursor;
+    use sqlx_core::row::Row;
+    let school_auth: &SchoolAuth = req.ext().unwrap();
+    if school_auth.role < 4 {
+        let _ = sqlx::query("SELECT * FROM classes WHERE id = $1 and school = $2")
+            .bind(&group_id)
+            .bind(&school_auth.school.id)
+            .execute(&req.state().db_pool).await?;
+        let classes = school_auth.school.get_group(&req, group_id).await?.get_classes_ids(&req).await?;
+        let post = req.body_json::<Vec<ClassAvailable>>().await?;
+        for available in post {
+            let update: sqlx::Result<InsertClassAvailable> = sqlx::query_as(r#"update class_available set hours = $3 where class_id = any($1) and day = $2 returning class_id, hours, day"#)
+                .bind(&classes)
+                .bind(&available.day.id)
+                .bind(&available.hours)
+                .fetch_one(&req.state().db_pool).await;
+            match update {
+                Ok(_s) => {}
+                Err(_) => {
+
+                    for c in &classes{
+                        let _insert: InsertClassAvailable = sqlx::query_as(r#"insert into class_available(class_id, day, hours) values($1, $2, $3, $4) returning class_id, day, hours"#)
+                            .bind(&c)
+                            .bind(&group_id)
+                            .bind(&available.day.id)
+                            .bind(&available.hours)
+                            .fetch_one(&req.state().db_pool).await?;
+                    }
+
+                }
+            }
+        }
+        Ok(res)
+    }
+    else {
+        Ok(res)
+    }
+}
 
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]

@@ -7,7 +7,7 @@ use crate::model::class::Class;
 use seed::Url;
 
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Tests{
     pub activity: Vec<Act>,
     pub teachers: Vec<Teacher>,
@@ -16,13 +16,13 @@ pub struct Tests{
     pub test5: Vec<Class>
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Act{
     pub teacher: ActTeacher,
     pub class: ActClass
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct ActClass{
     pub kademe: String,
     pub sube: String

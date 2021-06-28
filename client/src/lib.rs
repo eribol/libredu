@@ -71,7 +71,7 @@ struct Model {
     loaded: bool
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Context {
     pub base_url: Url,
     pub user: Option<UserDetail>,
@@ -132,7 +132,7 @@ impl<'a> Urls<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg {
     Home(page::home::Msg),
     UrlChanged(subs::UrlChanged),
@@ -378,7 +378,10 @@ fn view(model: &Model) -> Node<Msg> {
             //view_navbar_end(ctx)
         ],
         div![
-            C!["columns"]
+            C!["columns"],
+            div![
+                C!["column"]
+            ]
         ],
         match &model.page{
             Page::Home(m) => page::home::view(m, &ctx).map_msg(Msg::Home),

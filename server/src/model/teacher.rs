@@ -177,11 +177,10 @@ impl Teacher{
             .fetch_all(&req.state().db_pool).await?;
         Ok(acts)
     }
-    pub async fn limitations(&self, req: &mut tide::Request<AppState>, school_id: i32) -> tide::Result{
+    pub async fn limitations(&self, req: &tide::Request<AppState>, school_id: i32, posts: Option<Vec<TeacherAvailable>>) -> tide::Result{
         let res = tide::Response::new(StatusCode::Ok);
-        let posts = req.body_json::<Vec<TeacherAvailable>>().await;
         use sqlx::prelude::PgQueryAs;
-        if let Ok(post) = posts{
+        if let Some(post) = posts{
             for available in post {
                 let school = req.get_school().await?;
                 let group_id: i32 = req.param("group_id")?.parse()?;

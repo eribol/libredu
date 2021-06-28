@@ -2,14 +2,14 @@ use serde::*;
 use crate::model::class::{Class, ClassContext};
 use crate::model::{timetable, activity};
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct TeacherAvailable{
     pub group_id: Option<i32>,
     pub day: timetable::Day,
     pub hours: Vec<bool>
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct TeacherTimetable{
     pub id: i32,
     pub class_id: Vec<ClassContext>,
@@ -17,7 +17,7 @@ pub struct TeacherTimetable{
     pub hour: i16,
     pub subject: String,
 }
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct TeacherTimetable2{
     pub id: i32,
     pub class_id: Vec<Class>,
@@ -26,7 +26,7 @@ pub struct TeacherTimetable2{
     pub subject: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct TeacherAvailableForTimetables{
     pub(crate) user_id: i32,
     school_id: i32,
@@ -34,7 +34,7 @@ pub struct TeacherAvailableForTimetables{
     pub(crate) hours: Vec<bool>
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Teacher{
     pub id: i32,
     pub first_name: String,
@@ -46,14 +46,14 @@ pub struct Teacher{
     pub tel: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct TeacherContext{
     pub teacher: Teacher,
     pub group: Vec<TeacherGroupContext>,
     pub activities: Option<Vec<activity::FullActivity>>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct TeacherGroupContext{
     pub group: i32,
     pub activities: Option<Vec<activity::FullActivity>>,
@@ -61,7 +61,7 @@ pub struct TeacherGroupContext{
     pub timetables: Option<Vec<TeacherTimetable2>>
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct TeacherMenu<'a>{
     pub link: &'a str,
     pub name: &'a str,

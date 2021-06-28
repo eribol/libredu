@@ -6,7 +6,7 @@ use serde::*;
 use crate::page::school::detail::{SchoolContext};
 use web_sys::{HtmlSelectElement, HtmlOptionElement};
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     Home,
     FetchActivities(fetch::Result<Vec<activity::FullActivity>>),
@@ -21,7 +21,7 @@ pub enum Msg{
     Loading
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Teacher{
     pub id: i32,
     pub first_name: String,
@@ -31,7 +31,7 @@ pub struct Teacher{
     pub tel: Option<String>
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Model{
     url: Url,
     act_form: activity::NewActivity,

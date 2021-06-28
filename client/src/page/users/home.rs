@@ -4,19 +4,19 @@ use crate::{Context};
 use crate::page::users::detail;
 
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     Home,
     DetailPage(page::users::detail::Msg),
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Menu{
     title: String,
     link: String
 }
 
-#[derive(Debug)]
+#[derive()]
 enum Pages{
     Home,
     Detail(Box<detail::Model>),
@@ -27,7 +27,7 @@ impl Default for Pages{
         Pages::Home
     }
 }
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Model{
     page: Pages
 }

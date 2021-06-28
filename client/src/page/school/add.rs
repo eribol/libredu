@@ -4,7 +4,7 @@ use crate::{Context};
 use crate::page::school::detail::{City, Town};
 
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Model{
     form: NewSchool,
     cities: Vec<City>,
@@ -12,7 +12,7 @@ pub struct Model{
     types: Vec<SchoolType>
 }
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     FetchCity(fetch::Result<Vec<City>>),
     SubmitSchool,

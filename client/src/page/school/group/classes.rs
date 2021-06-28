@@ -4,14 +4,14 @@ use crate::page::school::group::class::home;
 use crate::model::class::{NewClass};
 use crate::page::school::detail::SchoolContext;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Model{
     pages: Pages,
     form: NewClass,
     url: Url
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Pages{
     Classes,
     Class(Box<home::Model>),
@@ -35,7 +35,7 @@ impl Pages{
     }
 }
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     AddClass,
     ChangeKademe(String),

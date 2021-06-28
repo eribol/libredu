@@ -5,21 +5,21 @@ use crate::page::school::detail;
 use crate::page::school::detail::SchoolContext;
 use crate::model::teacher::{TeacherContext, Teacher, TeacherGroupContext};
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct NewTeacher{
     first_name: String,
     last_name: String,
     role: i16
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Model{
     pages: Pages,
     form: NewTeacher,
     url: Url
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Pages{
     Teachers,
     Teacher(Box<home::Model>)
@@ -60,7 +60,7 @@ pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, school_ctx: &mut School
     model
 }
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     FetchTeachers(fetch::Result<Vec<Teacher>>),
     AddTeacher,

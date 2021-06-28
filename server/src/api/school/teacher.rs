@@ -3,7 +3,6 @@ use crate::AppState;
 use crate::request::{Auth, SchoolAuth};
 use http_types::{StatusCode, Method, Body};
 use crate::model::{timetable};
-use crate::model::school;
 use crate::model::activity;
 use crate::model::teacher;
 use crate::model::activity::Activity;
@@ -97,50 +96,18 @@ pub async fn teacher_detail(req: Request<AppState>) -> tide::Result {
 }
 
 pub async fn limitations(mut req: Request<AppState>) -> tide::Result {
-    let res = tide::Response::new(StatusCode::Ok);
     let teacher_id: i32 = req.param("teacher_id")?.parse()?;
-    let group_id: i32 = req.param("group_id")?.parse()?;
-    use sqlx_core::postgres::PgQueryAs;
     let user = req.user().await.unwrap();
     let post = req.body_json::<Vec<teacher::TeacherAvailable>>().await?;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role <= 2 || user.id == teacher_id {
-        let find: sqlx::Result<school::SchoolTeacher> = sqlx::query_as(r#"select * from school_users where school_id= $1 and user_id = $2"#)
-            .bind(&school_auth.school.id)
-            .bind(&teacher_id)
-            //.bind(&group_id)
-            .fetch_one(&req.state().db_pool).await;
-        match find {
-            Ok(_) => {
-                for available in post {
-                    let update: sqlx::Result<school::SchoolTeacher> = sqlx::query_as(r#"update teacher_available set hours = $4 where user_id= $1 and school_id= $2 and day= $3 and group_id = $5 returning school_id, user_id, group_id"#)
-                        .bind(&teacher_id)
-                        .bind(&school_auth.school.id)
-                        .bind(&available.day.id)
-                        .bind(&available.hours)
-                        .bind(&group_id)
-                        .fetch_one(&req.state().db_pool).await;
-                    match update {
-                        Ok(_s) => {}
-                        Err(_) => {
-                            let _update: school::SchoolTeacher = sqlx::query_as(r#"insert into teacher_available(user_id, school_id, day, hours, group_id)
-                                                        values($1, $2, $3, $4, $5) returning school_id, user_id"#)
-                                .bind(&teacher_id)
-                                .bind(&school_auth.school.id)
-                                .bind(&available.day.id)
-                                .bind(&available.hours)
-                                .bind(&group_id)
-                                .fetch_one(&req.state().db_pool).await?;
-                        }
-                    }
-                }
-                Ok(res)
-            }
-            Err(_) => {
-                Ok(res)
-            }
-        }
+        let mut res = tide::Response::new(StatusCode::Ok);
+        let teacher = school_auth.school.get_teacher(&req, teacher_id).await?;
+        teacher.limitations(&req, school_auth.school.id, Some(post)).await?;
+        res.set_body(Body::from_json(&teacher_id)?);
+        Ok(res)
     } else {
+        let res = tide::Response::new(StatusCode::Unauthorized);
         Ok(res)
     }
 }

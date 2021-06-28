@@ -6,11 +6,12 @@ use crate::model::teacher::{TeacherTimetable, TeacherGroupContext};
 use serde::*;
 use crate::page::school::detail::{SchoolContext};
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     Home,
     FetchDays(fetch::Result<Vec<timetable::Day>>),
     FetchLimitation(fetch::Result<Vec<teacher::TeacherAvailable>>),
+    FetchAllLimitation(fetch::Result<Vec<teacher::TeacherAvailable>>),
     ChangeHour((usize,usize)),
     SubmitLimitation,
     SubmitAllLimitation,
@@ -19,7 +20,7 @@ pub enum Msg{
 }
 
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Model{
     days: Vec<timetable::Day>,
     pub limitation: Vec<teacher::TeacherAvailable>,
@@ -228,6 +229,64 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                 }
             }
         }
+        Msg::FetchAllLimitation(json)=>{
+            let teachers_ctx = school_ctx.get_mut_teachers();
+            //
+            match json {
+                Ok(mut l) => {
+                    l.sort_by(|a, b| a.day.id.cmp(&b.day.id));
+                    for teacher_ctx in teachers_ctx{
+                        let teacher_group = &mut teacher_ctx.group.iter_mut().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap());
+                        if let Some(tg) = teacher_group{
+                            if let Some(lm) = &mut tg.limitations{
+                                *lm = l.clone();
+
+                            }
+                            else {
+                                tg.limitations = Some(l.clone());
+                            }
+                        }
+                    }
+                }
+                Err(_)=>{
+                    /*
+                    if let Some(tg) = teacher_group {
+                        if let Some(lm) = &mut tg.limitations {
+                            if lm.is_empty() {
+                                for d in model.days.iter() {
+                                    if !lm.iter().any(|ta| ta.day.id == d.id) {
+                                        let hours = vec![true; hours as usize];
+                                        lm.push(teacher::TeacherAvailable { day: d.clone(), hours, group_id: None })
+                                    }
+                                    else if lm[(d.id - 1) as usize].hours.len() != hours as usize {
+                                        let hours = vec![true; hours as usize];
+                                        lm[(d.id - 1) as usize].hours = hours;
+                                    }
+                                }
+                                orders.perform_cmd({
+                                    let url = format!("/api/schools/{}/teachers/{}/limitations/{}", school_ctx.school.id, model.url.path()[5], model.url.path()[3]);
+                                    let request = Request::new(url)
+                                        .method(Method::Post)
+                                        .json(&model.limitation);
+                                    async {
+                                        Msg::FetchLimitation(async {
+                                            request?
+                                                .fetch()
+                                                .await?
+                                                .check_status()?
+                                                .json()
+                                                .await
+                                        }.await)
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                     */
+                }
+            }
+        }
         Msg::SubmitLimitation=>{
             let teacher_ctx = &mut school_ctx.get_mut_teacher(&model.url);
             let teacher_group = &mut teacher_ctx.group.iter_mut().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap());
@@ -266,7 +325,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                                     .method(Method::Post)
                                     .json(&lm);
                                 async {
-                                    Msg::FetchLimitation(async {
+                                    Msg::FetchAllLimitation(async {
                                         request?
                                             .fetch()
                                             .await?

@@ -14,14 +14,14 @@ mod class_rooms;
 mod library;
 
 
-#[derive(Debug)]
+#[derive()]
 pub struct Model{
     page: SchoolPage,
     selected_school: Option<SchoolContext>,
     url: Url
 }
 
-#[derive(Debug)]
+#[derive()]
 pub enum SchoolPage{
     Home,
     Add(add::Model),
@@ -30,7 +30,7 @@ pub enum SchoolPage{
     NotFound
 }
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     AddSchool(add::Msg),
     DetailSchool(detail::Msg),

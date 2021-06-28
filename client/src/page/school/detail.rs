@@ -13,7 +13,7 @@ use crate::model::teacher::{TeacherContext, Teacher, TeacherGroupContext};
 use crate::model::subject;
 
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Model{
     url: Url,
     page: Pages,
@@ -23,13 +23,13 @@ pub struct Model{
     selected_group: Option<GroupContext>,
     edit: bool
 }
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct GroupForm{
     name: String,
     hour: i32
 }
 
-#[derive(Debug)]
+#[derive()]
 pub enum Pages{
     Home,
     Detail(SchoolDetail),
@@ -93,7 +93,7 @@ impl Default for Pages{
     }
 }
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     Home,
     Group(group::home::Msg),
@@ -822,20 +822,20 @@ fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &School
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct City {
     pub pk: i32,
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct Town {
     pub city: i32,
     pub pk: i32,
     pub name: String,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct SchoolContext{
     pub teachers: Option<Vec<TeacherContext>>,
     pub role: i16,
@@ -848,7 +848,7 @@ pub struct SchoolContext{
     pub menu: Vec<SchoolMenu>
 }
 
-#[derive(Debug, Serialize, Deserialize, Default,Clone)]
+#[derive(Serialize, Deserialize, Default,Clone)]
 pub struct SchoolMenu{
     pub link: String,
     pub name: String,

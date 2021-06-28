@@ -6,7 +6,7 @@ use crate::page::school::detail;
 use crate::model::teacher::{TeacherTimetable, TeacherTimetable2};
 use crate::model::group::GroupContext;
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     FetchTimetable(fetch::Result<Vec<TeacherTimetable2>>),
     FetchActivities(fetch::Result<Vec<activity::FullActivity>>),
@@ -19,7 +19,7 @@ pub enum Msg{
 }
 
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Model{
     days: Vec<timetable::Day>,
     url: Url
@@ -290,9 +290,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
 }
 
 pub fn view(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
-    let group_ctx = school_ctx.get_group(&model.url);
-    let teacher_ctx = school_ctx.get_teacher(&model.url);
-    let teacher_group = teacher_ctx.group.iter().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap()).unwrap();
     div![
         Script![
             attrs!{

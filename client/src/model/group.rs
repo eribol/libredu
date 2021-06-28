@@ -4,7 +4,7 @@ use crate::model::class;
 use crate::model::class::ClassContext;
 use seed::Url;
 
-#[derive(Debug, Clone,Deserialize, Serialize)]
+#[derive(Clone,Deserialize, Serialize)]
 pub struct Schedule{
     pub(crate) group_id: i32,
     hour: i32,
@@ -12,7 +12,7 @@ pub struct Schedule{
     end_time: NaiveTime
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct ClassGroups{
     pub id: i32,
     pub name: String,
@@ -20,7 +20,7 @@ pub struct ClassGroups{
     pub school: i32
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct GroupContext{
     pub group: ClassGroups ,
     pub classes: Option<Vec<class::ClassContext>>,

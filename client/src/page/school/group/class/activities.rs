@@ -6,7 +6,7 @@ use crate::model::class::{Class, ClassActivity};
 use crate::model::{activity, subject};
 use crate::page::school::detail::SchoolContext;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Activity{
     pub(crate) id: i32,
     pub(crate) subject: subject::Subject,
@@ -17,7 +17,7 @@ pub struct Activity{
     classes: Vec<i32>
 }
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     Home,
     FetchDays(fetch::Result<Vec<Day>>),
@@ -35,7 +35,7 @@ pub enum Msg{
     FetchDeleteAct(fetch::Result<String>),
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Model{
     days: Vec<Day>,
     pub act_form: activity::NewActivity,

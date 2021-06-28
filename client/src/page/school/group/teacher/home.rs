@@ -6,7 +6,7 @@ use crate::page::school::detail::{SchoolContext};
 use crate::model::teacher::Teacher;
 use crate::page::school::group::teacher::{activities, limitations, timetables};
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     Home,
     Limitations(limitations::Msg),
@@ -23,7 +23,7 @@ pub enum Msg{
     //Timetables
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct UpdateTeacherForm{
     pub first_name: String,
     pub last_name: String,
@@ -34,7 +34,7 @@ pub struct UpdateTeacherForm{
     password2: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Pages{
     Home,
     Activity(Box<activities::Model>),
@@ -49,7 +49,7 @@ impl Default for Pages{
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Model{
     pub page: Pages,
     form: UpdateTeacherForm,

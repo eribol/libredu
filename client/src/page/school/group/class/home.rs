@@ -7,13 +7,13 @@ use crate::model::group::ClassGroups;
 
 //use crate::page::school::class::class::Pages::Limitations;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Subject{
     pub name: String,
     pub id: i32
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Activity{
     pub(crate) id: i32,
     pub(crate) subject: Subject,
@@ -24,7 +24,7 @@ pub struct Activity{
     classes: Vec<i32>
 }
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     Home,
     Limitations(limitations::Msg),
@@ -34,7 +34,7 @@ pub enum Msg{
     FetchGroup(fetch::Result<ClassGroups>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Pages{
     Home,
     Students(students::Model),
@@ -48,7 +48,7 @@ impl Default for Pages{
         Self::NotFound
     }
 }
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Model{
     pub page: Pages,
     pub tab: String,

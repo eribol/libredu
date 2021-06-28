@@ -60,3 +60,17 @@ async fn index(_req: Request<AppState>)->tide::Result{
     res.insert_header("content-type", "text/html");
     Ok(res)
 }
+/* tera index
+async fn index(mut req: Request<AppState>) -> tide::Result<Response> {
+    use http_types::Body;
+    use tide_tera::prelude::*;
+    let mut res = tide::Response::new(StatusCode::Ok);
+    let mut context = tera::Context::new();
+    context.insert("name", &"HT");
+    let tmpl = req.state().tera.render(&"index.html", &context);
+    //res = res.body_string(tmpl.unwrap());
+    res.set_body(Body::from(tmpl.unwrap()));
+    res.insert_header("content-type", "text/html");
+    Ok(res)
+}
+ */

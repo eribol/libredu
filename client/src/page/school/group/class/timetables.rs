@@ -4,13 +4,13 @@ use seed::{*, prelude::*};
 use crate::model::class::{ClassTimetable, ClassActivity, ClassContext, ClassAvailable};
 use crate::page::school::detail::{SchoolContext};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Subject{
     pub name: String,
     pub id: i32
 }
 
-#[derive(Debug)]
+#[derive()]
 pub enum Msg{
     Home,
     FetchDays(fetch::Result<Vec<Day>>),
@@ -23,7 +23,7 @@ pub enum Msg{
     Submit
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Model{
     url: Url,
     days: Vec<Day>,

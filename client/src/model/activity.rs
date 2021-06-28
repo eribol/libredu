@@ -3,7 +3,7 @@ use crate::model::teacher::Teacher;
 use crate::model::class::Class;
 use crate::model::subject::Subject;
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct NewActivity{
     pub(crate) subject: i32,
     pub(crate) teacher: i32,
@@ -14,7 +14,7 @@ pub struct NewActivity{
     pub(crate) teachers: Vec<i32>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Activity{
     pub(crate) id: i32,
     pub(crate) subject: i32,
@@ -26,7 +26,7 @@ pub struct Activity{
     pub(crate) teachers: Option<Vec<i32>>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct FullActivity{
     pub(crate) id: i32,
     pub(crate) subject: Subject,

@@ -134,6 +134,7 @@ fn group_api(state: AppState)->tide::Server<AppState>{
     group_api.at("/timetables").get(group::get_timetables).post(group::timetables);
     group_api.at("/class_rooms").get(school::get_class_rooms).post(school::class_rooms);
     group_api.at("/classes").get(group::get_classes);
+    group_api.at("/classes/limitations").post(group::limitations);
     group_api.at("/students").get(group::get_students);
     group_api.at("/add_class").post(group::add_class);
     group_api.at("/activities").post(group::add_activity);
