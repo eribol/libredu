@@ -125,7 +125,7 @@ pub fn init(url: Url, orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolCont
         url: url.clone(),
         form: UpdateSchoolForm{
             name: school_ctx.school.name.clone(),
-            tel: school_ctx.school.tel.clone(),
+            tel: Some(String::from("")),
             location: school_ctx.school.location.clone(),
             city: school_ctx.school.city.clone(),
             town: school_ctx.school.town.clone()
