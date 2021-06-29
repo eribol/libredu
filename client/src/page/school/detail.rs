@@ -696,7 +696,7 @@ fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &School
                                 attrs!{
                                     At::Type=>"tel",
                                     At::Placeholder=>"Telefon numaranız",
-                                    At::Value => &model.form.tel.as_ref().unwrap_or("".to_string()),
+                                    At::Value => &model.form.tel.as_ref().unwrap_or(&"".to_string()),
                                 },
                                 input_ev(Ev::Input, Msg::TelChanged),
                             ]
@@ -714,7 +714,7 @@ fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &School
                             attrs!{
                                 At::Type=>"text",
                                 At::Placeholder=>"Adresi",
-                                At::Value => &model.form.location.as_ref().unwrap_or("".to_string),
+                                At::Value => &model.form.location.as_ref().unwrap_or(&"".to_string()),
                             },
                             input_ev(Ev::Input, Msg::LocationChanged),
                         ]
