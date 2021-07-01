@@ -75,13 +75,17 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx_sc
         }
         Msg::FetchSubject(subject) => {
             if let Ok(s) = subject {
-                model.filtered_subjects.insert(0, s)
+                model.filtered_subjects.insert(0, s.clone());
+                if let Some(subjects) = &mut ctx_school.subjects{
+                    subjects.insert(0, s);
+                }
             }
         }
         Msg::FetchSubjects(subjects) => {
             if let Ok(s) = subjects {
+                ctx_school.subjects = Some(s.clone());
                 model.subjects = s;
-                model.filtered_subjects = model.subjects.clone()
+                model.filtered_subjects = model.subjects.clone();
             }
         }
         Msg::FilterGrade(g) => {
