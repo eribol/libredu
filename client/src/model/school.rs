@@ -1,6 +1,5 @@
 use serde::*;
 use crate::model::city::{Town,City};
-use crate::model::timetable::Day;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct School{

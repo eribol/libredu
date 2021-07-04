@@ -1,6 +1,6 @@
 use serde::*;
 use seed::{*, prelude::*};
-use crate::{Context, createPDF, class_print, model};
+use crate::{createPDF, class_print, model};
 use crate::page::school::detail;
 use crate::page::school::group::test_generate;
 use crate::model::timetable::Day;

@@ -1,10 +1,9 @@
-use crate::model::{user, activity};
+use crate::model::{activity};
 use seed::{*, prelude::*};
 use crate::model::teacher;
 use crate::model::timetable;
 use crate::page::school::detail;
-use crate::model::teacher::{TeacherTimetable, TeacherTimetable2};
-use crate::model::group::GroupContext;
+use crate::model::teacher::{TeacherTimetable2};
 
 #[derive()]
 pub enum Msg{

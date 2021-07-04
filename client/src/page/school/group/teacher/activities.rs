@@ -1,5 +1,4 @@
 use seed::{*, prelude::*};
-use crate::{Context};
 use crate::model::{activity, subject};
 use crate::page::school::detail;
 use serde::*;

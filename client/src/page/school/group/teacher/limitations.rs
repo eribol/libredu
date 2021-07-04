@@ -2,9 +2,7 @@ use seed::{*, prelude::*};
 use crate::model::{teacher};
 use crate::model::timetable;
 use crate::page::school::detail;
-use crate::model::teacher::{TeacherTimetable, TeacherGroupContext};
-use serde::*;
-use crate::page::school::detail::{SchoolContext};
+use crate::model::teacher::{TeacherGroupContext};
 
 #[derive()]
 pub enum Msg{

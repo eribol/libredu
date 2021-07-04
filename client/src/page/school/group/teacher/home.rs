@@ -2,8 +2,6 @@ use seed::{*, prelude::*};
 use crate::page::school::detail;
 use serde::*;
 use crate::page::school::detail::{SchoolContext};
-//use crate::page::school::group::teacher::{activities, limitations, timetables};
-use crate::model::teacher::Teacher;
 use crate::page::school::group::teacher::{activities, limitations, timetables};
 
 #[derive()]

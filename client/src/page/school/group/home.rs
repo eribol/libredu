@@ -1,6 +1,5 @@
 use serde::*;
 use seed::{*, prelude::*};
-use crate::{Context};
 use crate::page::school::detail::SchoolContext;
 use crate::page::school::group::{schedules, teachers, timetable};
 use crate::page::school::group::classes;

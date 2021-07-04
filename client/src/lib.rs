@@ -4,6 +4,12 @@ use crate::model::user::UserDetail;
 use crate::model::post::{SchoolPost, NewPost};
 use crate::page::admin;
 use crate::page::school::detail::SchoolContext;
+use fluent::fluent_args;
+use seed::{prelude::*, *};
+use strum::IntoEnumIterator;
+
+mod i18n;
+use i18n::{I18n, Lang};
 
 mod page;
 mod model;
@@ -20,6 +26,7 @@ const RESET: &str = "reset";
 // ------ ------
 
 const STORAGE_KEY: &str = "user";
+const DEFAULT_LANG: Lang = Lang::EnUS;
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     let mut ctx = Context {
@@ -452,6 +459,7 @@ fn navbar_brand(model: &Model) -> Node<Msg>{
 }
 
 fn view_navbar_brand(model: &Model, ctx: &Context) -> Node<Msg>{
+    create_t![I18n::new(DEFAULT_LANG)];
         div![
             C!{"navbar-menu", &model.navbar},
             if !ctx.schools.is_empty(){
@@ -460,7 +468,7 @@ fn view_navbar_brand(model: &Model, ctx: &Context) -> Node<Msg>{
                     div![
                         C!{"navbar-item has-dropdown is-hoverable"},
                         div![
-                            C!{"navbar-link"}, "Okullarım"
+                            C!{"navbar-link"}, t!["my-schools"]
                         ],
                         div![
                             C!{"navbar-dropdown"},
@@ -494,7 +502,7 @@ fn view_navbar_brand(model: &Model, ctx: &Context) -> Node<Msg>{
                     C!["navbar-item"],
                     a![
                         C!{"navbar-item"},
-                        attrs!{At::Href=>"/schools/add"},"Okul Ekle",
+                        attrs!{At::Href=>"/schools/add"},t!["add-school"],
                     ]
                 ]
             },
@@ -504,11 +512,12 @@ fn view_navbar_brand(model: &Model, ctx: &Context) -> Node<Msg>{
 }
 
 fn view_navbar_end(ctx: &Context) -> Node<Msg> {
+    create_t![I18n::new(DEFAULT_LANG)];
     match &ctx.user {
         Some(user) => {
             div![
                 C!{"navbar-end"},
-                a![C!{"navbar-item"}, attrs!{At::Href => Urls::new(&ctx.base_url).help()}, "Yardım"],
+                a![C!{"navbar-item"}, attrs!{At::Href => Urls::new(&ctx.base_url).help()}, t!["help"]],
                 div![
                     C!{"navbar-item has-dropdown is-hoverable"},
                     a![
