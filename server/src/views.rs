@@ -47,7 +47,6 @@ pub struct AuthUser{
     //pub is_active: bool,
     //pub is_staff: bool,
 }
-
 pub async fn logout(_req: Request<AppState>) -> tide::Result{
     let mut res = tide::Response::new(StatusCode::Ok);
     res.remove_cookie(Cookie::named("libredu-user"));
@@ -56,20 +55,17 @@ pub async fn logout(_req: Request<AppState>) -> tide::Result{
     res.insert_header("content-type", "text/html");
     Ok(res)
 }
-
 pub async fn reset_password(_req: Request<AppState>) -> tide::Result{
     let mut res = tide::Response::new(StatusCode::Ok);
     res.set_body(Body::from_file("./server/templates/index.html").await?);
     res.insert_header("content-type", "text/html");
     Ok(res)
 }
-
 pub async fn robots(_req: Request<AppState>) -> tide::Result{
     let mut res = tide::Response::new(StatusCode::Ok);
     res.set_body(Body::from_file("./server/templates/robots.txt").await?);
     Ok(res)
 }
-
 pub async fn favico(_req: Request<AppState>) -> tide::Result{
     let mut res = tide::Response::new(StatusCode::Ok);
     res.set_body(Body::from_file("./server/templates/favicon.ico").await?);
@@ -243,7 +239,6 @@ pub async fn days(req: Request<AppState>) -> tide::Result {
     res.set_body(Body::from_json(&days)?);
     Ok(res)
 }
-
 pub async fn get_posts(req: Request<AppState>) -> tide::Result {
     use crate::model::post::Post;
     let mut res = tide::Response::new(StatusCode::Ok);
@@ -256,7 +251,8 @@ pub async fn get_posts(req: Request<AppState>) -> tide::Result {
             Some(id) =>{
                 use sqlx_core::cursor::Cursor;
                 use sqlx_core::row::Row;
-                let mut sch = req.get_school().await?;
+                let mut sch = SchoolDetail::get(&req, id).await?;
+                print!("okul alındı");
                 let school_post = SchoolPost{
                     id: p.id,
                     body: p.body,
