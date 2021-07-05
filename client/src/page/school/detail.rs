@@ -126,9 +126,7 @@ pub fn init(url: Url, orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolCont
         form: UpdateSchoolForm{
             name: school_ctx.school.name.clone(),
             tel: school_ctx.school.tel.clone(),
-            location: school_ctx.school.location.clone(),
-            city: school_ctx.school.city.clone(),
-            town: school_ctx.school.town.clone()
+            location: school_ctx.school.location.clone()
         },
         ..Default::default()
     };
@@ -324,9 +322,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                     model.form = UpdateSchoolForm{
                         name: school_ctx.school.name.clone(),
                         tel: school_ctx.school.tel.clone(),
-                        location: school_ctx.school.location.clone(),
-                        city: school_ctx.school.city.clone(),
-                        town: school_ctx.school.town.clone()
+                        location: school_ctx.school.location.clone()
                     };
                 }
             }
@@ -370,8 +366,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                 name: school_ctx.school.name.clone(),
                 tel: school_ctx.school.tel.clone(),
                 location: school_ctx.school.location.clone(),
-                city: school_ctx.school.city.clone(),
-                town: school_ctx.school.town.clone()
             };
             orders.perform_cmd({
                 let adres = format!("/api/schools/{}", school_ctx.school.id);
@@ -484,7 +478,10 @@ pub fn view(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolCon
                                     ]
                                 ]
 
-                            )]
+                            )],
+                            label![
+                                "Lütfen sınıflarınızı grup sayfanızdan ekleyiniz. Gruplar, sizin ders programınızın bilgilerini girdiğiniz alandır."
+                            ]
                         }
                         None => {
                             div!["Yükleniyor"]
@@ -722,22 +719,6 @@ fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &School
                 ]
             ],
             div![C!{"field"},
-                label![C!{"label"}, "İli:"],
-                p![C!{"control has-icons-left"},
-                    label![C!{"label"},
-                        &school_ctx.school.city.name,
-                    ]
-                ]
-            ],
-            div![C!{"field"},
-                label![C!{"label"}, "İlçesi:"],
-                p![C!{"control has-icons-left"},
-                    label![C!{"label"},
-                        &school_ctx.school.town.name,
-                    ]
-                ]
-            ],
-            div![C!{"field"},
                 p![C!{"control has-icons-left"},
                     input![C!{"button is-primary"},
                         attrs!{
@@ -782,22 +763,6 @@ fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &School
                 p![C!{"control"},
                     label![
                         C!{"label"}, &model.form.location.as_ref().unwrap_or(&"".to_string())
-                    ]
-                ]
-            ],
-            div![C!{"field"},
-                label![C!{"label"}, "İli:"],
-                p![C!{"control has-icons-left"},
-                    label![C!{"label"},
-                        &model.form.city.name,
-                    ]
-                ]
-            ],
-            div![C!{"field"},
-                label![C!{"label"}, "İlçesi:"],
-                p![C!{"control has-icons-left"},
-                    label![C!{"label"},
-                        &model.form.town.name,
                     ]
                 ]
             ],

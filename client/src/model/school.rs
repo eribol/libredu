@@ -13,11 +13,11 @@ pub struct SchoolDetail {
     pub(crate) id: i32,
     pub(crate) name: String,
     pub manager: i32,
-    pub school_type: i32,
+    //pub school_type: Option<i32>,
     pub tel: Option<String>,
     pub location: Option<String>,
-    pub city: City,
-    pub town: Town
+    //pub city: City,
+    //pub town: Town
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
@@ -29,9 +29,9 @@ pub struct SchoolTeacher {
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct NewSchool {
     pub(crate) name: String,
-    pub school_type: i32,
-    pub city: i32,
-    pub town: i32
+    //pub school_type: Option<i32>,
+    //pub city: i32,
+    //pub town: i32
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
@@ -47,8 +47,6 @@ pub struct UpdateSchoolForm{
     //pub school_type: i32,
     pub tel: Option<String>,
     pub location: Option<String>,
-    pub city: City,
-    pub town: Town
 }
 
 impl Default for UpdateSchoolForm{
@@ -57,8 +55,6 @@ impl Default for UpdateSchoolForm{
             name: "".to_string(),
             tel: Some("".to_string()),
             location: Some("".to_string()),
-            city: Default::default(),
-            town: Default::default()
         }
     }
 }

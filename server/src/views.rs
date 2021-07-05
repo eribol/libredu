@@ -256,27 +256,7 @@ pub async fn get_posts(req: Request<AppState>) -> tide::Result {
             Some(id) =>{
                 use sqlx_core::cursor::Cursor;
                 use sqlx_core::row::Row;
-                let mut sch = SchoolDetail::default();
-                let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
-                        FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.id = $1")
-                    .bind(&id)
-                    .fetch(&req.state().db_pool);
-                while let Some(row) = query.next().await?{
-                    sch = SchoolDetail{
-                        id: row.get(0),
-                        name: row.get(1),
-                        manager: row.get(2),
-                        school_type: row.get(3),
-                        tel: None,
-                        location: None,
-                        city: City{ pk: row.get(4), name: row.get(5) },
-                        town: Town{
-                            city: row.get(4),
-                            pk: row.get(6),
-                            name: row.get(7)
-                        }
-                    }
-                }
+                let mut sch = req.get_school().await?;
                 let school_post = SchoolPost{
                     id: p.id,
                     body: p.body,

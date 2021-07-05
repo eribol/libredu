@@ -98,21 +98,26 @@ impl Auth for Request<AppState>{
                 return SchoolDetail::get(&self, i).await
             }
         }
-        Err(sqlx_core::Error::ColumnNotFound(Box::from("Kurum bulunamadı")))
+        Err(sqlx_core::Error::ColumnNotFound(Box::from(format!("{} kodlu kurum bulunamadı", &school_id.unwrap()))))
     }
     async fn get_schools(&self)-> sqlx_core::Result<Vec<(i32, SchoolDetail)>> {
         use sqlx::Cursor;
         let user = self.user().await?;
         let mut s: Vec<(i32, SchoolDetail)> = vec![];
-        let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name, school_users.role \
-                    FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk \
-                    inner join school_users on school_users.school_id = school.id WHERE school_users.user_id = $1")
+        let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.tel, school.location, school_users.role \
+        FROM school inner join school_users on school_users.school_id = school.id WHERE school_users.user_id = $1 or school.manager = $1")
             .bind(&user.id)
             .fetch(&self.state().db_pool);
-        while let Some(row) = query.next().await? {
+        while let Some(row) = query.next().await.unwrap() {
             use sqlx::Row;
-            let school = SchoolDetail::get(&self, row.get(0)).await?;
-            s.push((row.get(8), school))
+            let school = SchoolDetail{
+                id: row.get(0),
+                name: row.get(1),
+                manager: row.get(2),
+                tel: row.get(3),
+                location: row.get(4)
+            };
+            s.push((row.get(5), school))
         }
         Ok(s)
     }

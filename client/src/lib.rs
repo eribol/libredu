@@ -6,7 +6,6 @@ use crate::page::admin;
 use crate::page::school::detail::SchoolContext;
 use fluent::fluent_args;
 use seed::{prelude::*, *};
-use strum::IntoEnumIterator;
 
 mod i18n;
 use i18n::{I18n, Lang};
@@ -124,11 +123,11 @@ impl<'a> Urls<'a> {
     pub fn help(self) -> Url { self.base_url().add_path_part("help") }
     //pub fn school(self) -> Url { self.base_url().add_path_part(SCHOOL) }
     pub fn school_pages(self, school_id: i32, link: &str) -> Url { self.base_url().add_path_part(SCHOOL).add_path_part(school_id.to_string()).add_path_part(link) }
-    pub fn teacher_detail(self, school_id: i32, teacher_id: i32) -> Url {
+    pub fn teacher_detail(self, school_id: &i32, teacher_id: i32) -> Url {
         self.base_url().add_path_part(SCHOOL).add_path_part(school_id.to_string()).add_path_part("teachers").add_path_part(teacher_id.to_string()) }
     pub fn class_detail(self, school_id: i32, class_id: i32) -> Url {
         self.base_url().add_path_part(SCHOOL).add_path_part(school_id.to_string()).add_path_part("classes").add_path_part(class_id.to_string()) }
-    pub fn school_detail(self, school_id: i32) -> Url {
+    pub fn school_detail(self, school_id: &i32) -> Url {
         self.base_url().add_path_part(SCHOOL).add_path_part(school_id.to_string())
     }
     pub fn group_detail(self, school_id: i32, group_id: i32) -> Url {
@@ -197,8 +196,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                         };
                         ctx.schools.push(ctx_school);
                     }
+                    SessionStorage::insert("schools", &ctx.schools).expect("Okullar eklenemedi");
                 }
-                SessionStorage::insert("schools", &ctx.schools).expect("Okullar eklenemedi");
+
                 orders.send_msg(Msg::Loading);
             }
             model.loaded= true;
@@ -478,7 +478,7 @@ fn view_navbar_brand(model: &Model, ctx: &Context) -> Node<Msg>{
                                     C!{"navbar-item"},
                                     &ctx_s.school.name,
                                     attrs!{
-                                        At::Href=> Urls::new(&ctx.base_url).school_detail(ctx_s.school.id)
+                                        At::Href=> Urls::new(&ctx.base_url).school_detail(&ctx_s.school.id)
                                     }
                                 ]
                             )

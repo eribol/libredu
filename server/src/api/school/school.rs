@@ -42,7 +42,8 @@ pub async fn add(mut req: Request<AppState>) -> tide::Result {
         .fetch_one(&req.state().db_pool).await;
     match s {
         Ok(_s) => {
-            res.set_body(Body::from_json(&"Kayıtlı kurumunuz mevcut")?);
+            //let school = SchoolDetail::get(&req, _s.id).await?;
+            res.set_body(Body::from_json(&(1, _s))?);
             Ok(res)
         }
         Err(_) => {
@@ -52,37 +53,14 @@ pub async fn add(mut req: Request<AppState>) -> tide::Result {
                 Ok(_school) => {
                     use sqlx_core::cursor::Cursor;
                     use sqlx_core::row::Row;
-                    let mut s = SchoolDetail::default();
-                    let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
-                                    FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.id = $1")
-                        .bind(&_school.id)
-                        .fetch(&req.state().db_pool);
-                    while let Some(row) = query.next().await? {
-                        s = SchoolDetail {
-                            id: row.get(0),
-                            name: row.get(1),
-                            manager: row.get(2),
-                            school_type: row.get(3),
-                            tel: None,
-                            location: None,
-                            city: City { pk: row.get(4), name: row.get(5) },
-                            town: Town {
-                                city: row.get(4),
-                                pk: row.get(6),
-                                name: row.get(7)
-                            }
-                        }
-                    }
+                    let mut s = SchoolDetail::get(&req, _school.id).await?;
                     let _add_school_user = sqlx::query!(r#"INSERT into school_users (school_id, user_id, role) values($1, $2, 1)"#,
                                     s.id, u.id)
                         .execute(&req.state().db_pool).await?;
-                    let mut hour: i32 = 7;
-                    if s.school_type == 3 {
-                        hour = 8;
-                    }
+                    let mut hour = 8;
                     let _g = sqlx::query!(r#"insert into class_groups (name, school, hour) values($1, $2, $3)"#, &"Varsayılan", s.id, hour)
                         .execute(&req.state().db_pool).await;
-                    res.set_body(Body::from_json(&s)?);
+                    res.set_body(Body::from_json(&(1, s.clone()))?);
                     let teacher = s.get_teacher(&req, u.id).await?;
                     teacher.limitations(&req, s.id, None).await?;
                     Ok(res)
@@ -581,27 +559,7 @@ pub async fn get_posts(req: Request<AppState>) -> tide::Result {
         .fetch_all(&req.state().db_pool).await?;
     use sqlx_core::cursor::Cursor;
     use sqlx_core::row::Row;
-    let mut sch = SchoolDetail::default();
-    let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, city.pk, city.name, town.pk, town.name \
-            FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.id = $1")
-        .bind(&school_id)
-        .fetch(&req.state().db_pool);
-    while let Some(row) = query.next().await?{
-        sch = SchoolDetail{
-            id: row.get(0),
-            name: row.get(1),
-            manager: row.get(2),
-            school_type: row.get(3),
-            tel: None,
-            location: None,
-            city: City{ pk: row.get(4), name: row.get(5) },
-            town: Town{
-                city: row.get(4),
-                pk: row.get(6),
-                name: row.get(7)
-            }
-        }
-    }
+    let mut sch = req.get_school().await?;
     let mut school_posts: Vec<SchoolPost> = vec![];
     for p in posts {
         let school_post = SchoolPost {

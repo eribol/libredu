@@ -18,11 +18,11 @@ pub struct SchoolDetail {
     pub(crate) id: i32,
     pub(crate) name: String,
     pub manager: i32,
-    pub school_type: i32,
+    //pub school_type: Option<i32>,
     pub tel: Option<String>,
     pub location: Option<String>,
-    pub city: City,
-    pub town: Town
+    //pub city: City,
+    //pub town: Town
 }
 
 #[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize)]
@@ -34,9 +34,9 @@ pub struct SchoolTeacher {
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct NewSchool {
     pub(crate) name: String,
-    pub school_type: i32,
-    pub city: i32,
-    pub town: i32
+    //pub school_type: Option<i32>,
+    //pub city: i32,
+    //pub town: i32
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default, sqlx::FromRow)]
@@ -56,10 +56,8 @@ impl NewSchool{
     pub async fn add(&self, req: &mut tide::Request<AppState>, id: i32) -> sqlx_core::Result<School> {
         use sqlx::prelude::PgQueryAs;
         let add_school: sqlx::Result<School> = sqlx::query_as
-            (r#"INSERT into school (name, town, school_type, manager) values($1, $2, $3, $4) returning id, name, manager"#)
+            (r#"INSERT into school (name, manager) values($1, $2) returning id, name, manager"#)
             .bind(&self.name)
-            .bind(&self.town)
-            .bind(&self.school_type)
             .bind(&id)
             .fetch_one(&req.state().db_pool).await;
         add_school
@@ -70,8 +68,7 @@ impl SchoolDetail{
     pub async fn get(req: &tide::Request<AppState>, school_id: i32) -> sqlx_core::Result<Self>{
         use sqlx_core::cursor::Cursor;
         use sqlx_core::row::Row;
-        let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.school_type, school.tel, school.location, city.pk, city.name, town.pk, town.name \
-            FROM school inner join town on school.town = town.pk inner join city on town.city = city.pk WHERE school.id = $1")
+        let mut query = sqlx::query("SELECT id, name, manager, tel, location FROM school WHERE id = $1")
             .bind(&school_id)
             .fetch(&req.state().db_pool);
         if let Some(row) = query.next().await.unwrap() {
@@ -79,19 +76,12 @@ impl SchoolDetail{
                 id: row.get(0),
                 name: row.get(1),
                 manager: row.get(2),
-                school_type: row.get(3),
-                tel: row.get(4),
-                location: row.get(5),
-                city: City { pk: row.get(6), name: row.get(7) },
-                town: Town {
-                    city: row.get(6),
-                    pk: row.get(8),
-                    name: row.get(9)
-                }
+                tel: row.get(3),
+                location: row.get(4),
             };
             return Ok(s)
         }
-        Err(sqlx_core::Error::ColumnNotFound(Box::from("Öğretmen bulunamadı")))
+        Err(sqlx_core::Error::ColumnNotFound(Box::from("Kurum bulunamadı")))
     }
     pub async fn _del_teacher(&self, req: &tide::Request<AppState>, teacher_id: i32) -> sqlx_core::Result<i32>{
         let teacher = req.get_teacher().await?;
