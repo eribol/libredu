@@ -25,7 +25,7 @@ const RESET: &str = "reset";
 // ------ ------
 
 const STORAGE_KEY: &str = "user";
-const DEFAULT_LANG: Lang = Lang::EnUS;
+const DEFAULT_LANG: Lang = Lang::TrTR;
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     let mut ctx = Context {
