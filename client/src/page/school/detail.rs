@@ -512,6 +512,7 @@ pub fn view(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolCon
                     Msg::AddGroup
                 })
             ],
+            hr![],
             label![
                 "Lütfen sınıflarınızı grup sayfanızdan ekleyiniz. Gruplar, sizin ders programınızın bilgilerini girdiğiniz alandır."
             ]
