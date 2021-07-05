@@ -105,7 +105,7 @@ impl Auth for Request<AppState>{
         let user = self.user().await?;
         let mut s: Vec<(i32, SchoolDetail)> = vec![];
         let mut query = sqlx::query("SELECT school.id, school.name, school.manager, school.tel, school.location, school_users.role \
-        FROM school inner join school_users on school_users.school_id = school.id WHERE school_users.user_id = $1 or school.manager = $1")
+        FROM school_users left join school on school_users.school_id = school.id WHERE school_users.user_id = $1")
             .bind(&user.id)
             .fetch(&self.state().db_pool);
         while let Some(row) = query.next().await.unwrap() {

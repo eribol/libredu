@@ -196,9 +196,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                         };
                         ctx.schools.push(ctx_school);
                     }
-                    SessionStorage::insert("schools", &ctx.schools).expect("Okullar eklenemedi");
-                }
 
+                }
+                SessionStorage::insert("schools", &ctx.schools).expect("Okullar eklenemedi");
                 orders.send_msg(Msg::Loading);
             }
             model.loaded= true;

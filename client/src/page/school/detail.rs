@@ -478,10 +478,7 @@ pub fn view(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolCon
                                     ]
                                 ]
 
-                            )],
-                            label![
-                                "Lütfen sınıflarınızı grup sayfanızdan ekleyiniz. Gruplar, sizin ders programınızın bilgilerini girdiğiniz alandır."
-                            ]
+                            )]
                         }
                         None => {
                             div!["Yükleniyor"]
@@ -514,6 +511,9 @@ pub fn view(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolCon
                 ev(Ev::Click, move |_event| {
                     Msg::AddGroup
                 })
+            ],
+            label![
+                "Lütfen sınıflarınızı grup sayfanızdan ekleyiniz. Gruplar, sizin ders programınızın bilgilerini girdiğiniz alandır."
             ]
         ],
         match &model.page{
