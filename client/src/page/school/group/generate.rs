@@ -321,19 +321,20 @@ pub fn find_timeslot(
     -> Option<Vec<(i32, usize)>> {
     use rand::thread_rng;
     let mut days = vec![1,2,3,4,5,6,7];
-    days.shuffle(&mut thread_rng());
+    //days.shuffle(&mut thread_rng());
     let mut slots: Vec<(i32, usize)> = vec![];
     for day in days{
         for hour in 0..tat[0].hours.len(){
             if classes_available(act, hour, day, cat){
                 if act.teachers.iter().all(|teacher| teacher_available(act, teacher, hour, day, max_day_hour, total_acts2, tat, timetables)){
                     slots.push((day, hour));
-                    return Some(slots);
+                    //return Some(slots);
                 }
             }
         }
     }
-    None
+    slots.shuffle(&mut thread_rng());
+    Some(slots)
 }
 
 fn teacher_available(

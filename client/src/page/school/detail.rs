@@ -20,7 +20,6 @@ pub struct Model{
     form: UpdateSchoolForm,
     group_form: GroupForm,
     posts: Vec<SchoolPost>,
-    selected_group: Option<GroupContext>,
     edit: bool
 }
 #[derive(Serialize, Deserialize, Default)]

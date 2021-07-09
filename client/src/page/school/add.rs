@@ -7,9 +7,6 @@ use crate::page::school::detail::{City, Town, SchoolContext};
 #[derive(Default)]
 pub struct Model{
     form: NewSchool,
-    cities: Vec<City>,
-    towns: Vec<Town>,
-    types: Vec<SchoolType>
 }
 
 #[derive()]

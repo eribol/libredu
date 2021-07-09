@@ -282,7 +282,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::GetUser(user)=>{
             if let Ok(u) = user{
-                SessionStorage::insert("user", &u);
+                SessionStorage::insert("user", &u).expect("Yüklenemedi");
                 ctx.user = Some(u);
                 orders.perform_cmd({
                     let request = Request::new("/api/schools")

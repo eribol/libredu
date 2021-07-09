@@ -10,12 +10,6 @@ pub enum Msg{
     DetailPage(page::users::detail::Msg),
 }
 
-#[derive(Default)]
-pub struct Menu{
-    title: String,
-    link: String
-}
-
 #[derive()]
 enum Pages{
     Home,
