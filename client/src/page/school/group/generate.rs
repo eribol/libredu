@@ -257,6 +257,9 @@ fn find_conflict_activity(
         item.sort_by(|a,b| a.id.cmp(&b.id));
         item.dedup();
     }
+    if total_act.len()>=depth{
+        return total_act[0..depth].to_vec();
+    }
     total_act
 }
 
@@ -324,7 +327,7 @@ pub fn find_timeslot(
         for hour in 0..tat[0].hours.len(){
             let slot = act.teachers.iter().all(|teacher| teacher_available(act, teacher, hour, day, max_day_hour, total_acts2, tat, timetables));
             if slot{
-                if classe_available(act, hour, day, cat){
+                if classes_available(act, hour, day, cat){
                     slots.push((day, hour));
                     return Some(slots);
                 }
@@ -379,7 +382,7 @@ fn teacher_available(
     false
 }
 
-fn classe_available(
+fn classes_available(
     act: &Activity,
     hour: usize,
     day: i32,
