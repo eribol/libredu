@@ -333,8 +333,11 @@ pub fn find_timeslot(
             }
         }
     }
-    slots.shuffle(&mut thread_rng());
-    Some(slots)
+    if slots.len() > 0{
+        slots.shuffle(&mut thread_rng());
+        return Some(slots)
+    }
+    None
 }
 
 fn teacher_available(
