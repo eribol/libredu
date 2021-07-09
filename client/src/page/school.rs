@@ -123,6 +123,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
                 model.selected_school = Some(school.clone());
                 model.page = SchoolPage::Detail(Box::new(detail::init(model.url.clone(), &mut orders.proxy(Msg::DetailSchool), school)));
             }
+            else {
+                model.page = SchoolPage::NotFound;
+            }
         }
         Msg::Loading => {
             orders.perform_cmd({

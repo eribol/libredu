@@ -1,7 +1,10 @@
 use rand::seq::SliceRandom;
 use seed::{*};
 use crate::model;
-use crate::page::school::group::timetable::{ClassAvailable, Activity, NewClassTimetable};
+use crate::page::school::group::timetable::{ClassAvailable};
+use crate::model::timetable::NewClassTimetable;
+use crate::model::activity::Activity;
+use crate::model::teacher::TeacherAvailableForTimetables;
 //use async_std::prelude::*;
 //use async_std::task;
 
@@ -20,7 +23,7 @@ pub(crate) fn generate(
     -> bool {
     use rand::thread_rng;
     let mut acts: Vec<Activity> = total_acts.iter().cloned()
-        .filter(|a| a.teacher.is_some() && !timetables.iter().cloned()
+        .filter(|a| !a.teachers.is_empty() && !timetables.iter().cloned()
             .any(|t| a.id == t.activities.unwrap())).collect();
     acts.shuffle(&mut thread_rng());
     acts.sort_by(|a, b| b.hour.cmp(&a.hour));
@@ -169,10 +172,12 @@ fn delete_activity(_acts: &[Activity],act: &Activity, tat: &mut Vec<model::teach
         .filter(|t| t.1.activities.unwrap() == act.id).collect();
 
     for t in &tt{
-        let find_tat = tat.iter().cloned()
+        let tat_index: Vec<(usize, TeacherAvailableForTimetables)> = tat.iter().cloned()
             .enumerate()
-            .find(|ta| ta.1.user_id == act.teacher.unwrap() && ta.1.day == t.1.day_id.unwrap()).unwrap();
-        tat[find_tat.0].hours[t.1.hour.unwrap() as usize] = true;
+            .filter(|ta| act.teachers.iter().any(|t| t == &ta.1.user_id) && ta.1.day == t.1.day_id.unwrap()).collect();
+        for index in tat_index{
+            tat[index.0].hours[t.1.hour.unwrap() as usize] = true;
+        }
 
         let c_index: Vec<(usize, ClassAvailable)> = cat.iter().cloned()
             .enumerate()
@@ -207,9 +212,9 @@ fn find_conflict_activity(
     let mut total_act: Vec<Vec<Activity>> = Vec::new();
 
     let activities: Vec<Activity> = _acts.to_owned().into_iter()
-        .filter(|a| act.classes.iter().any(|c1| a.classes.iter().any(|c2| c1 == c2)) || a.teacher==act.teacher).collect();
+        .filter(|a| act.classes.iter().any(|c1| a.classes.iter().any(|c2| c1 == c2)) || a.teachers.iter().any(|t| act.teachers.iter().any(|t2| t2 == t))).collect();
     let teacher_availables: Vec<model::teacher::TeacherAvailableForTimetables> = clean_tat.to_owned().into_iter()
-        .filter(|t| t.user_id == act.teacher.unwrap() && t.hours.iter().any(|h| *h)).collect();
+        .filter(|t| act.teachers.iter().any(|t2| t2 == &t.user_id)).collect();
     //teacher_availables.sort_by(|a, b| a.hours.iter().fold(0, |acc, x| if *x{ acc+1} else{acc}).cmp(&b.hours.iter().fold(0, |acc, x| if *x{acc+1}else{acc})));
     //teacher_availables.shuffle(&mut thread_rng());
     for teacher_available in &teacher_availables{
@@ -252,28 +257,7 @@ fn find_conflict_activity(
         item.sort_by(|a,b| a.id.cmp(&b.id));
         item.dedup();
     }
-    if total_act.len()>=depth{
-        total_act[0..depth].to_vec()
-    }
-    else {
-        total_act
-    }
-    /*if depth < 1{
-        if total_act.len()>=10{
-            return total_act[0..10].to_vec();
-        }
-        else {
-            return total_act
-        }
-    }
-    else{
-        if total_act.len()>=3{
-            return total_act[0..3].to_vec();
-        }
-        else {
-            return total_act
-        }
-    }*/
+    total_act
 }
 
 #[cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))]
@@ -297,10 +281,12 @@ pub fn put_activity(
             activities: Some(act.id)
         };
         //Close the teacher available hours
-        let tat_index = tat.iter().cloned()
+        let tat_index: Vec<(usize, TeacherAvailableForTimetables)> = tat.iter().cloned()
             .enumerate()
-            .find(|t| t.1.user_id == act.teacher.unwrap() && t.1.day==day).unwrap();
-        tat[tat_index.0].hours[timetable]= false;
+            .filter(|t| act.teachers.iter().any(|t2| t2 == &t.1.user_id) && t.1.day==day).collect();
+        for index in tat_index{
+            tat[index.0].hours[timetable]= false;
+        }
         //Close the class available hours
         let c_index: Vec<(usize, ClassAvailable)> = cat.iter().cloned()
             .enumerate()
@@ -331,77 +317,82 @@ pub fn find_timeslot(
 )
     -> Option<Vec<(i32, usize)>> {
     use rand::thread_rng;
-    let mut teacher_availables: Vec<(usize, model::teacher::TeacherAvailableForTimetables)> = tat.iter().cloned()
-        .enumerate()
-        .filter(|t| t.1.user_id == act.teacher.unwrap() && t.1.hours.iter()
-            .any(|h| *h)).collect();
-    teacher_availables.shuffle(&mut thread_rng());
-    let mut _teacher_total_day_availables: Vec<(usize, model::teacher::TeacherAvailableForTimetables)> = clean_tat.iter().cloned()
-        .enumerate()
-        .filter(|t| t.1.user_id == act.teacher.unwrap() && t.1.hours.iter()
-            .any(|h| *h)).collect();
-    //let available2 = false;
-    let mut slots: Vec<(i32, usize)> = Vec::new();
-    let mut day: i32;
-    let mut hour: usize;
-    let mut max_total_hour: usize = 0;
-    let teacher_acts: Vec<Activity> = total_acts2.iter().cloned()
-        .filter(|a| a.teacher == act.teacher && a.classes.iter().any(|ac| act.classes.iter().any(|ac2| ac == ac2))).collect();
-    for t in &teacher_acts {
-        max_total_hour += t.hour as usize;
-    }
-    if max_total_hour > 8 {
-        max_day_hour = 4;
-    }
-    //teacher_availables.shuffle(&mut thread_rng());
-    for teacher_available in &teacher_availables {
-        //let same_subject_acts: Vec<Activity> = teacher_acts.iter().cloned()
-        //    .filter(|a| a.class == act.1.class && a.subject == act.1.subject ).collect();
-        let same_day_acts: Vec<NewClassTimetable> = timetables.iter().cloned()
-            .filter(|t| t.day_id.unwrap() == teacher_available.1.day
-                && teacher_acts.iter().cloned()
-                .any(|a| a.id == t.activities.unwrap())).collect();
-        //if same_subject_acts.len() < 8{
-        if act.hour as usize + same_day_acts.len() > max_day_hour as usize {
-            continue;
-        }
-        let classes_availables: Vec<(usize, ClassAvailable)> = cat.iter().cloned()
-            .enumerate()
-            .filter(|c| act.classes.iter().any(|cc| cc == &c.1.class_id) && c.1.day == teacher_available.1.day).collect();
-        for i in 0..teacher_available.1.hours.len() {
-            if i + act.clone().hour as usize <= teacher_available.1.hours.len() {
-                //Look for activity hours. If same place/places is/are available for teacher and class
-                let available = (i..i + act.hour as usize)
-                    .all(|h| teacher_available.1.hours[h] && classes_availables.iter().all(|ca| ca.1.hours[h]));
-                if available {
-                    day = teacher_available.1.day;
-                    hour = i;
-                    let _other_same_subject: Vec<NewClassTimetable> = timetables.to_owned().into_iter()
-                        .filter(|t| t.day_id.unwrap() == day
-                            && teacher_acts.iter().cloned()
-                            .any(|a| a.id == t.activities.unwrap() && a.subject == act.subject)).collect();
-                    if _other_same_subject.is_empty() {
-                        slots.push((day, hour));
-                        return Some(slots)
-                    } else {
-                        //slots.push((day, hour));
-                        //return Some(slots)
-
-                        let hours = _other_same_subject.iter().cloned()
-                            .find(|t| t.hour.unwrap() == (hour - 1) as i16 || t.hour.unwrap() == hour as i16 + act.hour);
-                        if hours.is_some() {
-                            slots.push((day, hour));
-                            return Some(slots)
-                        }
-                    }
+    let mut days = vec![1,2,3,4,5,6,7];
+    days.shuffle(&mut thread_rng());
+    let mut slots: Vec<(i32, usize)> = vec![];
+    for day in days{
+        for hour in 0..tat[0].hours.len(){
+            let slot = act.teachers.iter().all(|teacher| teacher_available(act, teacher, hour, day, max_day_hour, total_acts2, tat, timetables));
+            if slot{
+                if classe_available(act, hour, day, cat){
+                    slots.push((day, hour));
+                    return Some(slots);
                 }
             }
         }
-        //if for_conflict && slots.len() >= 1 || slots.len()>=25{
-        //    break;
-        //}
     }
     None
+}
+
+fn teacher_available(
+    act: &Activity,
+    teacher: &i32,
+    hour: usize,
+    day: i32,
+    max_day_hour: i32,
+    total_acts2: &[Activity],
+    tat: &[model::teacher::TeacherAvailableForTimetables],
+    timetables: &[NewClassTimetable]) -> bool
+{
+    let teacher_available_day: (usize, &model::teacher::TeacherAvailableForTimetables) = tat.into_iter()
+        .enumerate()
+        .find(|t| t.1.user_id == *teacher && t.1.day == day).unwrap();
+    let teacher_acts: Vec<Activity> = total_acts2.iter().cloned()
+        .filter(|a| a.teachers.iter().any(|t| t == teacher) && a.classes.iter().any(|ac| act.classes.iter().any(|ac2| ac == ac2))).collect();
+    let same_day_acts: Vec<NewClassTimetable> = timetables.iter().cloned()
+        .filter(|t| t.day_id.unwrap() == day
+            && teacher_acts.iter().cloned()
+            .any(|a| a.id == t.activities.unwrap())).collect();
+    if act.hour as usize + same_day_acts.len() > max_day_hour as usize {
+        return false
+    }
+    if hour + act.clone().hour as usize <= teacher_available_day.1.hours.len() {
+        let available = (hour..hour + act.hour as usize)
+            .all(|h| teacher_available_day.1.hours[h]);
+        if available{
+            let _other_same_subject: Vec<NewClassTimetable> = timetables.to_owned().into_iter()
+                .filter(|t| t.day_id.unwrap() == day
+                    && teacher_acts.iter().cloned()
+                    .any(|a| a.id == t.activities.unwrap() && a.subject == act.subject)).collect();
+            if _other_same_subject.is_empty() {
+                return true
+            }
+            else {
+                let hours = _other_same_subject.iter().cloned()
+                    .find(|t| t.hour.unwrap() == (hour - 1) as i16 || t.hour.unwrap() == hour as i16 + act.hour);
+                if hours.is_some() {
+                    return true
+                }
+            }
+        }
+    }
+    false
+}
+
+fn classe_available(
+    act: &Activity,
+    hour: usize,
+    day: i32,
+    cat: &[ClassAvailable]) -> bool {
+    let classes_availables: Vec<(usize, ClassAvailable)> = cat.iter().cloned()
+        .enumerate()
+        .filter(|c| act.classes.iter().any(|cc| cc == &c.1.class_id) && c.1.day == day).collect();
+    if hour + act.clone().hour as usize <= classes_availables[0].1.hours.len() {
+        //Look for activity hours. If same place/places is/are available for teacher and class
+        return (hour..hour + act.hour as usize)
+            .all(|h|classes_availables.iter().all(|ca| ca.1.hours[h]))
+    }
+    false
 }
 
 /*

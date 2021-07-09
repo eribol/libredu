@@ -46,14 +46,14 @@ pub struct ClassTimetable{
 #[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow, Default)]
 pub struct ClassTimetableActivity{
     pub id: i32,
-    pub teacher: Teacher
+    pub teachers: Vec<Teacher>
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow, Default)]
 pub struct ClassActivity{
     pub id: i32,
     pub subject: Subject,
-    pub teacher: Teacher,
+    pub teachers: Vec<Teacher>,
     pub hour: i16,
     pub split: bool
 }

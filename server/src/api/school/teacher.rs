@@ -7,7 +7,7 @@ use crate::model::activity;
 use crate::model::teacher;
 use crate::model::activity::Activity;
 use crate::model::class::Class;
-use crate::model::teacher::TeacherTimetable;
+use crate::model::teacher::{TeacherTimetable, Teacher};
 use serde::*;
 
 #[derive(Clone, Debug, sqlx::FromRow, Serialize, Deserialize, Default)]
@@ -34,16 +34,15 @@ pub async fn get_activities(req: Request<AppState>) -> tide::Result {
         for a in acts {
             let subject = school_auth.school.get_subjects(&req).await?.into_iter().find(|s| s.id == a.subject).unwrap();
             //let class: class::Class = sqlx::query_as("SELECT * FROM classes WHERE id = $1").bind(&a.class).fetch_one(&req.state().db_pool).await?;
-            let teacher = school_auth.school.get_teachers(&req).await?.into_iter().find(|t| t.id == a.teacher).unwrap();
+            let teachers = school_auth.school.get_teachers(&req).await?.into_iter().filter(|t| a.teachers.iter().any(|a2| a2 == &t.id)).collect::<Vec<Teacher>>();
             let classes = school_auth.school.get_classes(&req).await?.into_iter().filter(|c| a.classes.iter().any(|c2| c2 == &c.id)).collect::<Vec<Class>>();
             let act = activity::FullActivity {
                 id: a.id,
                 subject: subject.clone(),
-                teacher: teacher.clone(),
                 hour: a.hour,
                 split: false,
                 classes: classes.clone(),
-                teachers: None
+                teachers
             };
             activities.push(act.clone());
         }
@@ -161,12 +160,11 @@ pub async fn timetables(req: Request<AppState>) -> tide::Result {
             Method::Get => {
                 let group = req.get_group().await?;
                 let mut class = sqlx::query("SELECT class_timetable.id, classes.id, classes.kademe, classes.sube, classes.school, classes.group_id,
-                            class_timetable.day_id, class_timetable.hour, subjects.name
+                            class_timetable.day_id, class_timetable.hour, subjects.name, activities.teachers
                             FROM class_timetable inner join activities on class_timetable.activities = activities.id
-                            inner join users on activities.teacher = users.id
                             inner join subjects on activities.subject = subjects.id
                             inner join classes on class_timetable.class_id = classes.id
-                            WHERE activities.teacher = $1 and classes.group_id = $2")
+                            WHERE $1 = any(activities.teachers) and classes.group_id = $2")
                     .bind(&teacher_id)
                     .bind(&group.id)
                     .fetch(&req.state().db_pool);

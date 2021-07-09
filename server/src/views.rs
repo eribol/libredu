@@ -249,10 +249,7 @@ pub async fn get_posts(req: Request<AppState>) -> tide::Result {
     for p in posts{
         match p.school{
             Some(id) =>{
-                use sqlx_core::cursor::Cursor;
-                use sqlx_core::row::Row;
-                let mut sch = SchoolDetail::get(&req, id).await?;
-                print!("okul alındı");
+                let sch = SchoolDetail::get(&req, id).await?;
                 let school_post = SchoolPost{
                     id: p.id,
                     body: p.body,

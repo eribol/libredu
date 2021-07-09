@@ -1,10 +1,12 @@
 use serde::*;
 use crate::model;
 use crate::page::school::detail;
-use crate::page::school::group::timetable::{Activity, ClassAvailable};
+use crate::page::school::group::timetable::{ClassAvailable};
 use crate::model::teacher::Teacher;
 use crate::model::class::Class;
 use seed::Url;
+use crate::model::activity::Activity;
+use crate::model::teacher;
 
 
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -18,8 +20,8 @@ pub struct Tests{
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Act{
-    pub teacher: ActTeacher,
-    pub class: ActClass
+    pub teacher: Vec<ActTeacher>,
+    pub class: Vec<ActClass>
 }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -53,7 +55,7 @@ pub fn tests(
             let group_ctx = school_ctx.get_group(&url);
             if let Some(teachers) = &school_ctx.teachers{
                 if let Some(classes) = &group_ctx.classes{
-                    let teacher = teachers.iter().find(|t| Some(t.teacher.id) == a.teacher).unwrap();
+                    let teacher = teachers.iter().filter(|t| a.teachers.iter().any(|t2| t2 == t.teacher.id)).collect::<Vec<teacher::TeacherContext>>();
                     let class = classes.iter().find(|c| a.classes.iter().any(|a2| a2 == &c.class.id)).unwrap();
                     let act = Act{
                         teacher: ActTeacher{
@@ -70,7 +72,7 @@ pub fn tests(
     }
     if let Some(teachers ) = &school_ctx.teachers{
         for teacher in teachers{
-            let total_act_hour = acts.iter().fold(0,|a, b| if b.teacher==Some(teacher.teacher.id){a+b.hour} else{a});
+            let total_act_hour = acts.iter().fold(0,|a, b| if !b.teachers.is_empty(){a+b.hour} else{a});
             let mut total_available_hour = 0;
             for t in tat{
                 if t.user_id == teacher.teacher.id{

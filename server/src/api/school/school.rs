@@ -8,7 +8,7 @@ use crate::model::group;
 use serde::*;
 use crate::model::school::{SchoolDetail};
 use crate::model::post::SchoolPost;
-use crate::model::city::{City, Town};
+use crate::model::city::{City};
 use crate::model::student::{NewStudent, Student};
 use crate::model::{subject, library, class_room};
 use multer::Multipart;
@@ -51,13 +51,11 @@ pub async fn add(mut req: Request<AppState>) -> tide::Result {
             let add_school = form.add(&mut req, u.id).await;
             match add_school {
                 Ok(_school) => {
-                    use sqlx_core::cursor::Cursor;
-                    use sqlx_core::row::Row;
-                    let mut s = SchoolDetail::get(&req, _school.id).await?;
+                    let s = SchoolDetail::get(&req, _school.id).await?;
                     let _add_school_user = sqlx::query!(r#"INSERT into school_users (school_id, user_id, role) values($1, $2, 1)"#,
                                     s.id, u.id)
                         .execute(&req.state().db_pool).await?;
-                    let mut hour = 8;
+                    let hour = 8;
                     let _g = sqlx::query!(r#"insert into class_groups (name, school, hour) values($1, $2, $3)"#, &"Varsayılan", s.id, hour)
                         .execute(&req.state().db_pool).await;
                     res.set_body(Body::from_json(&(1, s.clone()))?);
@@ -557,9 +555,7 @@ pub async fn get_posts(req: Request<AppState>) -> tide::Result {
     let posts: Vec<Post> = sqlx::query_as("SELECT * from post where school = $1 order by pub_date desc limit 40")
         .bind(&school_id)
         .fetch_all(&req.state().db_pool).await?;
-    use sqlx_core::cursor::Cursor;
-    use sqlx_core::row::Row;
-    let mut sch = req.get_school().await?;
+    let sch = req.get_school().await?;
     let mut school_posts: Vec<SchoolPost> = vec![];
     for p in posts {
         let school_post = SchoolPost {

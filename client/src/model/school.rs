@@ -1,5 +1,4 @@
 use serde::*;
-use crate::model::city::{Town,City};
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct School{

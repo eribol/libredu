@@ -97,7 +97,7 @@ impl ClassGroups {
     }
     pub async fn get_acts(&self, req: &tide::Request<AppState>) -> tide::Result<Vec<timetable::Activity>> {
         use sqlx::prelude::PgQueryAs;
-        let acts: Vec<timetable::Activity> = sqlx::query_as(r#"select activities.id, activities.subject, activities.hour, activities.teacher, activities.split, activities.classes
+        let acts: Vec<timetable::Activity> = sqlx::query_as(r#"select activities.id, activities.subject, activities.hour, activities.teachers, activities.split, activities.classes
                         from activities where classes && $1::integer[]"#)
             //.bind(&school_id)
             .bind(&self.get_classes_ids(&req).await?)
@@ -106,28 +106,27 @@ impl ClassGroups {
     }
     pub async fn add_acts(&self, req: &mut tide::Request<AppState>) -> tide::Result<Vec<activity::FullActivity>> {
         use sqlx::prelude::PgQueryAs;
-        use crate::model::teacher::Teacher;
         let mut act: activity::NewActivity = req.body_json().await?;
         act.classes.sort_unstable();
+        //act.classes.dedup();
+        act.teachers.sort_unstable();
+        act.teachers.dedup();
         act.classes.dedup();
-        //act.classes.retain(|c| *c & 1 == 1);
         //act.teachers.retain(|t| *t & 1 == 1);
         let school = req.get_school().await.unwrap();
-        let teacher = Teacher::get(&req, school.id, act.teacher).await?;
         let teachers = school.get_teachers(&req).await?;
         let subject = school.get_subjects(&req).await?.into_iter().find(|s| s.id == act.subject).unwrap();
         let group = req.get_group().await?;
         let classes = group.get_classes(&req).await?;
         let act2 = act.clone();
-        let act_classes =group.get_classes(&req).await?.into_iter().filter(|c| act2.classes.iter().any(|c2| c2 == &c.id)).collect::<Vec<class::Class>>();
-        if act.classes.iter().all(|c| classes.iter().any(|c2| &c2.id == c)) && act.teachers.iter().all(|t| teachers.iter().any(|t2| &t2.id == t)) {
+        let act_classes = classes.into_iter().filter(|c| act2.classes.iter().any(|c2| c2 == &c.id)).collect::<Vec<class::Class>>();
+        let act_teachers = teachers.into_iter().filter(|t| act2.teachers.iter().any(|t2| t2 == &t.id)).collect::<Vec<teacher::Teacher>>();
+        if act.classes.iter().all(|c| act_classes.iter().any(|c2| &c2.id == c)) && act.teachers.iter().all(|t| act_teachers.iter().any(|t2| &t2.id == t)) {
             let mut acts: Vec<activity::FullActivity> = vec![];
             for h in act.hour.split(' ').collect::<Vec<&str>>() {
                 if let Ok(hour) = h.parse::<i16>() {
-                    let insert: activity::Activity = sqlx::query_as("insert into activities(teacher, subject, hour, split, classes, teachers) values($1, $2, $3, $4, $5, $6) \
-                                            returning id, subject, teacher, hour, split, classes, teachers")
-                        //.bind(&act.class)
-                        .bind(&act.teacher)
+                    let insert: activity::Activity = sqlx::query_as("insert into activities(subject, hour, split, classes, teachers) values($1, $2, $3, $4, $5) \
+                                            returning id, subject, hour, split, classes, teachers")
                         .bind(&act.subject)
                         .bind(&hour)
                         .bind(&act.split)
@@ -139,11 +138,10 @@ impl ClassGroups {
                     let new_act = activity::FullActivity {
                         id: insert.id,
                         subject: subject.clone(),
-                        teacher: teacher.clone(),
                         hour,
                         split: false,
                         classes: act_classes.clone(),
-                        teachers: Some(vec![])
+                        teachers: act_teachers.clone()
                     };
                     acts.push(new_act)
                 }

@@ -40,8 +40,7 @@ pub struct Timetable {
 pub struct Activity{
     id: i32,
     subject: i32,
-    teacher: Option<i32>,
-    //class: i32,
+    teachers: Vec<i32>,
     hour: i16,
     split: bool,
     classes: Vec<i32>

@@ -3,6 +3,7 @@ use crate::model::subject::Subject;
 use crate::model::teacher::Teacher;
 use crate::model::student::{SimpleStudent};
 use crate::model::timetable::Day;
+use crate::model::activity;
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Class{
@@ -31,16 +32,7 @@ pub struct ClassTimetable{
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct ClassTimetableActivity{
     pub id: i32,
-    pub teacher: Teacher
-}
-
-#[derive(Clone, Serialize, Deserialize, Default)]
-pub struct ClassActivity{
-    pub id: i32,
-    pub subject: Subject,
-    pub teacher: Teacher,
-    pub hour: i16,
-    pub split: bool
+    pub teachers: Vec<Teacher>
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -62,7 +54,7 @@ pub struct UpdateClass{
 pub struct ClassContext{
     pub class: Class,
     pub students: Option<Vec<SimpleStudent>>,
-    pub activities: Option<Vec<ClassActivity>>,
+    pub activities: Option<Vec<activity::FullActivity>>,
     pub limitations: Option<Vec<ClassAvailable>>,
     pub timetables: Option<Vec<ClassTimetable>>
 }

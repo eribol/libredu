@@ -376,12 +376,10 @@ pub async fn add_activity(mut req: Request<AppState>) -> tide::Result {
 }
 
 pub async fn limitations(mut req: Request<AppState>) -> tide::Result {
-    let mut res = tide::Response::new(StatusCode::Ok);
+    let res = tide::Response::new(StatusCode::Ok);
     //let school_id: i32 = req.param("school")?.parse()?;
     let group_id: i32 = req.param("group_id")?.parse()?;
     use sqlx_core::postgres::PgQueryAs;
-    use sqlx_core::cursor::Cursor;
-    use sqlx_core::row::Row;
     let school_auth: &SchoolAuth = req.ext().unwrap();
     if school_auth.role < 4 {
         let _ = sqlx::query("SELECT * FROM classes WHERE id = $1 and school = $2")

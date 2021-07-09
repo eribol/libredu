@@ -1,5 +1,4 @@
 use serde::*;
-use crate::model::city::{City, Town};
 use crate::AppState;
 use crate::model::{class, subject, group, teacher, library};
 use crate::request::Auth;

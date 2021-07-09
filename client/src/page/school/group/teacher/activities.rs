@@ -38,7 +38,7 @@ pub struct Model{
     error: String
 }
 
-pub fn init(url: Url, orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolContext)-> Model{
+pub fn init(url: Url, orders: &mut impl Orders<Msg>, _school_ctx: &mut SchoolContext)-> Model{
     let model = Model{url: url, ..Default::default()};
     orders.send_msg(Msg::Loading);
     model
@@ -51,12 +51,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
         }
         Msg::FetchAct(act)=>{
             let teacher_ctx = school_ctx.get_mut_teacher(&model.url);
-            if let Ok(a) = act {
+            if let Ok(mut acts) = act {
                 if let Some(activities) = &mut teacher_ctx.activities{
-                    activities.append(&mut a.clone());
+                    log!("len act teacher = {}", acts[0].teachers.len());
+                    activities.append(&mut acts);
                 }
                 else{
-                    teacher_ctx.activities = Some(a);
+                    teacher_ctx.activities = Some(acts);
                 }
             }
         }
@@ -70,6 +71,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                     model.act_form.classes.push(item.value().parse::<i32>().unwrap());
                 }
             }
+            log!(&model.act_form.classes.len());
             //let class= group_ctx.classes.iter().find(|c| c.class.id == model.act_form.classes[0]).unwrap();
             //model.selected_subjects = model.subjects.clone().into_iter().filter(|s| s.kademe == class.kademe).collect();
             //let classes = ctx_group.classes.into_iter()
@@ -137,10 +139,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             }
         }
         Msg::SubmitActivity=>{
-            log!(&model.act_form.teachers);
             let group_ctx = school_ctx.get_group(&model.url);
             model.act_form.teachers = vec![model.url.path()[5].parse().unwrap()];
-            model.act_form.teacher = model.url.path()[5].parse().unwrap();
             model.act_form.split = false;
             if group_ctx.classes.is_some() && school_ctx.subjects.is_some() &&
                 !model.act_form.classes.is_empty() &&
@@ -282,17 +282,13 @@ pub fn view(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
                     tbody![
                         acts.iter().map(|a|
                             tr![
-                                match &a.teacher{
-                                    Some(_ab)=>{
-                                        style!{
-
-                                        }
+                                if &a.teachers.len() == &0{
+                                    style!{
+                                        St::BackgroundColor=>"gray"
                                     }
-                                    None => {
-                                        style!{
-                                            St::BackgroundColor=>"gray"
-                                        }
-                                    }
+                                }
+                                else {
+                                    style!{}
                                 },
                                 td![
                                     a.classes.iter().map(|c|
@@ -307,34 +303,31 @@ pub fn view(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
                                 td![
                                     &a.hour.to_string()
                                 ],
-                                match &a.teacher{
-                                    Some(_) =>{
-                                        td![
-                                            a![
-                                                "Sil",
-                                                //attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Sil"},
-                                                {
-                                                    let id = a.id;
-                                                    ev(Ev::Click, move |_event| {
-                                                        Msg::DeleteActivity(id.to_string())
-                                                    })
-                                                }
-                                            ]
+                                if &a.teachers.len() >= &1{
+                                    td![
+                                        a![
+                                            "Sil",
+                                            //attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Sil"},
+                                            {
+                                                let id = a.id;
+                                                ev(Ev::Click, move |_event| {
+                                                    Msg::DeleteActivity(id.to_string())
+                                                })
+                                            }
                                         ]
-                                    }
-                                    None => {
-                                        td![
-                                            input![
-                                                attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Aktar"},
-                                                {
-                                                    let id = a.id;
-                                                    ev(Ev::Click, move |_event| {
-                                                        //Msg::PatchActivity(id.to_string())
-                                                    })
-                                                }
-                                            ]
+                                    ]
+                                }
+                                else {
+                                    td![
+                                        input![
+                                            attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Aktar"},
+                                            {
+                                                let id = a.id;
+                                                ev(Ev::Click, move |_event| {
+                                                })
+                                            }
                                         ]
-                                    }
+                                    ]
                                 }
                             ]
                         )

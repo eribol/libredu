@@ -2,20 +2,11 @@ use crate::model::timetable::{Day};
 use serde::*;
 use seed::{*, prelude::*};
 use crate::model::timetable::ClassAvailable;
-use crate::model::class::{Class, ClassActivity};
+use crate::model::class::{Class};
 use crate::model::{activity, subject};
 use crate::page::school::detail::SchoolContext;
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Activity{
-    pub(crate) id: i32,
-    pub(crate) subject: subject::Subject,
-    pub(crate) teacher: i32,
-    pub(crate) class: Class,
-    pub(crate) hour: i16,
-    pub(crate) split: bool,
-    classes: Vec<i32>
-}
+use web_sys::{HtmlOptionElement, HtmlSelectElement};
+use crate::model::activity::FullActivity;
 
 #[derive()]
 pub enum Msg{
@@ -23,8 +14,8 @@ pub enum Msg{
     FetchDays(fetch::Result<Vec<Day>>),
     FetchClass(fetch::Result<Class>),
     //FetchClasses(fetch::Result<Vec<Class>>),
-    FetchActivities(fetch::Result<Vec<ClassActivity>>),
-    FetchAct(fetch::Result<Vec<ClassActivity>>),
+    FetchActivities(fetch::Result<Vec<FullActivity>>),
+    FetchAct(fetch::Result<Vec<FullActivity>>),
     FetchSubjects(fetch::Result<Vec<subject::Subject>>),
     ChangeHour((usize,usize)),
     SubmitActivity,
@@ -40,6 +31,7 @@ pub struct Model{
     days: Vec<Day>,
     pub act_form: activity::NewActivity,
     pub limitation: Vec<ClassAvailable>,
+    select: ElRef<HtmlSelectElement>,
     url: Url
 }
 
@@ -130,7 +122,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             model.act_form.classes = vec![class_ctx.class.id];
         }
         Msg::ChangeActTeacher(t)=>{
-            model.act_form.teacher = t.parse::<i32>().unwrap();
+            model.act_form.teachers = vec![];
+            let selected_options = model.select.get().unwrap().selected_options();
+            for i in 0..selected_options.length() {
+                let item = selected_options.item(i).unwrap().dyn_into::<HtmlOptionElement>().unwrap();
+                if item.selected() {
+                    model.act_form.teachers.push(item.value().parse::<i32>().unwrap());
+                }
+            }
         }
         Msg::ChangeActHour(h)=>{
             model.act_form.hour = h;
@@ -196,7 +195,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             }
             model.act_form.split = false;
 
-            if model.act_form.teacher != 0 && model.act_form.subject != 0 && !model.act_form.hour.is_empty(){
+            if !model.act_form.teachers.is_empty() && model.act_form.subject != 0 && !model.act_form.hour.is_empty(){
                 orders.perform_cmd({
                     let url = format!("/api/schools/{}/groups/{}/activities", &school_ctx.school.id, &group_ctx);
                     let request = Request::new(url)
@@ -255,7 +254,11 @@ pub fn activities(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
                         activities.iter().map(|a|
                             tr![
                                 td![
-                                    &a.teacher.first_name, " ", &a.teacher.last_name
+                                    a.teachers.iter().map(|t|
+                                        label![
+                                            &t.first_name, " ", &t.last_name, br![]
+                                        ]
+                                    )
                                 ],
                                 td![
                                     &a.subject.name
@@ -289,20 +292,38 @@ pub fn activities(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
             ],
             div![
                 C!{"field"},
-                C!{"select"},
-                school_ctx.teachers.as_ref().map_or(select![], |teachers|
-                    select![
-                        option![],
-                        attrs!{At::Name=>"teacher"},
-                        teachers.iter().map(|t|
-                            option![
-                                attrs!{At::Value=>&t.teacher.id},
-                                &t.teacher.first_name, " ", &t.teacher.last_name
+                label![
+                    C!{"label"},
+                    "Aktivite sınıfını/sınıflarını seçin"
+                ],
+                p![
+                    C!{"control"},
+                    span![
+                        C!{"select is-multiple"},
+                        school_ctx.teachers.as_ref().map_or(
+                            select![
+                                el_ref(&model.select),
+                                attrs!{
+                                    At::from("multiple") => true.as_at_value()
+                                }
+                            ],
+                            |teachers|
+                            select![
+                                el_ref(&model.select),
+                                attrs!{
+                                    At::from("multiple") => true.as_at_value()
+                                },
+                                teachers.iter().map(|t|
+                                    option![
+                                        attrs!{At::Value => &t.teacher.id},
+                                        format!("{} {}", &t.teacher.first_name, &t.teacher.last_name)
+                                    ]
+                                ),
+                                input_ev(Ev::Change, Msg::ChangeActTeacher)
                             ]
-                        ),
-                        input_ev(Ev::Change, Msg::ChangeActTeacher)
+                        )
                     ]
-                )
+                ]
             ],
             div![
                 C!{"field"},

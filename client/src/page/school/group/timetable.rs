@@ -2,14 +2,15 @@ use serde::*;
 use seed::{*, prelude::*};
 use crate::{createPDF, class_print, model};
 use crate::page::school::detail;
-use crate::page::school::group::test_generate;
-use crate::model::timetable::Day;
+//use crate::page::school::group::test_generate;
+use crate::model::timetable::{Day, NewClassTimetable};
 use crate::model::teacher::{TeacherTimetable, TeacherAvailableForTimetables};
 use crate::model::class::{ClassTimetable, ClassTimetableActivity};
 use crate::page::school::detail::{SchoolContext};
 use crate::model::group::Schedule;
 use crate::page::school::group::generate;
 use crate::model::{teacher, subject};
+use crate::model::activity::Activity;
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct AuthUser{
@@ -35,7 +36,7 @@ pub struct Model{
     pub teacher_timetables: Vec<TeacherTimetable>,
     pub class_timetables: Vec<ClassTimetable>,
     pub data: TimetableData,
-    pub test: test_generate::Tests,
+    //pub test: test_generate::Tests,
     subjects: Vec<subject::Subject>,
     schedules: Vec<Vec<Schedule>>,
     pub error: String,
@@ -49,24 +50,6 @@ struct Params{
     depth2: usize
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, PartialEq)]
-pub struct NewClassTimetable {
-    pub class_id: Option<i32>,
-    pub day_id: Option<i32>,
-    pub hour: Option<i16>,
-    pub activities: Option<i32>
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
-pub struct Activity{
-    pub(crate) id: i32,
-    pub(crate) subject: i32,
-    pub(crate) teacher: Option<i32>,
-    //pub(crate) class: i32,
-    pub(crate) hour: i16,
-    pub(crate) split: bool,
-    pub(crate) classes: Vec<i32>,
-}
 #[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct Class{
     pub id: i32,
@@ -77,9 +60,9 @@ pub struct Class{
 }
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct TimetableData{
-    pub(crate) tat: Vec<model::teacher::TeacherAvailableForTimetables>,
-    pub(crate) cat: Vec<ClassAvailable>,
-    pub(crate) acts: Vec<Activity>,
+    tat: Vec<model::teacher::TeacherAvailableForTimetables>,
+    cat: Vec<ClassAvailable>,
+    acts: Vec<Activity>,
     classes: Vec<Class>,
     teachers: Vec<model::teacher::Teacher>,
     timetables: Vec<NewClassTimetable>
@@ -209,23 +192,24 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             }
         }
         Msg::SubmitTest=>{
-            let test = &mut model.test;
+            /*let test = &mut model.test;
             let acts = model.data.acts.clone();
             let timetables = model.data.timetables.clone();
             //model.clean_cat = model.data.cat.clone();
             //model.clean_tat = model.data.tat.clone();
             //model.total_hour = model.data.acts.iter().fold(0, |a,b| if b.teacher.is_some(){(b.hour) as i32 + (a)}else{0});
             let acts2: Vec<Activity> = acts.iter().cloned()
-                .filter(|a| a.teacher.is_some() && !timetables.iter().cloned()
+                .filter(|a| !a.teachers.is_empty() && !timetables.iter().cloned()
                     .any(|t| a.id == t.activities.unwrap())).collect();
             for tt in &model.data.timetables{
                 let class_lim = model.data.cat.iter().cloned().enumerate().find(|cl| cl.1.class_id==tt.class_id.unwrap() && cl.1.day == tt.day_id.unwrap()).unwrap();
                 model.data.cat[class_lim.0].hours[tt.hour.unwrap() as usize]=false;
                 let _act = model.data.acts.iter().find(|a| a.id == tt.activities.unwrap()).unwrap();
-                let _teacher_lim = model.data.tat.iter().cloned().enumerate().find(|tl| tl.1.day == tt.day_id.unwrap() && _act.teacher.is_some() && tl.1.user_id == _act.teacher.unwrap()).unwrap();
+                let _teacher_lim = model.data.tat.iter().cloned().enumerate().find(|tl| tl.1.day == tt.day_id.unwrap() && _act.teachers.iter().any(|t| &tl.1.user_id == t)).unwrap();
                 model.data.tat[_teacher_lim.0].hours[tt.hour.unwrap() as usize] = false;
             }
             test_generate::tests(&acts2, model.params.hour, test, school_ctx, &model.data.tat, &model.data.cat, model.url.clone())
+            */
         }
         Msg::DepthChanged(d)=>{
             if let Ok(h) = d.parse::<usize>() {
@@ -258,7 +242,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             model.data.timetables = timetables.clone();
             if result{
                 let _acts2: Vec<Activity> = acts.iter().cloned()
-                    .filter(|a| a.teacher.is_some() && !timetables.iter().cloned()
+                    .filter(|a| !a.teachers.is_empty() && !timetables.iter().cloned()
                         .any(|t| a.id == t.activities.unwrap())).collect();
                 /*
                 let mut not_placed = 0;
@@ -287,7 +271,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                 for t in teachers{
                     let mut teacher_print: Vec<TeacherTimetable>=Vec::new();
                     let teacher_timetables: Vec<NewClassTimetable> = timetables2.iter().cloned()
-                        .filter(|tt| acts.clone().iter().any(|a| a.teacher.is_some() && a.teacher == Some(t.teacher.id) && tt.activities.unwrap() == a.id )).collect();
+                        .filter(|tt| acts.clone().iter().any(|a| a.teachers.iter().any(|t2| t2 == &t.teacher.id) && tt.activities.unwrap() == a.id )).collect();
                     for tt in teacher_timetables{
                         //let class = school_ctx.classes.iter().find(|c| c.id == tt.class_id.unwrap()).unwrap();
                         let group_ctx = school_ctx.get_group(&model.url);
@@ -324,33 +308,26 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                     let class_timetables: Vec<NewClassTimetable> = model.data.timetables.iter().cloned()
                         .filter(|tt| acts.iter().any(|a| a.id == tt.activities.unwrap())).collect();
                     for tt in &class_timetables{
-                        let act = acts.iter().find(|a| a.id == tt.activities.unwrap() && a.teacher.is_some()).unwrap();
-                        if let Some(teachers) = &school_ctx.teachers{
-                            let teacher = teachers.iter().find(|t| act.teacher.is_some() && act.teacher.unwrap() == t.teacher.id);
-                            if let Some(t) = teacher {
-                                let subject = model.subjects.iter().find(|s| s.id == act.subject).unwrap();
-                                let timetable = ClassTimetable {
-                                    id: 0,
-                                    class_id: c.class.id,
-                                    day_id: tt.day_id.unwrap(),
-                                    hour: tt.hour.unwrap(),
-                                    subject: subject.name.clone(),
-                                    activity: ClassTimetableActivity {
-                                        id: 0,
-                                        teacher: teacher::Teacher {
-                                            id: 0,
-                                            first_name: t.teacher.first_name.clone(),
-                                            last_name: t.teacher.last_name.clone(),
-                                            role_id: 0,
-                                            role_name: "".to_string(),
-                                            is_active: false,
-                                            email: None,
-                                            tel: None
-                                        }
-                                    }
-                                };
-                                c_print.push(timetable)
+                        let act = acts.iter().find(|a| a.id == tt.activities.unwrap() && !a.teachers.is_empty()).unwrap();
+                        if let Some(teachers) = &school_ctx.teachers {
+                            let tchrs = teachers.clone().into_iter().filter(|t| act.teachers.iter().any(|t2| t2 == &t.teacher.id)).collect::<Vec<teacher::TeacherContext>>();
+                            let mut teachers: Vec<teacher::Teacher> = vec![];
+                            for t in tchrs{
+                                teachers.push(t.teacher);
                             }
+                            let subject = model.subjects.iter().find(|s| s.id == act.subject).unwrap();
+                            let timetable = ClassTimetable {
+                                id: 0,
+                                class_id: c.class.id,
+                                day_id: tt.day_id.unwrap(),
+                                hour: tt.hour.unwrap(),
+                                subject: subject.name.clone(),
+                                activity: ClassTimetableActivity {
+                                    id: 0,
+                                    teachers
+                                }
+                            };
+                            c_print.push(timetable)
                         }
 
                     }
@@ -382,7 +359,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             if let Some(teachers) = &school_ctx.teachers{
                 for t in teachers {
                     let limitations = model.clean_tat.clone().into_iter().filter(|l| l.user_id == t.teacher.id).collect::<Vec<TeacherAvailableForTimetables>>();
-                    let acts = model.data.acts.clone().into_iter().filter(|a| a.teacher.unwrap() == t.teacher.id).collect::<Vec<Activity>>();
+                    let acts = model.data.acts.clone().into_iter().filter(|a| a.teachers.iter().any(|a2| a2 == &t.teacher.id)).collect::<Vec<Activity>>();
                     for l in limitations {
                         for h in l.hours.iter().enumerate() {
                             if !*h.1 {
@@ -401,7 +378,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
 
             //let acts: Vec<Activity> = model.data.acts.clone().into_iter().filter(|a| ctx_group.classes.iter().any(|c| a.classes.iter().any(|ac| ac == c.id))).collect();
             for act in &model.data.acts{
-                if let Some(_t) = act.teacher {
+                if !act.teachers.is_empty() {
                     model.total_hour += act.hour as i32;
                 }
             }
@@ -416,10 +393,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                 let class_lim = model.data.cat.iter().cloned().enumerate().find(|cl| _act.unwrap().classes.iter().any(|c| c == &cl.1.class_id) && cl.1.day == tt.day_id.unwrap()).unwrap();
                 model.data.cat[class_lim.0].hours[tt.hour.unwrap() as usize]=false;
                 let _act = model.data.acts.iter().find(|a| a.id == tt.activities.unwrap());
-                if let Some(a) = _act {
-                    let _teacher_lim = model.data.tat.iter().cloned().enumerate().find(|tl| tl.1.day == tt.day_id.unwrap() && a.teacher.is_some() && tl.1.user_id == a.teacher.unwrap());
-                    if let Some(t) = _teacher_lim {
-                        model.data.tat[t.0].hours[tt.hour.unwrap() as usize] = false;
+                for a in _act{
+                    for t in &a.teachers{
+                        let _teacher_lim = model.data.tat.iter().cloned().enumerate().find(|tl| tl.1.day == tt.day_id.unwrap() && tl.1.user_id == *t);
+                        if let Some(t) = _teacher_lim {
+                            model.data.tat[t.0].hours[tt.hour.unwrap() as usize] = false;
+                        }
                     }
                 }
             }
@@ -568,21 +547,21 @@ pub fn view(model: &Model, ctx_school: &SchoolContext)-> Node<Msg>{
                     //&model.test_async.to_string(),
                     p![
                         " Test1:",br![],
-                        model.test.activity.iter().map(|a|
-                            div![&a.teacher.first_name, " ", &a.teacher.last_name, " adlı öğretmenin ", &a.class.kademe.to_string(), "/", &a.class.sube, " sınıfına ait aktivitesinin saat sayısı büyük.", br![]]
-                        )
+                        //model.test.activity.iter().map(|a|
+                        //    div![&a.teacher.first_name, " ", &a.teacher.last_name, " adlı öğretmenin ", &a.class.kademe.to_string(), "/", &a.class.sube, " sınıfına ait aktivitesinin saat sayısı büyük.", br![]]
+                        //)
                     ],
                     p![
                         " Test2:",br![],
-                        model.test.teachers.iter().map(|t|
-                            div![&t.first_name, " ", &t.last_name, " adlı öğretmene atanan ders sayısı, boş saatlerinden daha fazla. Öğretmenin kısıtlamasını kontrol edin.", br![]]
-                        )
+                        //model.test.teachers.iter().map(|t|
+                        //    div![&t.first_name, " ", &t.last_name, " adlı öğretmene atanan ders sayısı, boş saatlerinden daha fazla. Öğretmenin kısıtlamasını kontrol edin.", br![]]
+                        //)
                     ],
                     p![
                         " Test3:",br![],
-                        model.test.classes.iter().map(|c|
-                            div![&c.kademe.to_string(), "/", &c.sube, " sınıfına atanan ders sayısı, boş saatlerinden daha fazla. Sınıfın kısıtlamasını kontrol edin.", br![]]
-                        )
+                        //model.test.classes.iter().map(|c|
+                        //    div![&c.kademe.to_string(), "/", &c.sube, " sınıfına atanan ders sayısı, boş saatlerinden daha fazla. Sınıfın kısıtlamasını kontrol edin.", br![]]
+                        //)
                     ],
                     /*p![
                         " Test4:",br![],

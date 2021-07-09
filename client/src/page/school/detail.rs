@@ -254,6 +254,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             }
             else {
                 school_ctx.groups = Some(vec![]);
+                model.page = Pages::NotFound;
             }
         }
         Msg::FetchPosts(posts) => {

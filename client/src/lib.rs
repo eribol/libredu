@@ -4,8 +4,7 @@ use crate::model::user::UserDetail;
 use crate::model::post::{SchoolPost, NewPost};
 use crate::page::admin;
 use crate::page::school::detail::SchoolContext;
-use fluent::fluent_args;
-use seed::{prelude::*, *};
+use seed::{prelude::*};
 
 mod i18n;
 use i18n::{I18n, Lang};
@@ -25,7 +24,7 @@ const RESET: &str = "reset";
 // ------ ------
 
 const STORAGE_KEY: &str = "user";
-const DEFAULT_LANG: Lang = Lang::TrTR;
+const DEFAULT_LANG: Lang = Lang::EnUS;
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     let mut ctx = Context {
@@ -34,6 +33,14 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         schools: vec![],
         loaded: false
     };
+    let lang = window().navigator().language();
+    let mut b_lang = DEFAULT_LANG;
+    match lang{
+        Some(ref l) => {
+            if l == &"tr-TR".to_string() {b_lang = Lang::TrTR}
+        },
+        _ => {}
+    }
     orders.perform_cmd({
         let request = Request::new("/api/login")
             .method(Method::Get);
@@ -59,7 +66,10 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         form: NewPost::default(),
         navbar: "".to_string(),
         url,
-        loaded: false
+        loaded: false,
+        i18n: I18n::new(
+            b_lang
+        )
     }
 }
 
@@ -74,7 +84,8 @@ struct Model {
     form: NewPost,
     navbar: String,
     url: Url,
-    loaded: bool
+    loaded: bool,
+    i18n: I18n
 }
 
 #[derive(Clone)]
@@ -459,7 +470,7 @@ fn navbar_brand(model: &Model) -> Node<Msg>{
 }
 
 fn view_navbar_brand(model: &Model, ctx: &Context) -> Node<Msg>{
-    create_t![I18n::new(DEFAULT_LANG)];
+    create_t![model.i18n];
         div![
             C!{"navbar-menu", &model.navbar},
             if !ctx.schools.is_empty(){

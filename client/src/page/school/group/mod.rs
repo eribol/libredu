@@ -2,7 +2,7 @@ pub mod home;
 pub mod schedules;
 pub mod class;
 pub mod generate;
-mod test_generate;
+//mod test_generate;
 mod classes;
 mod teachers;
 mod teacher;

@@ -2,39 +2,50 @@ use tide::Request;
 use crate::AppState;
 
 use http_types::{StatusCode, Method, Body};
-use crate::model::class::{ClassTimetable, ClassTimetableActivity, Class, ClassActivity, UpdateClass};
-use crate::model::school::SchoolDetail;
+use crate::model::class::{ClassTimetable, ClassTimetableActivity, Class, UpdateClass};
 use crate::request::{Auth, SchoolAuth};
 use crate::model::timetable::{ClassAvailable, InsertClassAvailable};
 use crate::model::timetable::Day;
-use crate::model::city::{City, Town};
 use crate::model::student::SimpleStudent;
 use crate::model::subject::Subject;
 use crate::model::teacher::Teacher;
+use crate::model::activity::FullActivity;
 
 pub async fn activities(req: Request<AppState>) -> tide::Result {
     let class_id: i32 = req.param("class_id")?.parse()?;
     let school_id: i32 = req.param("school")?.parse()?;
+    let group_id: i32 = req.param("group_id")?.parse()?;
     use sqlx_core::cursor::Cursor;
     use sqlx_core::row::Row;
-    //let school_auth: &SchoolAuth = req.ext().unwrap();
+    let school_auth: &SchoolAuth = req.ext().unwrap();
     let mut res = tide::Response::new(StatusCode::Ok);
     let mut cursor = sqlx::query(r#"SELECT
-                        activities.id, subjects.id, subjects.name, users.id, users.first_name, users.last_name, activities.hour, activities.split, subjects.kademe,subjects.optional, users.is_active, users.email, users.tel
-                        FROM activities inner join users on activities.teacher= users.id inner join subjects on activities.subject = subjects.id
-                        WHERE $1 = any(activities.classes) order by activities.subject, activities.teacher"#)
+                        activities.id, activities.hour, activities.split, activities.classes, activities.teachers, subjects.id, subjects.name, subjects.kademe, subjects.optional
+                        FROM activities inner join subjects on activities.subject = subjects.id
+                        WHERE $1 = any(activities.classes) order by activities.subject"#)
         .bind(&class_id)
         .fetch(&req.state().db_pool);
-    let mut acts: Vec<ClassActivity> = Vec::new();
+    let mut acts: Vec<FullActivity> = Vec::new();
 
     while let Some(row) = cursor.next().await? {
         //println!("{:?}", format!("{}",row.to_string()));
-        let act = ClassActivity {
+        let mut act_teachers: Vec<Teacher> = vec![];
+        let teachers: Vec<i32> = row.get(4);
+        for t in teachers{
+            act_teachers.push(Teacher::get(&req, school_id, t).await?);
+        }
+        let mut act_classes: Vec<Class> = vec![];
+        let classes: Vec<i32> = row.get(3);
+        for _ in classes{
+            act_classes.push(school_auth.school.get_class(&req, group_id, class_id).await?);
+        }
+        let act = FullActivity {
             id: row.get(0),
-            subject: Subject { name: row.get(2), id: row.get(1), kademe: row.get(8), optional: row.get(9), school: 0 },
-            teacher: Teacher::get(&req,school_id, row.get(3)).await?,
-            hour: row.get(6),
-            split: row.get(7)
+            hour: row.get(1),
+            split: row.get(2),
+            subject: Subject { id: row.get(5), name: row.get(6), kademe: row.get(7), optional: row.get(8), school: 0 },
+            teachers: act_teachers,
+            classes: act_classes
         };
         acts.push(act);
     }
@@ -166,14 +177,18 @@ pub async fn timetables(req: Request<AppState>) -> tide::Result {
         .fetch_one(&req.state().db_pool).await?;
     if school_auth.role <= 8 {
         let mut class = sqlx::query("SELECT class_timetable.id, class_timetable.class_id, class_timetable.day_id, class_timetable.hour,
-                            activities.id, users.id, users.first_name, users.last_name, subjects.name, users.is_active, users.email, users.tel
-                            FROM class_timetable inner join activities on class_timetable.activities = activities.id
-                            inner join users on activities.teacher = users.id
+                            activities.id, activities.teachers, subjects.name FROM class_timetable
+                            inner join activities on class_timetable.activities = activities.id
                             inner join subjects on activities.subject = subjects.id WHERE class_id = $1")
             .bind(&class_id.parse::<i32>()?)
             .fetch(&req.state().db_pool);
         let mut class_timetables: Vec<ClassTimetable> = Vec::new();
         while let Some(row) = class.next().await? {
+            let mut act_teachers: Vec<Teacher> = vec![];
+            let teachers: Vec<i32> = row.get(5);
+            for t in teachers{
+                act_teachers.push(Teacher::get(&req, school_auth.school.id, t).await?);
+            }
             let class_timetable = ClassTimetable {
                 id: row.get(0),
                 class_id: row.get(1),
@@ -181,9 +196,9 @@ pub async fn timetables(req: Request<AppState>) -> tide::Result {
                 hour: row.get(3),
                 activity: ClassTimetableActivity {
                     id: row.get(4),
-                    teacher: Teacher::get(&req, school_auth.school.id, row.get(5)).await?,
+                    teachers: act_teachers,
                 },
-                subject: row.get(8)
+                subject: row.get(6)
             };
             class_timetables.push(class_timetable);
         }
@@ -199,9 +214,7 @@ pub async fn update_class(mut req: Request<AppState>) -> tide::Result {
     let school_id: i32 = req.param("school")?.parse()?;
     use sqlx_core::postgres::PgQueryAs;
     let class = req.body_json::<UpdateClass>().await?;
-    use sqlx_core::cursor::Cursor;
-    use sqlx_core::row::Row;
-    let mut s = req.get_school().await?;
+    let s = req.get_school().await?;
     let u = req.user().await?;
     if s.manager == u.id || u.is_admin {
         let c: Class = sqlx::query_as("update classes set sube = $1, kademe = $2, school = $3, group_id = $4 where id = $5 returning id, sube, kademe, group_id, school")

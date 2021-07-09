@@ -1,8 +1,9 @@
 use crate::model::timetable::{Day};
 use serde::*;
 use seed::{*, prelude::*};
-use crate::model::class::{ClassTimetable, ClassActivity, ClassContext, ClassAvailable};
+use crate::model::class::{ClassTimetable, ClassContext, ClassAvailable};
 use crate::page::school::detail::{SchoolContext};
+use crate::model::activity;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Subject{
@@ -14,7 +15,7 @@ pub struct Subject{
 pub enum Msg{
     Home,
     FetchDays(fetch::Result<Vec<Day>>),
-    FetchActivities(fetch::Result<Vec<ClassActivity>>),
+    FetchActivities(fetch::Result<Vec<activity::FullActivity>>),
     FetchTimetable(fetch::Result<Vec<ClassTimetable>>),
     FetchLimitation(fetch::Result<Vec<ClassAvailable>>),
     ChangeHour((usize,usize)),
@@ -313,8 +314,8 @@ fn get_timetable_row(day: i32, hour: (usize, &bool), timetable: &[ClassTimetable
 
     match get_timetable{
         Some(t)=>{
-            let name = &t.activity.teacher.first_name.chars().collect::<Vec<_>>();
-            let lastname = &t.activity.teacher.last_name.chars().collect::<Vec<_>>();
+            let name = &t.activity.teachers[0].first_name.chars().collect::<Vec<_>>();
+            let lastname = &t.activity.teachers[0].last_name.chars().collect::<Vec<_>>();
             let mut subject = String::new();
             let split_subject = &t.subject.split(' ').collect::<Vec<&str>>();
             if split_subject.len() == 1{

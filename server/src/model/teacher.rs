@@ -91,32 +91,26 @@ impl Teacher{
     pub async fn del_act(&self, req: &tide::Request<AppState>) -> sqlx_core::Result<i32>{
         use sqlx::prelude::PgQueryAs;
         let act_id: i32 = req.param("act_id").expect("Aktivite id numarası belirtilmemiş").parse().expect("Sayı değil");
-        let act: activity::Activity  = sqlx::query_as(r#"select * from activities where id = $1 and ($2 = any(teachers) or teacher = $2) "#)
+        let mut act: activity::Activity  = sqlx::query_as(r#"select * from activities where id = $1 and ($2 = any(teachers) or teacher = $2) "#)
             .bind(act_id)
             .bind(&self.id)
             .fetch_one(&req.state().db_pool).await?;
-        if let Some(teachers) = act.teachers{
-            if teachers.len() <= 1{
+
+            if act.teachers.len() <= 1{
                 let _ = sqlx::query(r#"delete from activities where id = $1"#)
                     .bind(act_id)
                     .execute(&req.state().db_pool).await?;
                 Ok(act_id)
             }
             else {
-                let ids = &teachers.into_iter().filter(|t| t != &self.id).collect::<Vec<i32>>();
+                act.teachers.retain(|t| t == &self.id);
                 let _ = sqlx::query(r#"update activities set teachers = $2 where id = $1"#)
-                    .bind(act_id)
-                    .bind(&ids)
+                    .bind(&act.teachers)
+                    .bind(&act.id)
                     .execute(&req.state().db_pool).await?;
                 Ok(act_id)
             }
-        }
-        else {
-            let _ = sqlx::query(r#"delete from activities where id = $1"#)
-                .bind(act_id)
-                .execute(&req.state().db_pool).await?;
-            Ok(act_id)
-        }
+
     }
     pub async fn del_acts(&self, req: &tide::Request<AppState>, school_id: i32) -> sqlx_core::Result<&Self>{
         let acts: Vec<activity::Activity>  = self.get_acts_for_school(&req, school_id).await?;
@@ -125,24 +119,24 @@ impl Teacher{
                 .bind(a.id)
                 .execute(&req.state().db_pool).await?;
             //return del
-            if let Some(teachers) = a.teachers {
-                if teachers.is_empty() {
-                    let _ = sqlx::query(r#"delete from activities where id = $1 returning *"#)
+
+            if a.teachers.is_empty() {
+                let _ = sqlx::query(r#"delete from activities where id = $1 returning *"#)
                         .bind(a.id)
                         .execute(&req.state().db_pool).await?;
                     //return del
-                } else {
-                    let ids = &teachers.into_iter().filter(|t| t != &self.id).collect::<Vec<i32>>();
-                    if ids.len() == 0{
-                        let _ = sqlx::query(r#"delete from activities where id = $1 returning *"#)
-                            .bind(a.id)
-                            .execute(&req.state().db_pool).await?;
-                    }
-                    let _ = sqlx::query(r#"update from activities set teachers = $2 where id = $1"#)
+            }
+            else {
+                let ids = &a.teachers.into_iter().filter(|t| t != &self.id).collect::<Vec<i32>>();
+                if ids.len() == 0 {
+                    let _ = sqlx::query(r#"delete from activities where id = $1 returning *"#)
                         .bind(a.id)
-                        .bind(&ids)
                         .execute(&req.state().db_pool).await?;
                 }
+                let _ = sqlx::query(r#"update from activities set teachers = $2 where id = $1"#)
+                    .bind(a.id)
+                    .bind(&ids)
+                    .execute(&req.state().db_pool).await?;
             }
         }
         Ok(self)
@@ -159,7 +153,7 @@ impl Teacher{
         let school = SchoolDetail::get(&req, school_id).await?;
         let group = school.get_group(&req, group_id).await?;
         let ids = group.get_classes_ids(&req).await?;
-        let acts: Vec<Activity> = sqlx::query_as(r#"SELECT * FROM activities WHERE (activities.teacher = $1 or $1 = any(teachers)) and classes && $2::integer[]"#)
+        let acts: Vec<Activity> = sqlx::query_as(r#"SELECT * FROM activities WHERE $1 = any(teachers) and classes && $2::integer[]"#)
             .bind(&self.id)
             .bind(&ids)
             //.bind(&school_auth.school.id)
