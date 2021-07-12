@@ -37,7 +37,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     let mut b_lang = DEFAULT_LANG;
     match lang{
         Some(ref l) => {
-            //if l == &"tr-TR".to_string() {b_lang = Lang::TrTR}
+            if l == &"tr-TR".to_string() {b_lang = Lang::TrTR}
         },
         _ => {}
     }
