@@ -11,6 +11,7 @@ use crate::model::class_room::Classroom;
 use crate::model::subject::Subject;
 use crate::model::teacher::{TeacherContext, Teacher, TeacherGroupContext};
 use crate::model::subject;
+use crate::i18n::I18n;
 
 
 #[derive(Default)]
@@ -447,7 +448,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
     }
 }
 
-pub fn view(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolContext)-> Node<Msg>{
+pub fn view(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolContext, lang: &I18n)-> Node<Msg>{
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
     div![
         C!{"columns"},
         div![
@@ -459,10 +462,10 @@ pub fn view(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolCon
                     &school_ctx.school.name
                 ],
 
-                menus(school_ctx, model),
+                menus(school_ctx, model, lang),
                 p![
                     C!{"menu-label"},
-                    "Gruplar",
+                    t!["groups"],
                     C!{"menu-list"},
                     match &school_ctx.groups{
                         Some(groups_ctx) => {
@@ -486,7 +489,9 @@ pub fn view(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolCon
                     }
                 ]
             ],
-            label!["Grup Adı:"],
+            label![
+                t! ["group-name"]
+            ],
             input![
                 C!{"input"},
                 attrs!{
@@ -494,7 +499,9 @@ pub fn view(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolCon
                 },
                 input_ev(Ev::Change, Msg::ChangeGroupName)
             ],
-            label!["Günlük ders saati sayısı"],
+            label![
+                t!["group-hour"]
+            ],
             input![
                 C!{"input"},
                 attrs!{
@@ -506,7 +513,7 @@ pub fn view(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolCon
                 C!{"button is-secondary"},
                 attrs!{
                     At::Type => "button",
-                    At::Value => "Grup Ekle"
+                    At::Value => t!["group-add"]
                 },
                 ev(Ev::Click, move |_event| {
                     Msg::AddGroup
@@ -514,19 +521,19 @@ pub fn view(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolCon
             ],
             hr![],
             label![
-                "Lütfen sınıflarınızı grup sayfanızdan ekleyiniz. Gruplar, sizin ders programınızın bilgilerini girdiğiniz alandır."
+                t!["group-info"]
             ]
         ],
         match &model.page{
             Pages::Detail(_m)=>{
-                detail_page(model, user_ctx, school_ctx)
+                detail_page(model, user_ctx, school_ctx, lang)
             }
             Pages::Group(m) => {
                 //div!["groups"]
                 match &school_ctx.groups{
                     Some(groups) => {
                         //let group_ctx = school_ctx.get_group(model.url.path()[3].parse().unwrap());
-                        group::home::view(m, &school_ctx).map_msg(Msg::Group)
+                        group::home::view(m, &school_ctx, lang).map_msg(Msg::Group)
                     }
                     None => div!["Grup ekleyiniz."]
                 }
@@ -537,10 +544,10 @@ pub fn view(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolCon
                 posts(model, user_ctx)
             }
             Pages::Students(m) => {
-                students::view(m, school_ctx).map_msg(Msg::Students)
+                students::view(m, school_ctx, lang).map_msg(Msg::Students)
             },
             Pages::Subjects(m) => {
-                subjects::view(m).map_msg(Msg::Subjects)
+                subjects::view(m, lang).map_msg(Msg::Subjects)
             },
             Pages::Classrooms(m) => {
                 class_rooms::view(m).map_msg(Msg::Classrooms)
@@ -555,11 +562,11 @@ pub fn view(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolCon
     ]
 }
 
-pub fn menus(school_ctx: &SchoolContext, model: &Model) -> Node<Msg>{
-    use crate::model::school::LIST;
+pub fn menus(school_ctx: &SchoolContext, model: &Model, lang: &I18n) -> Node<Msg>{
+    use crate::model::school::create_menu;
     ul![
         C!{"menu-list"},
-        LIST.iter().map(|m|
+        create_menu(lang).iter().map(|m|
             li![
                 a![
                     C!{
@@ -574,7 +581,7 @@ pub fn menus(school_ctx: &SchoolContext, model: &Model) -> Node<Msg>{
         )
     ]
 }
-fn active_menu (page: &Pages, menu: &crate::model::school::SchoolMenu) -> bool{
+fn active_menu (page: &Pages, menu: &crate::model::school::SchoolMenu2) -> bool{
     match page{
         Pages::Detail(_m) => {
             menu.link == "detail"
@@ -658,12 +665,14 @@ fn posts(model: &Model, user_ctx: &Option<UserDetail>) -> Node<Msg>{
         )
     ]
 }
-fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolContext)-> Node<Msg> {
+fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolContext, lang: &I18n)-> Node<Msg> {
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
     if model.edit{
         div![
             C!{"column is-12"},
             div![C!{"field"},
-                label![C!{"label"}, "Okul Adı:"],
+                label![C!{"label"}, t!["school"]," ", t!["name"]],
                 p![C!{"control has-icons-left"},
                     input![C!{"input"},
                         attrs!{
@@ -685,7 +694,7 @@ fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &School
                         p![
                             C!{"control"},
                             a![
-                                C!{"button is-static"}, "+90"
+                                C!{"button is-static"}, t!["country-code"]
                             ]
                         ],
                         p![C!{"control has-icons-left"},
@@ -693,7 +702,7 @@ fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &School
                                 C!{"input"},
                                 attrs!{
                                     At::Type=>"tel",
-                                    At::Placeholder=>"Telefon numaranız",
+                                    At::Placeholder=> t!["mobile-number"],
                                     At::Value => &model.form.tel.as_ref().unwrap_or(&"".to_string()),
                                 },
                                 input_ev(Ev::Input, Msg::TelChanged),
@@ -711,7 +720,7 @@ fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &School
                             C!{"input"},
                             attrs!{
                                 At::Type=>"text",
-                                At::Placeholder=>"Adresi",
+                                At::Placeholder=> t!["location"],
                                 At::Value => &model.form.location.as_ref().unwrap_or(&"".to_string()),
                             },
                             input_ev(Ev::Input, Msg::LocationChanged),
@@ -724,7 +733,7 @@ fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &School
                     input![C!{"button is-primary"},
                         attrs!{
                             At::Type=>"button",
-                            At::Value=>"Güncelle",
+                            At::Value=> t!["update"],
                             At::Id=>"update_button",
                             //At::Disabled => false.as_at_value()
                         },
@@ -742,7 +751,7 @@ fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &School
         div![
             C!{"column is-12"},
             div![C!{"field"},
-                label![C!{"label"}, "Okul Adı:"],
+                label![C!{"label"}, t!["school"]," ", t!["name"]],
                 p![C!{"control has-icons-left"},
                     label![
                         C!{"label"}, &model.form.name
@@ -751,7 +760,7 @@ fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &School
             ],
             div![
                 C!{"field"},
-                label![C!{"label"}, "Telefon:"],
+                label![C!{"label"}, t!["mobile-number"]],
                 p![C!{"control"},
                     label![
                         C!{"label"}, &model.form.tel.as_ref().unwrap_or(&"".to_string())
@@ -760,7 +769,7 @@ fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &School
             ],
             div![
                 C!{"field"},
-                label![C!{"label"}, "Adresi:"],
+                label![C!{"label"}, t!["location"]],
                 p![C!{"control"},
                     label![
                         C!{"label"}, &model.form.location.as_ref().unwrap_or(&"".to_string())
@@ -772,7 +781,7 @@ fn detail_page(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &School
                     input![C!{"button is-primary"},
                         attrs!{
                             At::Type=>"button",
-                            At::Value=>"Düzenle",
+                            At::Value=> t!["edit"],
                             At::Id=>"update_button",
                             //At::Disabled => false.as_at_value()
                         },

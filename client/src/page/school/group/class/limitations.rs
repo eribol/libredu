@@ -4,6 +4,7 @@ use seed::{*, prelude::*};
 use crate::model::class::{Class, ClassAvailable, ClassContext};
 use crate::model::group::GroupContext;
 use crate::page::school::detail::SchoolContext;
+use crate::i18n::I18n;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Subject{
@@ -363,8 +364,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
     }
 }
 
-pub fn limitations(model: &Model, group_ctx: &GroupContext)->Node<Msg>{
+pub fn limitations(model: &Model, group_ctx: &GroupContext, lang: &I18n)->Node<Msg>{
     let class_ctx = group_ctx.get_class(&model.url);
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
     div![
         C!{"column"},
         div![
@@ -374,11 +377,11 @@ pub fn limitations(model: &Model, group_ctx: &GroupContext)->Node<Msg>{
                 thead![
                 tr![
                     td![
-                        "Günler/Saatler"
+                        t!["days"], t!["hours"],
                     ],
                     (0..group_ctx.group.hour as i32).map(|h|
                         td![
-                            &h+1, ". Saat",
+                            &h+1, ". ", t!["hour"],
                             {
                                 let hour_index: usize = h as usize;
                                 ev(Ev::Click, move |_event|
@@ -430,10 +433,10 @@ pub fn limitations(model: &Model, group_ctx: &GroupContext)->Node<Msg>{
         div![
             C!{"columns is-multiline"},
             div![
-                C!{"column is-1"},
+                C!{"column is-2"},
                 input![
                     attrs!{
-                        At::Type=>"button", At::Class=>"button is-primary", At::Value=>"Kaydet"
+                        At::Type=>"button", At::Class=>"button is-primary", At::Value=> t!["save"]
                     },
                     ev(Ev::Click, |event| {
                         event.prevent_default();
@@ -442,10 +445,10 @@ pub fn limitations(model: &Model, group_ctx: &GroupContext)->Node<Msg>{
                 ],
             ],
             div![
-                C!{"column is-2"},
+                C!{"column is-3"},
                 input![
                     attrs!{
-                        At::Type=>"button", At::Class=>"button is-primary", At::Value=> "Tüm ".to_owned() + &class_ctx.class.kademe.to_string() + ". sınıflara aktar"
+                        At::Type=>"button", At::Class=>"button is-primary", At::Value=> t!["save-for-all-same-grade"]
                     },
                     ev(Ev::Click, |event| {
                         event.prevent_default();
@@ -457,7 +460,7 @@ pub fn limitations(model: &Model, group_ctx: &GroupContext)->Node<Msg>{
                 C!{"column is-1"},
                 input![
                     attrs!{
-                        At::Type=>"button", At::Class=>"button is-primary", At::Value=> "Tüm sınıflara aktar"
+                        At::Type=>"button", At::Class=>"button is-primary", At::Value=> t!["save-for-all"]
                     },
                     ev(Ev::Click, |event| {
                         event.prevent_default();

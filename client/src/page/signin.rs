@@ -3,6 +3,7 @@ use seed::{*, prelude::*};
 use serde::*;
 use crate::{Context};
 use crate::model::user::UserDetail;
+use crate::i18n::{I18n, Lang};
 
 // ------ ------
 //     Init
@@ -179,18 +180,20 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
 //     View
 // ------ ------
 
-pub fn view(model: &Model)-> Node<Msg>{
+pub fn view(model: &Model, lang: &I18n)-> Node<Msg>{
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
     div![C!{"columns"},
         div![C!{"column is-2"}],
         div![C!{"column is-4"},
             form![attrs!{At::Action=>"/signin", At::Method=>"Post"},
                 div![C!{"field"},
-                    label![C!{"label"}, "Üye Ol"],
+                    label![C!{"label"}, t!["signin"]],
                     p![C!{"control has-icons-left"},
                         input![C!{"input"},
                             attrs!{
                                 At::Type=>"text",
-                                At::Placeholder=>"Adınız",
+                                At::Placeholder=>t!["your-name"],
                                 // TODO: `username` vs `email`?
                                 At::Name=>"first_name",
                                 At::Id=>"first_name"
@@ -209,7 +212,7 @@ pub fn view(model: &Model)-> Node<Msg>{
                         input![C!{"input"},
                             attrs!{
                                 At::Type=>"text",
-                                At::Placeholder=>"Soyadınız",
+                                At::Placeholder=> t!["your-surname"],
                                 // TODO: `username` vs `email`?
                                 At::Name=>"last_name",
                                 At::Id=>"last_name"
@@ -231,7 +234,7 @@ pub fn view(model: &Model)-> Node<Msg>{
                             p![
                                 C!{"control"},
                                 a![
-                                    C!{"button is-static"}, "+90"
+                                    C!{"button is-static"}, t!["country-code"]
                                 ]
                             ],
                             p![C!{"control has-icons-left"},
@@ -239,7 +242,7 @@ pub fn view(model: &Model)-> Node<Msg>{
                                     C!{"input"},
                                     attrs!{
                                         At::Type=>"tel",
-                                        At::Placeholder=>"Telefon numaranız",
+                                        At::Placeholder=> t!["mobile-number"],
                                         // TODO: `username` vs `email`?
                                         At::Name=>"tel",
                                         At::Id=>"tel"
@@ -259,7 +262,7 @@ pub fn view(model: &Model)-> Node<Msg>{
                         input![C!{"input"},
                             attrs!{
                                 At::Type=>"text",
-                                At::Placeholder=>"E-posta adresiniz",
+                                At::Placeholder=> t!["your-email"],
                                 // TODO: `username` vs `email`?
                                 At::Name=>"email",
                                 At::Id=>"email"
@@ -281,11 +284,11 @@ pub fn view(model: &Model)-> Node<Msg>{
                                 attrs!{At::Name=>"gender", At::Id=>"gender"},
                                 option![
                                     attrs!{At::Value=>"E"},
-                                    "Erkek"
+                                    t!["male"]
                                 ],
                                 option![
                                     attrs!{At::Value=>"K"},
-                                    "Kadın"
+                                    t!["female"]
                                 ],
                                 input_ev(Ev::Change, Msg::GenderChanged),
                             ]
@@ -297,7 +300,7 @@ pub fn view(model: &Model)-> Node<Msg>{
                         input![C!{"input"},
                             attrs!{
                                 At::Type=>"password",
-                                At::Placeholder=>"Şifreniz",
+                                At::Placeholder=> t!["password"],
                                 // TODO: `username` vs `password`?
                                 At::Name=>"password1",
                                 At::Id=>"password1"
@@ -313,7 +316,7 @@ pub fn view(model: &Model)-> Node<Msg>{
                         input![C!{"input"},
                             attrs!{
                                 At::Type=>"password",
-                                At::Placeholder=>"Şifreniz(tekrar)",
+                                At::Placeholder=>t!["password"],
                                 // TODO: `username` vs `password`?
                                 At::Name=>"password2",
                                 At::Id=>"password2"
@@ -327,11 +330,13 @@ pub fn view(model: &Model)-> Node<Msg>{
                     ]
                 ],
                 div![C!{"field"},
-                    p![C!{"control has-icons-left"},
-                        input![C!{"button is-primary"},
+                    p![
+                        C!{"control has-icons-left"},
+                        input![
+                            C!{"button is-primary"},
                             attrs!{
                                 At::Type=>"button",
-                                At::Value=>"Giriş Yap",
+                                At::Value=> t!["signin"],
                                 At::Id=>"signin_button"
                             },
                             ev(Ev::Click, |event| {
@@ -339,7 +344,7 @@ pub fn view(model: &Model)-> Node<Msg>{
                                 Msg::Submit
                             })
                         ],
-                        span![C!{"icon is-small is-left"}, i![C!{"fa fa-envelop"}]]
+                        //span![C!{"icon is-small is-left"}, i![C!{"fa fa-envelop"}]]
                     ]
                 ],
                 p![

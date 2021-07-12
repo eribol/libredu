@@ -57,32 +57,37 @@ impl Default for UpdateSchoolForm{
         }
     }
 }
+use crate::i18n::{I18n, Lang};
+
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
-pub struct SchoolMenu<'a>{
-    pub link: &'a str,
-    pub name: &'a str,
+pub struct SchoolMenu2{
+    pub link: String,
+    pub name: String,
 }
 
-pub const LIST: &[SchoolMenu] = &[
-
-        SchoolMenu {
-            link: "",
-            name: "Anasayfa"
+pub(crate) fn create_menu(lang: &I18n) -> Vec<SchoolMenu2>{
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
+    vec![
+        SchoolMenu2 {
+            link: String::from(""),
+            name: String::from(t!["homepage"])
         },
-        SchoolMenu {
-            link: "detail",
-            name: "Okul Bilgiler"
+        SchoolMenu2 {
+            link: String::from("detail"),
+            name: String::from(t!["detail-page"])
         },
-        SchoolMenu {
-            link: "students",
-            name: "Öğrenciler"
+        SchoolMenu2 {
+            link: String::from("students"),
+            name: String::from(t!["students"])
         },
-        SchoolMenu {
-            link: "subjects",
-            name: "Dersler"
+        SchoolMenu2 {
+            link: String::from("subjects"),
+            name: String::from(t!["subjects-page"])
         },
-        SchoolMenu {
-            link: "class_rooms",
-            name: "Derslikler"
-        }
-];
+        SchoolMenu2 {
+            link: String::from("class_rooms"),
+            name: String::from(t!["class_rooms-page"])
+        },
+    ]
+}

@@ -2,6 +2,7 @@ use seed::{*, prelude::*};
 use serde::*;
 use crate::page::school::detail::SchoolContext;
 use crate::model::student::Student;
+use crate::i18n::I18n;
 
 
 #[derive(Debug, Default, Clone)]
@@ -162,12 +163,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
     }
 }
 
-fn add(model: &Model, _ctx_school: &SchoolContext)-> Node<Msg>{
+fn add(model: &Model, _ctx_school: &SchoolContext, lang: &I18n)-> Node<Msg>{
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
     div![
         C!{"columns"},
         div![C!{"column is-6"},
             //label!["Dosyadan öğrencileri ekle"],
-            label!["Dosyadan yükle:", attrs! {At::For => "form-file" }],
+            label![t!["load-from-file"], attrs! {At::For => "form-file" }],
             div![
                 C!{"field"},
                 p![
@@ -194,7 +197,7 @@ fn add(model: &Model, _ctx_school: &SchoolContext)-> Node<Msg>{
                     input![C!{"button is-primary"},
                         attrs!{
                             At::Type=>"button",
-                            At::Value=>"Yakında",
+                            At::Value=> t!["soon"],
                             //At::Id=>"login_button",
                             //At::Disabled => true.as_at_value()
                         },
@@ -210,7 +213,7 @@ fn add(model: &Model, _ctx_school: &SchoolContext)-> Node<Msg>{
             C!{"column is-6"},
             label!["Öğrenci bilgilerini girerek öğrenci ekle"],
             div![C!{"field"},
-                label![C!{"label"}, "Adı"],
+                label![C!{"label"}, t!["name"]],
                 p![C!{"control"},
                     input![C!{"input"},
                         attrs!{
@@ -223,7 +226,7 @@ fn add(model: &Model, _ctx_school: &SchoolContext)-> Node<Msg>{
                 ]
             ],
             div![C!{"field"},
-                label![C!{"label"}, "Soyadı"],
+                label![C!{"label"}, t!["lastname"]],
                 p![C!{"control"},
                     input![C!{"input"},
                         attrs!{
@@ -234,7 +237,7 @@ fn add(model: &Model, _ctx_school: &SchoolContext)-> Node<Msg>{
                 ]
             ],
             div![C!{"field"},
-                label![C!{"label"}, "Numarası"],
+                label![C!{"label"}, t!["number"]],
                 p![C!{"control"},
                     input![C!{"input"},
                         attrs!{
@@ -244,7 +247,7 @@ fn add(model: &Model, _ctx_school: &SchoolContext)-> Node<Msg>{
                         },
                         input_ev(Ev::Change, Msg::NumberChanged)
                     ],
-                    "Kullanılmayan numaralar:",
+                    t!["unused-numbers"],
                     model.unused_numbers.iter().map(|n|
                         label![n.to_string(), ", "]
                     )
@@ -255,7 +258,7 @@ fn add(model: &Model, _ctx_school: &SchoolContext)-> Node<Msg>{
                     input![C!{"button is-primary"},
                         attrs!{
                             At::Type=>"button",
-                            At::Value=>"Ekle",
+                            At::Value=> t!["add"],
                             At::Id=>"login_button"
                         },
                         ev(Ev::Click, |event| {
@@ -269,11 +272,13 @@ fn add(model: &Model, _ctx_school: &SchoolContext)-> Node<Msg>{
 
     ]
 }
-pub fn view(model: &Model, ctx_school: &SchoolContext)-> Node<Msg>{
+pub fn view(model: &Model, ctx_school: &SchoolContext, lang: &I18n)-> Node<Msg>{
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
     div![
         div![
             //C!{"columns"},
-            add(model, ctx_school)
+            add(model, ctx_school, lang)
         ],
         div![C!{"columns"},
             div![
@@ -284,15 +289,15 @@ pub fn view(model: &Model, ctx_school: &SchoolContext)-> Node<Msg>{
                         tr![
                             th![
                                 attrs!{At::Scope=>"col"},
-                                "Adı"
+                                t!["name"]
                             ],
                             th![
                                 attrs!{At::Scope=>"col"},
-                                "Soyadı"
+                                t!["lastname"]
                             ],
                             th![
                                 attrs!{At::Scope=>"col"},
-                                "Numarası"
+                                t!["number"]
                             ],
                             th![
                                 attrs!{At::Scope=>"col"},
@@ -315,7 +320,7 @@ pub fn view(model: &Model, ctx_school: &SchoolContext)-> Node<Msg>{
                                     ],
                                     td![
                                         button![
-                                            "Sil",
+                                            t!["delete"],
                                             {
                                                 let id = s.id;
                                                 ev(Ev::Click, move |_event| {

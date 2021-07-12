@@ -5,6 +5,9 @@ use crate::{Context, STORAGE_KEY};
 use crate::model::school::{SchoolDetail};
 use crate::model::user::UserDetail;
 use crate::page::school::detail::SchoolContext;
+use crate::i18n::{I18n, Lang};
+use crate::{create_t, with_dollar_sign};
+
 //use seed::app::subs::url_requested::UrlRequest;
 
 // ------ ------
@@ -121,18 +124,21 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx: &
 //     View
 // ------ ------
 
-pub fn view(model: &Model, ctx: &Context)-> Node<Msg>{
+pub fn view(model: &Model, ctx: &Context, lang: &I18n)-> Node<Msg>{
+    create_t![lang];
     div![C!{"columns"},
         div![C!{"column is-2"}],
         div![C!{"column is-4"},
-            form![attrs!{At::Action=>"/login", At::Method=>"Post"},
+            form![
+                attrs!{At::Action=>"/login", At::Method=>"Post"},
+                C!["box"],
                 div![C!{"field"},
-                    label![C!{"label"}, "Giriş Yap"],
+                    label![C!{"label"}, t!["your-email"]],
                     p![C!{"control has-icons-left"},
                         input![C!{"input"},
                             attrs!{
                                 At::Type=>"text",
-                                At::Placeholder=>"E-posta veya telefon numarası",
+                                At::Placeholder=> t!["your-email"],
                                 // TODO: `username` vs `email`?
                                 At::Name=>"email",
                                 At::Id=>"email"
@@ -148,7 +154,7 @@ pub fn view(model: &Model, ctx: &Context)-> Node<Msg>{
                         input![C!{"input"},
                             attrs!{
                                 At::Type=>"password",
-                                At::Placeholder=>"Şifreniz",
+                                At::Placeholder=> t!["password"],
                                 // TODO: `username` vs `password`?
                                 At::Name=>"password",
                                 At::Id=>"password"
@@ -164,7 +170,7 @@ pub fn view(model: &Model, ctx: &Context)-> Node<Msg>{
                         input![C!{"button is-primary"},
                             attrs!{
                                 At::Type=>"button",
-                                At::Value=>"Giriş Yap",
+                                At::Value=>t!["login"]
                                 At::Id=>"login_button"
                             },
                             ev(Ev::Click, |event| {
@@ -175,15 +181,15 @@ pub fn view(model: &Model, ctx: &Context)-> Node<Msg>{
                     ]
                 ],
                 div![C!{"field"},
-                    "Üye olmak için",
+                    t!["want-to-join"], " ",
                     a![attrs!{ At::Href => crate::Urls::new(&ctx.base_url).signin() },
-                        " tıklayınız"
+                        t!["click"]
                     ]
                 ],
                 div![C!{"field"},
-                    "Şifrenizi mi unuttunuz? ",
+                    t!["forget-password"], " ",
                     a![attrs!{ At::Href => crate::Urls::new(&ctx.base_url).reset() },
-                        " tıklayınız"
+                        t!["click"]
                     ]
                 ]
             ]

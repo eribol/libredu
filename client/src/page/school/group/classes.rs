@@ -3,6 +3,7 @@ use crate::model::class::{Class, ClassContext};
 use crate::page::school::group::class::home;
 use crate::model::class::{NewClass};
 use crate::page::school::detail::SchoolContext;
+use crate::i18n::I18n;
 
 #[derive(Default, Clone)]
 pub struct Model{
@@ -207,10 +208,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
     }
 }
 
-pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
+pub fn view(model: &Model, school_ctx: &SchoolContext, lang: &I18n)-> Node<Msg>{
     let groups = school_ctx.get_groups();
     let group_ctx = school_ctx.get_group(&model.url);
-    use crate::model::class::CLASS_MENU;
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
     div![
         C!{"columns"},
         //div![
@@ -225,15 +227,15 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                             tr![
                                 th![
                                     attrs!{At::Scope=>"col"},
-                                    "Kademe"
+                                    t!["class-grade"]
                                 ],
                                 th![
                                     attrs!{At::Scope=>"col"},
-                                    "Şube"
+                                    t!["class-branch"]
                                 ],
                                 th![
                                     attrs!{At::Scope=>"col"},
-                                    "Grup"
+                                    t!["process"]
                                 ]
                             ]
                         ],
@@ -246,13 +248,13 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                                     C!{"table-light"},
                                     td![
                                         input![
-                                            attrs!{At::Type=>"text", At::Placeholder=>"Kademe", At::Value=>&model.form.kademe},
+                                            attrs!{At::Type=>"text", At::Placeholder=>t!["class-grade"], At::Value=>&model.form.kademe},
                                             input_ev(Ev::Input, Msg::ChangeKademe)
                                         ]
                                     ],
                                     td![
                                         input![
-                                            attrs!{At::Type=>"text", At::Placeholder=>"Şube", At::Value=>&model.form.sube},
+                                            attrs!{At::Type=>"text", At::Placeholder=>t!["class-branch"], At::Value=>&model.form.sube},
                                             input_ev(Ev::Input, Msg::ChangeSube)
                                         ]
                                     ],
@@ -260,7 +262,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                                         input![C!{"button is-primary"},
                                             attrs!{
                                                 At::Type=>"button",
-                                                At::Value=> "Sınıfı Ekle",
+                                                At::Value=> t!["add"],
                                                 At::Id=>"login_button"
                                             },
                                             ev(Ev::Click, |event| {
@@ -295,7 +297,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                                             button![
                                                 C!{"button"},
                                                 //attrs!{At::Value=>&c.1.id},
-                                                "Sil",
+                                                t!["delete"],
                                                 {
                                                     let id = c.1.class.id;
                                                     ev(Ev::Click, move |_event| {
@@ -313,6 +315,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
             },
             Pages::Class(m) => {
                 let class_ctx = group_ctx.get_class(&model.url);
+                use crate::model::class::create_menu;
                 div![
                     C!{"column"},
                             div![
@@ -327,7 +330,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                                             attrs!{
                                                 At::Href=> format!("/schools/{}/groups/{}/classes", &school_ctx.school.id, &group_ctx.group.id)
                                             },
-                                            "<--Sınıflar",
+                                            "<--",t!["classes"],
                                         ]
                                     ],
                                     match group_ctx.get_prev_class(&m.url){
@@ -337,7 +340,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                                                     attrs!{
                                                         At::Href=> format!("/schools/{}/groups/{}/classes/{}/{}", &school_ctx.school.id, &group_ctx.group.id, class.class.id, &m.tab)
                                                     },
-                                                    "Önceki Sınıf"
+                                                    t!["previous-class"]
                                                 ]
                                             ]
                                         },
@@ -355,7 +358,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                                                     attrs!{
                                                         At::Href=> format!("/schools/{}/groups/{}/classes/{}/{}", &school_ctx.school.id, &group_ctx.group.id, &class.class.id, &m.tab)
                                                     },
-                                                    "Sonraki Sınıf",
+                                                    t!["next-class"],
                                                 ]
                                             ]
                                         },
@@ -372,14 +375,14 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                         div![
                             C!{"column tabs is-centered"},
                             ul![
-                                CLASS_MENU.iter().map(|menu|
+                                create_menu(lang).iter().map(|menu|
                                     li![
                                         if m.tab == menu.link{
                                         C!{"is-active"}} else {C!{""}},
                                         a![
-                                            menu.name,
+                                            &menu.name,
                                             attrs!{
-                                                At::Href => format!("/schools/{}/groups/{}/classes/{}/{}", &school_ctx.school.id, &group_ctx.group.id, &class_ctx.class.id, menu.link)
+                                                At::Href => format!("/schools/{}/groups/{}/classes/{}/{}", &school_ctx.school.id, &group_ctx.group.id, &class_ctx.class.id, &menu.link)
                                             }
                                         ]
                                     ]
@@ -389,7 +392,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                     ],
                     div![
                         C!{"columns"},
-                        class_detail(m,school_ctx)
+                        class_detail(m,school_ctx, lang)
                     ]
                 ]
             }
@@ -401,13 +404,13 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
     ]
 }
 
-fn class_detail(c_model: &home::Model, school_ctx: &SchoolContext) ->Node<Msg>{
+fn class_detail(c_model: &home::Model, school_ctx: &SchoolContext, lang: &I18n) ->Node<Msg>{
     let group_ctx = school_ctx.get_group(&c_model.url);
     let class_ctx = school_ctx.get_group(&c_model.url).get_class(&c_model.url);
     div![
         C!{"column is-12"},
         div![
-            home::view(c_model, school_ctx).map_msg(Msg::Class),
+            home::view(c_model, school_ctx, lang).map_msg(Msg::Class),
         ]
     ]
 }

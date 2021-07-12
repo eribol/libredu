@@ -3,6 +3,7 @@ use seed::{*, prelude::*};
 use crate::page::school::detail::SchoolContext;
 use chrono::NaiveTime;
 use crate::model::group;
+use crate::i18n::I18n;
 
 #[derive(Debug, Clone,Deserialize, Serialize)]
 pub struct Form{
@@ -104,21 +105,23 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, group_
     }
 }
 
-pub fn view(model: &Model) -> Node<Msg>{
+pub fn view(model: &Model, lang: &I18n) -> Node<Msg>{
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
     div![
         table![
             C!{"table"},
             thead![
                 tr![
-                    th!["Saat"],
-                    th!["Giriş"],
-                    th!["Çıkış"]
+                    th![t!["hour"]],
+                    th![t!["schedules-start"]],
+                    th![t!["schedules-end"]]
                 ]
             ],
             tbody![
                 model.form.iter().map(|h|
                     tr![
-                        td![(h.hour).to_string(), ". Saat"],
+                        td![(h.hour).to_string(), ". ", t!["hour"]],
                         td![
                             input![
                                 attrs!{
@@ -150,7 +153,7 @@ pub fn view(model: &Model) -> Node<Msg>{
         input![
             attrs!{
                 At::Type => "button",
-                At::Value => "Saatleri Güncelle"
+                At::Value => t!["update"]
             },
             C!{"button is-secondary"},
             ev(Ev::Click, |event| {

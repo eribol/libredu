@@ -390,13 +390,13 @@ fn classes_available(
     hour: usize,
     day: i32,
     cat: &[ClassAvailable]) -> bool {
-    let classes_availables: Vec<(usize, ClassAvailable)> = cat.iter().cloned()
+    let classes_availables = cat.iter().cloned()
         .enumerate()
-        .filter(|c| act.classes.iter().any(|cc| cc == &c.1.class_id) && c.1.day == day).collect();
-    if hour + act.clone().hour as usize <= classes_availables[0].1.hours.len() {
+        .find(|c| act.classes.iter().any(|cc| cc == &c.1.class_id) && c.1.day == day).unwrap();
+    if hour + act.clone().hour as usize <= classes_availables.1.hours.len() {
         //Look for activity hours. If same place/places is/are available for teacher and class
         return (hour..hour + act.hour as usize)
-            .all(|h|classes_availables.iter().all(|ca| ca.1.hours[h]))
+            .all(|h|classes_availables.1.hours[h])
     }
     false
 }

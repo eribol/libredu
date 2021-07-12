@@ -7,6 +7,7 @@ use crate::model::{activity, subject};
 use crate::page::school::detail::SchoolContext;
 use web_sys::{HtmlOptionElement, HtmlSelectElement};
 use crate::model::activity::FullActivity;
+use crate::i18n::I18n;
 
 #[derive()]
 pub enum Msg{
@@ -217,14 +218,17 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
         }
     }
 }
-pub fn activities(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
+
+pub fn activities(model: &Model, school_ctx:&SchoolContext, lang: &I18n)->Node<Msg>{
     let group_ctx = school_ctx.get_group(&model.url);
     let class_ctx = group_ctx.get_class(&model.url);
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
     div![
         C!{"columns"},
         div![
             C!{"column is-7"},
-            "Toplam Ders saati: ", &class_ctx.activities.as_ref().map_or(0.to_string(), |activities| activities.iter().fold(0, |acc, a| acc+a.hour).to_string()),
+            t!["total-activity-hour"], " ", &class_ctx.activities.as_ref().map_or(0.to_string(), |activities| activities.iter().fold(0, |acc, a| acc+a.hour).to_string()),
             hr![],
             table![
                 C!{"table table-hover"},
@@ -232,19 +236,19 @@ pub fn activities(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
                     tr![
                         th![
                             attrs!{At::Scope=>"col"},
-                            "Öğretmen"
+                            t!["activity-teachers"]
                         ],
                         th![
                             attrs!{At::Scope=>"col"},
-                            "Ders"
+                            t!["activity-subject"]
                         ],
                         th![
                             attrs!{At::Scope=>"col"},
-                            "Süre"
+                            t!["activity-hour"]
                         ],
                         th![
                             attrs!{At::Scope=>"col"},
-                            "İşlem"
+                            t!["process"]
                         ]
                     ]
                 ],
@@ -268,7 +272,7 @@ pub fn activities(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
                                 ],
                                 td![
                                     a![
-                                        "Sil",
+                                        t!["delete"],
                                         //attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Sil"},
                                         {
                                             let id = a.id;
@@ -288,13 +292,9 @@ pub fn activities(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
             C!{"column"},
             div![
                 C!{"field"},
-                label!["Aktivite Öğretmenini Seçin:"]
-            ],
-            div![
-                C!{"field"},
                 label![
                     C!{"label"},
-                    "Aktivite sınıfını/sınıflarını seçin"
+                    t!["choose-activity-teachers"]
                 ],
                 p![
                     C!{"control"},
@@ -327,14 +327,17 @@ pub fn activities(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
             ],
             div![
                 C!{"field"},
-                label!["Aktivite Dersini Seçin:"]
+                label![
+                    C!["label"],
+                    t!["choose-activity-subject"]
+                ]
             ],
             div![
                 C!{"field"},
                 C!{"select"},
                 school_ctx.subjects.as_ref().map_or(select![], |subjects|
                     select![
-                        attrs!{At::Name=>"teacher"},
+                        attrs!{At::Name=>"subject"},
                         subjects.iter().map(|s|
                             option![
                                 attrs!{At::Value=>&s.id},
@@ -347,7 +350,10 @@ pub fn activities(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
             ],
             div![
                 C!{"field"},
-                label!["Aktivite Saat Sayısını Seçin:"]
+                label![
+                    C!["label"],
+                    t!["choose-activity-hour"]
+                ]
             ],
             div![
                 C!{"field"},
@@ -361,11 +367,17 @@ pub fn activities(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
                 C!{"field"},
                 input![
                 //C!{"butt"},
-                    attrs!{At::Type=>"button", At::Class=>"button", At::Value=>"Ekle"},
+                    attrs!{At::Type=>"button", At::Class=>"button", At::Value=> t!["add"]},
                     ev(Ev::Click, |event| {
                         event.prevent_default();
                         Msg::SubmitActivity
                     })
+                ]
+            ],
+            div![
+                C!{"field"},
+                label![
+                    t!["activity-info"]
                 ]
             ]
         ]

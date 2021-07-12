@@ -6,6 +6,7 @@ use crate::page::school::group::classes;
 //use crate::page::school::group::teachers;
 use crate::model::class::{Class, ClassContext};
 use crate::model::group;
+use crate::i18n::I18n;
 
 #[derive(Clone)]
 pub enum Pages{
@@ -50,7 +51,17 @@ pub struct Menu{
     link: String,
     title: String
 }
-
+fn create_menu(lang: &I18n, group_name: &String) -> Vec<Menu>{
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
+    vec![
+        Menu { link: "".to_string(), title: group_name.clone() },
+        Menu { link: "schedules".to_string(), title: String::from(t!["group-schedules"]) },
+        Menu { link: "classes".to_string(), title: String::from(t!["group-classes"]) },
+        Menu { link: "teachers".to_string(), title: String::from(t!["group-teachers"]) },
+        Menu { link: "timetables".to_string(), title: String::from(t!["group-timetables"]) },
+    ]
+}
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub struct Form{
     name: String,
@@ -85,14 +96,6 @@ pub fn init(url: Url, school_ctx: &mut SchoolContext, orders: &mut impl Orders<M
     let group_ctx = &mut school_ctx.get_mut_group(&url);
     model.form.hour = group_ctx.group.hour;
     model.form.name = group_ctx.group.name.clone();
-    model.menu = vec![
-        Menu { link: "".to_string(), title: group_ctx.group.name.to_string() },
-        Menu { link: "schedules".to_string(), title: "Zaman Çizelgesi".to_string() },
-        Menu { link: "classes".to_string(), title: "Sınıflar".to_string() },
-        Menu { link: "teachers".to_string(), title: "Öğretmenler".to_string() },
-        Menu { link: "common_exam".to_string(), title: "Ortak Sınav".to_string() },
-        Menu { link: "timetables".to_string(), title: "Ders Programı".to_string() },
-    ];
     orders.send_msg(Msg::Loading);
     model
 }
@@ -264,7 +267,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
          */
     }
 }
-pub fn view(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
+pub fn view(model: &Model, school_ctx: &SchoolContext, lang: &I18n)->Node<Msg>{
+    let group_ctx = school_ctx.get_group(&model.url);
     div![
         C!{"column"},
         div![
@@ -275,7 +279,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
                 nav![
                     C!{"breadcrumb is-centered"},
                     ul![
-                        model.menu.iter().map(|m|
+                        create_menu(lang, &group_ctx.group.name).iter().map(|m|
                             li![
                                 a![
                                     attrs!{
@@ -290,9 +294,9 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
             ]
         ],
         match &model.page{
-            Pages::Home => home(model),
-            Pages::Schedules(m) => schedules::view(&m).map_msg(Msg::Schedules),
-            Pages::Classes(m) => classes::view(&m, &school_ctx).map_msg(Msg::Classes),
+            Pages::Home => home(model, lang),
+            Pages::Schedules(m) => schedules::view(&m, lang).map_msg(Msg::Schedules),
+            Pages::Classes(m) => classes::view(&m, &school_ctx, lang).map_msg(Msg::Classes),
             Pages::Teachers(m) => teachers::view(&m, school_ctx).map_msg(Msg::Teachers),
             //Pages::CommonExam(m) => common_exam::view(&m, &ctx_group).map_msg(Msg::CommonExam),
             Pages::Timetables(m) => timetable::view(&m, school_ctx).map_msg(Msg::Timetables),
@@ -304,14 +308,16 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
     ]
 }
 
-fn home(model: &Model) -> Node<Msg>{
+fn home(model: &Model, lang: &I18n) -> Node<Msg>{
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
     div![
         C!{"columns"},
         div![
             C!{"column is-half is-offset-1"},
             p![
                 C!{"control"},
-                label![C!{"label"}, "Grup Adı:"],
+                label![C!{"label"}, t!["group-name"]],
                 input![
                     C!{"input"},
                     attrs!{
@@ -324,7 +330,7 @@ fn home(model: &Model) -> Node<Msg>{
             ],
             p![
                 C!{"control"},
-                label![C!{"label"}, "Grup Günlük Ders Saati Sayısı:"],
+                label![C!{"label"}, t!["group-hour"]],
                 input![
                     C!{"input"},
                     attrs!{
@@ -338,7 +344,7 @@ fn home(model: &Model) -> Node<Msg>{
                 input![C!{"button is-primary"},
                     attrs!{
                         At::Type=>"button",
-                        At::Value=>"Güncelle"
+                        At::Value=> t!["update"]
                     },
                     ev(Ev::Click, |event| {
                         event.prevent_default();
@@ -348,14 +354,14 @@ fn home(model: &Model) -> Node<Msg>{
             ],
             p![
                 C!{"is-dangerous"},
-                "Dikkat! Grubun günlük ders saatini değiştirdiğinizde, sınıfların ve öğretmenlerin kısıtlamaları da değişir. Hatalarla karşılaşmamak için, saat sayısını güncelledikten sonra kısıtlamalara göz atın."
+                t!["group-dangerous-info"]
             ],
             p![
                 C!{"control"},
                 input![C!{"button is-danger"},
                     attrs!{
                         At::Type=>"button",
-                        At::Value=>"Grubu Sil(Dikkat! Gruba bağlı tüm veriler silinir)"
+                        At::Value=> t!["group-delete"]
                     },
                     ev(Ev::Click, |event| {
                         event.prevent_default();

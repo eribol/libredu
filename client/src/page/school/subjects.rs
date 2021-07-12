@@ -2,28 +2,36 @@ use seed::{*, prelude::*};
 use crate::model::subject::{Subject, NewSubject};
 //use crate::{Context, Urls};
 use crate::page::school::detail::{SchoolContext};
+use crate::i18n::I18n;
 
 #[derive(Debug, Default, Clone)]
 pub struct Model{
     form: NewSubject,
     subjects: Vec<Subject>,
-    filtered_subjects: Vec<Subject>
+    filtered_subjects: Vec<Subject>,
+    opt: bool,
+    grade: String
 }
 
 pub fn init(orders: &mut impl Orders<Msg>, ctx_school: &SchoolContext)-> Model {
     let mut model = Model::default();
-    orders.perform_cmd({
-        let request = Request::new(format!("/api/schools/{}/subjects", ctx_school.school.id))
-            .method(Method::Get);
-        async { Msg::FetchSubjects(async {
-            request
-                .fetch()
-                .await?
-                .check_status()?
-                .json()
-                .await
-        }.await)}
-    });
+    if let Some(subjects) = &ctx_school.subjects{
+        orders.send_msg(Msg::Filtering);
+    }
+    else {
+        orders.perform_cmd({
+            let request = Request::new(format!("/api/schools/{}/subjects", ctx_school.school.id))
+                .method(Method::Get);
+            async { Msg::FetchSubjects(async {
+                request
+                    .fetch()
+                    .await?
+                    .check_status()?
+                    .json()
+                    .await
+            }.await)}
+        });
+    }
     model.form.school = ctx_school.school.id;
     model
 }
@@ -39,7 +47,8 @@ pub enum Msg{
     FilterOptional(String),
     FetchSubjects(fetch::Result<Vec<Subject>>),
     DelSubject(i32),
-    FetchDelSubject(fetch::Result<i32>)
+    FetchDelSubject(fetch::Result<i32>),
+    Filtering
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx_school: &mut SchoolContext) {
@@ -79,30 +88,29 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx_sc
                 if let Some(subjects) = &mut ctx_school.subjects{
                     subjects.insert(0, s);
                 }
+                else {
+                    ctx_school.subjects = Some(vec![s])
+                }
             }
         }
         Msg::FetchSubjects(subjects) => {
             if let Ok(s) = subjects {
                 ctx_school.subjects = Some(s.clone());
-                model.subjects = s;
-                model.filtered_subjects = model.subjects.clone();
+                model.filtered_subjects = s;
             }
         }
         Msg::FilterGrade(g) => {
-            if !g.is_empty() {
-                model.filtered_subjects = model.subjects.clone();
-                model.filtered_subjects = model.filtered_subjects.iter().cloned().filter(|s| s.kademe == g).collect()
-            }
-            else {
-                model.filtered_subjects = model.subjects.clone()
-            }
+            model.grade = g;
+            orders.send_msg(Msg::Filtering);
         }
         Msg::FilterOptional(_) => {
-            if !model.filtered_subjects.is_empty() && model.filtered_subjects[0].optional{
-                model.filtered_subjects = model.subjects.iter().cloned().filter(|s| !s.optional && s.kademe == model.filtered_subjects[0].kademe).collect()
-            }
-            else {
-                model.filtered_subjects = model.filtered_subjects.iter().cloned().filter(|s| s.optional).collect()
+            model.opt = !model.opt;
+            orders.send_msg(Msg::Filtering);
+        }
+        Msg::Filtering => {
+            if let Some(subjects) = &ctx_school.subjects{
+                model.filtered_subjects = subjects.clone().into_iter().filter(|s| s.optional == model.opt && s.kademe.contains(&model.grade)).collect();
+                log!(&model);
             }
         }
         Msg::DelSubject(id) => {
@@ -127,14 +135,16 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, ctx_sc
     }
 }
 
-pub fn view(model: &Model) -> Node<Msg> {
+pub fn view(model: &Model, lang: &I18n) -> Node<Msg> {
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
     div![
         div![
             C!{"field"},
             p![
                 label![
                     C!{"label"},
-                    "Ders Sınıf Kademesi:"
+                    t!["subject-class-grade"]
                 ],
                 input![
                     C!{"input"},
@@ -147,7 +157,7 @@ pub fn view(model: &Model) -> Node<Msg> {
             p![
                 label![
                     C!{"label"},
-                    "Dersin Adı:"
+                    t!["subject-name"]
                 ],
                 input![
                     C!{"input"},
@@ -160,7 +170,7 @@ pub fn view(model: &Model) -> Node<Msg> {
             p![
                 label![
                     C!{"label"},
-                    "Seçmeli:"
+                    t!["subject-optional"]
                 ],
                 input![
                     C!{"checkbox"},
@@ -177,7 +187,7 @@ pub fn view(model: &Model) -> Node<Msg> {
                     C!{"button is-primary"},
                     attrs!{
                         At::Type=>"button",
-                        At::Value=>"Ekle",
+                        At::Value=> t!["add"],
                         At::Id=>"login_button"
                     },
                     ev(Ev::Click, |event| {
@@ -191,7 +201,7 @@ pub fn view(model: &Model) -> Node<Msg> {
             C!{"field"},
             p![
                 label![
-                    "Kademeye göre filtrele"
+                    t!["filter-subject-grade"]
                 ]
             ],
             p![
@@ -204,7 +214,7 @@ pub fn view(model: &Model) -> Node<Msg> {
             C!{"field"},
             p![
                 label![
-                    "Seçmeli durumuna göre filtrele"
+                    t!["filter-subject-optional"]
                 ]
             ],
             p![
@@ -223,13 +233,13 @@ pub fn view(model: &Model) -> Node<Msg> {
                 thead![
                     tr![
                         th![
-                            "Dersin Adı"
+                            t!["subject-name"]
                         ],
                         th![
-                            "Kademesi"
+                            t!["subject-class-grade"]
                         ],
                         th![
-                            "Seçmeli"
+                            t!["subject-optional"]
                         ],
                         th![
                             "İşlem"
@@ -261,7 +271,7 @@ pub fn view(model: &Model) -> Node<Msg> {
                             td![
                                 button![
                                     C!{"button"},
-                                    "Sil",
+                                    t!["delete"],
                                     {
                                         let id = s.id;
                                         ev(Ev::Click, move |_event| {

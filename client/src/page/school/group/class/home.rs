@@ -4,6 +4,7 @@ use crate::model::class::{Class, ClassContext};
 use crate::page::school::detail::SchoolContext;
 use crate::page::school::group::class::{activities, limitations, timetables, students};
 use crate::model::group::ClassGroups;
+use crate::i18n::I18n;
 
 //use crate::page::school::class::class::Pages::Limitations;
 
@@ -132,51 +133,18 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
     }
 }
 
-pub fn view(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
+pub fn view(model: &Model, school_ctx: &SchoolContext, lang: &I18n)->Node<Msg>{
     let group_ctx = school_ctx.get_group(&model.url);
     let class_ctx = school_ctx.get_group(&model.url).get_class(&model.url);
     div![
         C!{"columns"},
-        /*
-        div![
-            C!{"column is-2 is-hidden-mobile is-hidden-tablet"},
-            div![
-                table![
-                    C!{"table table-hover"},
-                    thead![
-                        tr![
-                            th![
-                                attrs!{At::Scope=>"col"},
-                                "Sınıf"
-                            ]
-                        ]
-                    ],
-                    tbody![
-                        group_ctx.get_classes().iter().enumerate().map(|c|
-                            tr![
-                                C!{"table-light"},
-                                td![
-                                    a![
-                                        &c.1.class.kademe.to_string(), "/", &c.1.class.sube, " Sınıfı",
-                                        attrs!{
-                                            At::Href=> format!("/schools/{}/groups/{}/classes/{}/{}", &school_ctx.school.id, &group_ctx.group.id, c.1.class.id, &model.tab)
-                                        }
-                                    ]
-                                ]
-                            ]
-                        )
-                    ]
-                ]
-            ]
-        ],
-         */
         match &model.page{
-            Pages::Home => home(&class_ctx),
+            Pages::Home => home(&class_ctx, lang),
             Pages::Activity(m) => {
-                activities::activities(m, school_ctx).map_msg(Msg::Activity)
+                activities::activities(m, school_ctx, lang).map_msg(Msg::Activity)
             }
             Pages::Limitations(m) => {
-                limitations::limitations(m, group_ctx).map_msg(Msg::Limitations)
+                limitations::limitations(m, group_ctx, lang).map_msg(Msg::Limitations)
             }
             Pages::NotFound => {
                 div![]
@@ -188,50 +156,15 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
                 students::view(m, school_ctx).map_msg(Msg::Students)
             }
         }
-        /*
-        match &model.page{
-            Pages::Students(m)=>{
-                div![
-                    div![
-                        C!{"columns"},
-                        div![
-                            C!{"column is-12"},
-                            div![
-                                C!{"tabs is-centered"},
-                                students::tabs(m, ctx_school, ctx_group).map_msg(Msg::Students),
-                            ]
-                        ]
-                    ],
-                    students::view(m, ctx_school, ctx_group).map_msg(Msg::Students)
-                ]
-            }
-
-            Pages::Timetables(m) => {
-                div![
-                    div![
-                        C!{"columns"},
-                        div![
-                            C!{"column is-12"},
-                            div![
-                                C!{"tabs is-centered"},
-                                timetables::tabs(m, ctx_school, ctx_group).map_msg(Msg::Timetables),
-                            ]
-                        ]
-                    ],
-
-                ]
-            }
-
-
-        }
-        */
     ]
 }
-fn home(class_ctx: &ClassContext)->Node<Msg>{
+fn home(class_ctx: &ClassContext, lang: &I18n)->Node<Msg>{
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
     div![
-        C!{"column is-full"},
+        C!{"column is-4"},
         div![C!{"field"},
-            label![C!{"label"}, "Kademe"],
+            label![C!{"label"}, t!["class-grade"]],
             p![C!{"control has-icons-left"},
                 input![C!{"input"},
                     attrs!{
@@ -245,7 +178,7 @@ fn home(class_ctx: &ClassContext)->Node<Msg>{
             ]
         ],
         div![C!{"field"},
-            label![C!{"label"}, "Şube"],
+            label![C!{"label"}, t!["class-branch"]],
             p![C!{"control has-icons-left"},
                 input![C!{"input"},
                     attrs!{

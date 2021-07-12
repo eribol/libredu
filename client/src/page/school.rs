@@ -3,6 +3,7 @@ use crate::{Context};
 use crate::model::user::UserDetail;
 use crate::page::school::detail::SchoolContext;
 use crate::model::school::SchoolDetail;
+use crate::i18n::I18n;
 
 mod add;
 pub(crate) mod detail;
@@ -158,7 +159,7 @@ fn home(user: &Option<UserDetail>)-> Node<Msg>{
         ]
     }
 }
-pub fn view(model: &Model, ctx: &Context)-> Node<Msg>{
+pub fn view(model: &Model, ctx: &Context, lang: &I18n)-> Node<Msg>{
     match &model.page{
         SchoolPage::Home => home(&ctx.user),
         SchoolPage::Add(city) => add::view(city, ctx).map_msg(Msg::AddSchool),
@@ -166,7 +167,7 @@ pub fn view(model: &Model, ctx: &Context)-> Node<Msg>{
             let id = model.selected_school.as_ref().unwrap().school.id;
             let school_ctx = ctx.schools.iter().find(|s| s.school.id == id);
             if let Some(school) = school_ctx{
-                detail::view(m, &ctx.user, &school).map_msg(Msg::DetailSchool)
+                detail::view(m, &ctx.user, &school, lang).map_msg(Msg::DetailSchool)
             }
             else {
                 div!["Kurum bulunamadı2"]

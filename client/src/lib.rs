@@ -37,7 +37,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     let mut b_lang = DEFAULT_LANG;
     match lang{
         Some(ref l) => {
-            if l == &"tr-TR".to_string() {b_lang = Lang::TrTR}
+            //if l == &"tr-TR".to_string() {b_lang = Lang::TrTR}
         },
         _ => {}
     }
@@ -409,7 +409,7 @@ fn view(model: &Model) -> Node<Msg> {
             Page::Login(m) => {
                 if ctx.user.is_none(){
                     div![
-                        page::login::view(m, &ctx).map_msg(Msg::LoginMsg)
+                        page::login::view(m, &ctx, &model.i18n).map_msg(Msg::LoginMsg)
                     ]
                 }
                 else{
@@ -425,10 +425,10 @@ fn view(model: &Model) -> Node<Msg> {
                 }
             },
             Page::School(school) => {
-                page::school::view(school, &ctx).map_msg(Msg::School)
+                page::school::view(school, &ctx, &model.i18n).map_msg(Msg::School)
             },
-            Page::SignIn(model) => {
-                page::signin::view(model).map_msg(Msg::SignIn)
+            Page::SignIn(m) => {
+                page::signin::view(m, &model.i18n).map_msg(Msg::SignIn)
             },
             Page::Loading => div!["loading"],
             _ => div!["404"]
@@ -473,7 +473,7 @@ fn view_navbar_brand(model: &Model, ctx: &Context) -> Node<Msg>{
     create_t![model.i18n];
         div![
             C!{"navbar-menu", &model.navbar},
-            if !ctx.schools.is_empty(){
+            if ctx.user.is_some() && !ctx.schools.is_empty(){
                 div![
                     C!{"navbar-start"},
                     div![
@@ -517,13 +517,13 @@ fn view_navbar_brand(model: &Model, ctx: &Context) -> Node<Msg>{
                     ]
                 ]
             },
-            view_navbar_end(ctx)
+            view_navbar_end(ctx, &model.i18n)
         ]
 
 }
 
-fn view_navbar_end(ctx: &Context) -> Node<Msg> {
-    create_t![I18n::new(DEFAULT_LANG)];
+fn view_navbar_end(ctx: &Context, lang: &I18n) -> Node<Msg> {
+    create_t![lang];
     match &ctx.user {
         Some(user) => {
             div![
@@ -554,9 +554,9 @@ fn view_navbar_end(ctx: &Context) -> Node<Msg> {
         None => {
             div![
                 C!{"navbar-end"},
-                a![C!{"navbar-item"}, attrs!{At::Href => Urls::new(&ctx.base_url).help()}, "Yardım"],
-                a![C!{"navbar-item"}, attrs!{At::Href => Urls::new(&ctx.base_url).login()}, "Giriş Yap"],
-                a![C!{"navbar-item"}, attrs!{At::Href => Urls::new(&ctx.base_url).signin()}, "Üye Ol"]
+                a![C!{"navbar-item"}, attrs!{At::Href => Urls::new(&ctx.base_url).help()}, t!["help"]],
+                a![C!{"navbar-item"}, attrs!{At::Href => Urls::new(&ctx.base_url).login()}, t!["login"]],
+                a![C!{"navbar-item"}, attrs!{At::Href => Urls::new(&ctx.base_url).signin()}, t!["signin"]]
             ]
         }
     }

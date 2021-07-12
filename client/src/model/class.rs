@@ -4,6 +4,7 @@ use crate::model::teacher::Teacher;
 use crate::model::student::{SimpleStudent};
 use crate::model::timetable::Day;
 use crate::model::activity;
+use crate::i18n::I18n;
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Class{
@@ -60,34 +61,47 @@ pub struct ClassContext{
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
-pub struct ClassMenu<'a>{
-    pub link: &'a str,
-    pub name: &'a str,
+pub struct ClassMenu{
+    pub link: String,
+    pub name: String
 }
 
-pub const CLASS_MENU: &[ClassMenu] = &[
+pub fn create_menu(lang: &I18n) -> Vec<ClassMenu>{
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
+    vec![
+        ClassMenu {
+            link: String::from(""),
+            name: String::from("Sınıf".to_string() + " " + &t!["info"]),
+        },
+        /*
+        ClassMenu {
+            link: String::from("students"),
+            name: String::from(t!["students"]),
+        },
+        */
+        ClassMenu {
+            link: String::from("activities"),
+            name: String::from(t!["activities"]),
+        },
+        ClassMenu {
+            link: String::from("limitations"),
+            name: String::from(t!["limitations"]),
+        },
+        ClassMenu {
+            link: String::from("timetables"),
+            name: String::from(t!["timetables"]),
+        }
+        /*
 
-    ClassMenu {
-        link: "",
-        name: "Sınıf Bilgileri",
-    },
-    ClassMenu {
-        link: "students",
-        name: "Öğrenciler",
-    },
-    ClassMenu {
-        link: "activities",
-        name: "Aktiviteler",
-    },
-    ClassMenu {
-        link: "limitations",
-        name: "Kısıtlamalar",
-    },
-    ClassMenu {
-        link: "timetables",
-        name: "Ders Programı",
-    }
-];
+        ClassMenu {
+            link: "timetables",
+            name: "Ders Programı",
+        }
+
+         */
+    ]
+}
 
 impl ClassContext{
     pub fn get_mut_students(&mut self) -> &mut Vec<SimpleStudent>{

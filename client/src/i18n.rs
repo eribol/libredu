@@ -17,7 +17,7 @@ impl I18n {
             ftl_bundle: lang.create_ftl_bundle(),
         }
     }
-
+    /*
     pub const fn lang(&self) -> &Lang {
         &self.lang
     }
@@ -27,7 +27,7 @@ impl I18n {
         self.ftl_bundle = lang.create_ftl_bundle();
         self
     }
-
+    */
     pub fn translate(&self, key: impl AsRef<str>, args: Option<&FluentArgs>) -> String {
         let mmessage = self
             .ftl_bundle
@@ -54,12 +54,14 @@ pub enum Lang {
 }
 
 impl Lang {
+    /*
     pub const fn label(self) -> &'static str {
         match self {
             Self::EnUS => "English (US)",
             Self::TrTR => "Türkçe (Türkiye)",
         }
     }
+    */
 
     pub const fn ftl_messages(self) -> &'static str {
         macro_rules! include_ftl_messages {
