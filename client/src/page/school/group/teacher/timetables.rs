@@ -4,6 +4,7 @@ use crate::model::teacher;
 use crate::model::timetable;
 use crate::page::school::detail;
 use crate::model::teacher::{TeacherTimetable2};
+use crate::i18n::I18n;
 
 #[derive()]
 pub enum Msg{
@@ -25,7 +26,7 @@ pub struct Model{
 }
 
 pub fn init(url: Url, orders: &mut impl Orders<Msg>, _school_ctx: &mut detail::SchoolContext)-> Model{
-    let model = Model{url: url.clone(), days: timetable::Day::new(), ..Default::default()};
+    let model = Model{url: url.clone(), days: timetable::create_days(), ..Default::default()};
     orders.send_msg(Msg::Loading);
     model
 }
@@ -36,7 +37,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
     match msg {
         Msg::FetchTimetable(t) => {
             if let Ok(tt) = t {
-                log!("tt yüklendi");
                 let teacher_ctx = &mut school_ctx.get_mut_teacher(&model.url);
                 let teacher_group = &mut teacher_ctx.group.iter_mut().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap());
                 if let Some(tg) = teacher_group {
@@ -52,7 +52,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             let teacher_ctx = &mut school_ctx.get_mut_teacher(&model.url);
             let teacher_group = &mut teacher_ctx.group.iter_mut().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap());
             if let Ok(a) = acts{
-                log!("acts yüklendi");
                 if let Some(tg) = teacher_group {
                     if let Some(acts) = &mut tg.activities {
                         *acts = a;
@@ -68,7 +67,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
             let teacher_group = &mut teacher_ctx.group.iter_mut().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap());
             match json {
                 Ok(mut l) => {
-                    log!("lim yüklendi");
                     l.sort_by(|a, b| a.day.id.cmp(&b.day.id));
                     if let Some(tg) = teacher_group{
                         if let Some(lm) = &mut tg.limitations{
@@ -288,7 +286,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
     }
 }
 
-pub fn view(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
+pub fn view(model: &Model, school_ctx: &detail::SchoolContext, lang: &I18n)->Node<Msg>{
     div![
         Script![
             attrs!{
@@ -296,17 +294,20 @@ pub fn view(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
                 At::Type=>"module"
             }
         ],
-        timetable(model, school_ctx)
+        timetable(model, school_ctx, lang)
     ]
 
 }
 
 
-fn timetable(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
+fn timetable(model: &Model, school_ctx: &detail::SchoolContext, lang: &I18n)->Node<Msg>{
     let group_ctx = school_ctx.get_group(&model.url);
     let hours = group_ctx.group.hour;
     let teacher_ctx = school_ctx.get_teacher(&model.url);
     let teacher_group = teacher_ctx.group.iter().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap()).unwrap();
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
+    use fluent::fluent_args;
     div![
         C!{"column is-12"},
 
@@ -315,7 +316,7 @@ fn timetable(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
             C!{"table is-bordered"},
             tr![
                 td![
-                    "Günler/Saatler"
+                    t!["days"], "/", t!["hours"]
                 ],
                 (0..group_ctx.group.hour as i32).map(|h|
                     td![
@@ -336,7 +337,7 @@ fn timetable(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
                     lm.iter().enumerate().map(|d|
                         tr![
                             td![
-                                &d.1.day.name.to_uppercase(),
+                                t![t!("day", fluent_args!["dayId" => &d.1.day.id])],
                                 {
                                     let day_index = d.0;
                                     ev(Ev::Click, move |_event|
@@ -354,7 +355,7 @@ fn timetable(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
         ],
         input![
             attrs!{
-                At::Type=>"button", At::Class=>"button is-primary", At::Value=>"Kaydet"
+                At::Type=>"button", At::Class=>"button is-primary", At::Value=> t!["save"]
             },
             ev(Ev::Click, |event| {
                 event.prevent_default();

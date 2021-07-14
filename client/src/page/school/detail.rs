@@ -490,7 +490,7 @@ pub fn view(model: &Model, user_ctx: &Option<UserDetail>, school_ctx: &SchoolCon
                 ]
             ],
             label![
-                t! ["group-name"]
+                t!["group-name"]
             ],
             input![
                 C!{"input"},

@@ -29,6 +29,7 @@ update = Update
 edit = Edit
 add = Add
 delete = Delete
+move = Move
 
 #School Menu
 homepage = Home
@@ -102,5 +103,34 @@ activity-info = If you want to add multiple activities, use whitespaces between 
 days = Days
 hours = Hours
 save = Kaydet
-save-for-all = Save For All Classes
+save-for-all-classes = Save For All Classes
 save-for-all-same-grade = Save For All Same Grade Class
+
+# Days
+monday = Monday
+tuesday = Tuesday
+wednesday = Wednesday
+thursday = Thursday
+friday = Friday
+saturday = Saturday
+sunday = Sunday
+
+day = {$dayId ->
+[1] monday
+[2] tuesday
+[3] wednesday
+[4] thursday
+[5] friday
+[6] saturday
+*[other] sunday
+}
+
+#Teachers
+teachers = Teachers
+teacher-role = Role
+teacher-information = Teacher Info
+next-teacher = Next Teacher
+previous-teacher = Previous Teacher
+teacher-warning1 = If teacher is not activated(not created password, email, mobile number) you can activate.
+teacher-warning2 = If teacher is activated, only teacher himself/herself can change the password.
+save-for-all-teachers = Save For All Teachers

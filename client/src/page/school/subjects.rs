@@ -15,7 +15,7 @@ pub struct Model{
 
 pub fn init(orders: &mut impl Orders<Msg>, ctx_school: &SchoolContext)-> Model {
     let mut model = Model::default();
-    if let Some(subjects) = &ctx_school.subjects{
+    if let Some(_subjects) = &ctx_school.subjects{
         orders.send_msg(Msg::Filtering);
     }
     else {

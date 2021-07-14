@@ -102,7 +102,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
                 }.await)}
             });
         }
-        Msg::FetchDelStudent(number) => {
+        Msg::FetchDelStudent(_number) => {
             //if let Ok(n) = number {
             //    model.students.retain(|s| s.id != n);
             //}

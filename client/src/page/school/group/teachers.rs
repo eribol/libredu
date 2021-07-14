@@ -4,6 +4,7 @@ use crate::page::school::group::teacher::home;
 use crate::page::school::detail;
 use crate::page::school::detail::SchoolContext;
 use crate::model::teacher::{TeacherContext, Teacher, TeacherGroupContext};
+use crate::i18n::I18n;
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct NewTeacher{
@@ -200,13 +201,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
     }
 }
 
-pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
+pub fn view(model: &Model, school_ctx: &SchoolContext, lang: &I18n)-> Node<Msg>{
     let group_ctx = school_ctx.get_group(&model.url);
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
     div![
         C!{"columns"},
         match &model.pages{
             Pages::Teacher(m) => {
-                use crate::model::teacher::TEACHER_MENU;
+                use crate::model::teacher::create_menu;
                 let teacher_ctx = school_ctx.get_teacher(&model.url);
                 div![
                     C!{"column"},
@@ -222,7 +225,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                                             attrs!{
                                                 At::Href=> format!("/schools/{}/groups/{}/teachers", &school_ctx.school.id, &group_ctx.group.id)
                                             },
-                                            "<--Öğretmenler",
+                                            "<--", t!["teachers"],
                                         ]
                                     ],
                                     match school_ctx.get_prev_teacher(&m.url){
@@ -232,7 +235,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                                                     attrs!{
                                                         At::Href=> format!("/schools/{}/groups/{}/teachers/{}/{}", &school_ctx.school.id, &group_ctx.group.id, teacher.teacher.id, &m.tab)
                                                     },
-                                                    "Önceki Öğretmen"
+                                                    t!["previous-teacher"],
                                                 ]
                                             ]
                                         },
@@ -250,7 +253,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                                                     attrs!{
                                                         At::Href=> format!("/schools/{}/groups/{}/teachers/{}/{}", &school_ctx.school.id, &group_ctx.group.id, &teacher.teacher.id, &m.tab)
                                                     },
-                                                    "Sonraki Öğretmen",
+                                                    t!["next-teacher"],
                                                 ]
                                             ]
                                         },
@@ -267,12 +270,12 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                         div![
                             C!{"column tabs is-centered"},
                             ul![
-                                TEACHER_MENU.iter().map(|menu|
+                                create_menu(lang).iter().map(|menu|
                                     li![
                                         if m.tab == menu.link{
                                         C!{"is-active"}} else {C!{""}},
                                         a![
-                                            menu.name,
+                                            &menu.name,
                                             attrs!{
                                                 At::Href => format!("/schools/{}/groups/{}/teachers/{}/{}", &school_ctx.school.id, &group_ctx.group.id, &teacher_ctx.teacher.id, menu.link)
                                             }
@@ -284,7 +287,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                     ],
                     div![
                         C!{"columns"},
-                        teacher_detail(m, school_ctx)
+                        teacher_detail(m, school_ctx, lang)
                     ]
                 ]
             },
@@ -292,11 +295,11 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                 div![
                     C!{"field"},
                     p![
-                        label![C!{"label"}, "Adı:"],
+                        label![C!{"label"}, t!["name"]],
                         input![
                             attrs!{
                                 At::Type=>"text",
-                                At::Placeholder=>"Adı",
+                                At::Placeholder=> t!["name"],
                                 At::Value=>&model.form.first_name,
                                 At::Disabled => disabled(school_ctx).as_at_value()
                             },
@@ -304,11 +307,11 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                         ]
                     ],
                     p![
-                        label![C!{"label"},"Soyadı:"],
+                        label![C!{"label"},t!["lastname"]],
                         input![
                             attrs!{
                                 At::Type=>"text",
-                                At::Placeholder=>"Soyadı",
+                                At::Placeholder=> t!["lastname"],
                                 At::Value=>&model.form.last_name
                                 At::Disabled => disabled(school_ctx).as_at_value()
                             },
@@ -317,7 +320,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                     ],
                     p![
                         label![
-                            C!{"label"},"Rol:"
+                            C!{"label"}, t!["teacher-role"]
                         ],
                         select![
                             C!{"select"},
@@ -358,7 +361,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                         input![C!{"button is-primary"},
                             attrs!{
                                 At::Type=>"button",
-                                At::Value=>"Ekle",
+                                At::Value=> t!["add"],
                                 At::Id=>"login_button",
                                 At::Disabled => disabled(school_ctx).as_at_value()
                             },
@@ -374,19 +377,19 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
                             tr![
                                 th![
                                     attrs!{At::Scope=>"col"},
-                                    "Adı"
+                                    t!["name"]
                                 ],
                                 th![
                                     attrs!{At::Scope=>"col"},
-                                    "Soyadı"
+                                    t!["lastname"]
                                 ],
                                 th![
                                     attrs!{At::Scope=>"col"},
-                                    "Rolü"
+                                    t!["teacher-role"]
                                 ],
                                 th![
                                     attrs!{At::Scope=>"col"},
-                                    "İşlem"
+                                    t!["process"]
                                 ]
                             ]
                         ],
@@ -483,13 +486,13 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)-> Node<Msg>{
         }
     ]
 }
-fn teacher_detail(model: &home::Model, school_ctx: &SchoolContext) ->Node<Msg>{
+fn teacher_detail(model: &home::Model, school_ctx: &SchoolContext, lang: &I18n) ->Node<Msg>{
     let group_ctx = school_ctx.get_group(&model.url);
     //let teacher_ctx = school_ctx.get_group(&model.url).get_class(&model.url);
     div![
         C!{"column is-12"},
         div![
-            home::view(model, school_ctx).map_msg(Msg::Teacher),
+            home::view(model, school_ctx, lang).map_msg(Msg::Teacher),
         ]
     ]
 }

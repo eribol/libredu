@@ -1,6 +1,7 @@
 use serde::*;
 use crate::model::class::{Class, ClassContext};
 use crate::model::{timetable, activity};
+use crate::i18n::I18n;
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct TeacherAvailable{
@@ -62,26 +63,30 @@ pub struct TeacherGroupContext{
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
-pub struct TeacherMenu<'a>{
-    pub link: &'a str,
-    pub name: &'a str,
+pub struct TeacherMenu{
+    pub link: String,
+    pub name: String,
 }
 
-pub const TEACHER_MENU: &[TeacherMenu] = &[
-    TeacherMenu {
-        link: "",
-        name: "Öğretmen Bilgileri",
-    },
-    TeacherMenu {
-        link: "activities",
-        name: "Aktiviteler",
-    },
-    TeacherMenu {
-        link: "limitations",
-        name: "Kısıtlamalar",
-    },
-    TeacherMenu {
-        link: "timetables",
-        name: "Ders Programı",
-    }
-];
+pub fn create_menu(lang: &I18n) -> Vec<TeacherMenu>{
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
+    vec![
+        TeacherMenu {
+            link: "".parse().unwrap(),
+            name: t!["info"],
+        },
+        TeacherMenu {
+            link: "activities".parse().unwrap(),
+            name: t!["activities"],
+        },
+        TeacherMenu {
+            link: "limitations".parse().unwrap(),
+            name: t!["limitations"],
+        },
+        TeacherMenu {
+            link: "timetables".parse().unwrap(),
+            name: t!["timetables"],
+        }
+    ]
+}

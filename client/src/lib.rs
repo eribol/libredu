@@ -27,7 +27,7 @@ const STORAGE_KEY: &str = "user";
 const DEFAULT_LANG: Lang = Lang::EnUS;
 
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
-    let mut ctx = Context {
+    let ctx = Context {
         base_url: url.to_base_url(),
         user: None,
         schools: vec![],
@@ -37,7 +37,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
     let mut b_lang = DEFAULT_LANG;
     match lang{
         Some(ref l) => {
-            if l == &"tr-TR".to_string() {b_lang = Lang::TrTR}
+            //if l == &"tr-TR".to_string() {b_lang = Lang::TrTR}
         },
         _ => {}
     }

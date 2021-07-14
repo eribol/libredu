@@ -315,12 +315,12 @@ pub fn find_timeslot(
     timetables: &[NewClassTimetable],
     cat: &[ClassAvailable],
     clean_tat: &[model::teacher::TeacherAvailableForTimetables],
-    mut max_day_hour: i32,
+    max_day_hour: i32,
     _for_conflict: bool
 )
     -> Option<Vec<(i32, usize)>> {
     use rand::thread_rng;
-    let mut days = vec![1,2,3,4,5,6,7];
+    let days = vec![1,2,3,4,5,6,7];
     //days.shuffle(&mut thread_rng());
     let mut slots: Vec<(i32, usize)> = vec![];
     for day in days{

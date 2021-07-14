@@ -2,8 +2,8 @@
 # syntax highlighting for *.ftl files - e.g. vscode-fluent
 
 # Simple things are simple.
-name = Ad
-lastname = Soyad
+name = Adı
+lastname = Soyadı
 info = Bilgileri
 country-code = +90
 add-school = Okul Ekle
@@ -29,11 +29,12 @@ update = Güncelle
 edit = Düzenle
 add = Ekle
 delete = Sil
+move = Aktar
 
 #School Menu
 homepage = Home
 detail-page = Okul Bilgileri
-students-page = Öğrenciler
+students = Öğrenciler
 subjects-page = Dersler
 class_rooms-page = Derslikler
 
@@ -69,9 +70,9 @@ group-timetables = Ders Programını Oluştur
 
 # Group
 ## Schedules
-hour = Hour
-schedules-start = Start
-schedules-end = End
+hour = Saat
+schedules-start = Başlangıç
+schedules-end = Bitiş
 
 ## Classes
 classes = Sınıflar
@@ -86,7 +87,7 @@ activities = Aktiviteler
 limitations = Kısıtlamalar
 timetables = Ders Tablosu
 
-#Activities
+####Activities
 total-activity-hour = Toplam aktivite saati
 activity-teachers = Öğretmenler
 activity-subject = Konu
@@ -97,9 +98,38 @@ choose-activity-subject = Aktivite Konusunu Seçin
 choose-activity-hour = Aktivite Saat Sayısını Girin
 activity-info = Eğer birden çok aktivite eklemek isterseniz, saat sayılarının arasında boşluk bırakın. Örneğin 6 saatlik matematik dersini "2 2 2" şeklinde girebilirsiniz.
 
-#Limitations
+####Limitations
 days = Günler
 hours = Saatler
 save = Kaydet
-save-for-all = Bütün sınıflar için kaydet
+save-for-all-classes = Bütün sınıflar için kaydet
 save-for-all-same-grade = Aynı kademedeki bütün sınıflar için kaydet
+
+# Days
+monday = Pazartesi
+tuesday = Salı
+wednesday = Çarşamba
+thursday = Perşembe
+friday = Cuma
+saturday = Cumartesi
+sunday = Pazar
+
+day = {$dayId ->
+[1] monday
+[2] tuesday
+[3] wednesday
+[4] thursday
+[5] friday
+[6] saturday
+*[other] sunday
+}
+
+#Teachers
+teachers = Öğretmenler
+teacher-role = Rol
+teacher-information = Öğretmen Bilgileri
+next-teacher = Önceki Öğretmen
+previous-teacher = Sonraki Öğretmen
+teacher-warning1 = Eğer bir öğretmene daha önce şifre atamadıysanız, buradan oluşturabilirsiniz.
+teacher-warning2 = Eğer öğretmene daha önce şifre ataması yaptıysanız, yalnız öğretmen şifresini değiştirebilir.
+save-for-all-teachers = Tüm Öğretmenler İçin Kaydet

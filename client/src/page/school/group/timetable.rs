@@ -448,7 +448,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
     }
 }
 
-pub fn view(model: &Model, ctx_school: &SchoolContext)-> Node<Msg>{
+pub fn view(model: &Model, _ctx_school: &SchoolContext)-> Node<Msg>{
     div![
         C!{"columns"},
             div![

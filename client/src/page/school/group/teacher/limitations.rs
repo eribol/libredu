@@ -3,6 +3,7 @@ use crate::model::{teacher};
 use crate::model::timetable;
 use crate::page::school::detail;
 use crate::model::teacher::{TeacherGroupContext};
+use crate::i18n::I18n;
 
 #[derive()]
 pub enum Msg{
@@ -356,17 +357,20 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
     }
 }
 
-pub fn view(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
+pub fn view(model: &Model, school_ctx: &detail::SchoolContext, lang: &I18n)->Node<Msg>{
     let group_ctx = school_ctx.get_group(&model.url);
     let teacher_ctx = school_ctx.get_teacher(&model.url);
     let teacher_group = teacher_ctx.group.iter().find(|g| g.group == model.url.path()[3].parse::<i32>().unwrap()).unwrap();
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
+    use fluent::fluent_args;
     div![
         C!{"column is-12"},
         table![
             C!{"table is-bordered"},
             tr![
                 td![
-                    "Günler/Saatler"
+                    t!["days"], "/", t!["hours"]
                 ],
                 (0..group_ctx.group.hour).map(|h|
                     td![
@@ -387,7 +391,7 @@ pub fn view(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
                     lm.iter().enumerate().map(|d|
                         tr![
                             td![
-                                &d.1.day.name,
+                                t![t!("day", fluent_args!["dayId" => &d.1.day.id])],
                                 {
                                     let day_index = d.0;
                                     ev(Ev::Click, move |_event|
@@ -427,7 +431,7 @@ pub fn view(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
                 C!{"column is-2"},
                 input![
                     attrs!{
-                        At::Type=>"button", At::Class=>"button is-primary", At::Value=>"Kaydet"
+                        At::Type=>"button", At::Class=>"button is-primary", At::Value=> t!["save"]
                     },
                     ev(Ev::Click, |event| {
                         event.prevent_default();
@@ -439,7 +443,7 @@ pub fn view(model: &Model, school_ctx: &detail::SchoolContext)->Node<Msg>{
                 C!{"column is-2"},
                 input![
                     attrs!{
-                        At::Type=>"button", At::Class=>"button is-primary", At::Value=>"Tüm Öğretmenlere aktar"
+                        At::Type=>"button", At::Class=>"button is-primary", At::Value=> t!["save-for-all-teachers"]
                     },
                     ev(Ev::Click, |event| {
                         event.prevent_default();

@@ -150,7 +150,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext, lang: &I18n)->Node<Msg>{
                 div![]
             }
             Pages::Timetables(m) => {
-                timetables::timetable(m, school_ctx).map_msg(Msg::Timetables)
+                timetables::timetable(m, school_ctx, lang).map_msg(Msg::Timetables)
             }
             Pages::Students(m) => {
                 students::view(m, school_ctx).map_msg(Msg::Students)

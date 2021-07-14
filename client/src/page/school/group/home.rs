@@ -297,7 +297,7 @@ pub fn view(model: &Model, school_ctx: &SchoolContext, lang: &I18n)->Node<Msg>{
             Pages::Home => home(model, lang),
             Pages::Schedules(m) => schedules::view(&m, lang).map_msg(Msg::Schedules),
             Pages::Classes(m) => classes::view(&m, &school_ctx, lang).map_msg(Msg::Classes),
-            Pages::Teachers(m) => teachers::view(&m, school_ctx).map_msg(Msg::Teachers),
+            Pages::Teachers(m) => teachers::view(&m, school_ctx, lang).map_msg(Msg::Teachers),
             //Pages::CommonExam(m) => common_exam::view(&m, &ctx_group).map_msg(Msg::CommonExam),
             Pages::Timetables(m) => timetable::view(&m, school_ctx).map_msg(Msg::Timetables),
             Pages::NotFound => div!["Grup bulunamadı"],

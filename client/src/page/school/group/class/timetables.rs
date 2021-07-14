@@ -4,6 +4,7 @@ use seed::{*, prelude::*};
 use crate::model::class::{ClassTimetable, ClassContext, ClassAvailable};
 use crate::page::school::detail::{SchoolContext};
 use crate::model::activity;
+use crate::i18n::I18n;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Subject{
@@ -242,9 +243,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
         }
     }
 }
-pub fn timetable(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
+pub fn timetable(model: &Model, school_ctx:&SchoolContext, lang: &I18n)->Node<Msg>{
     let group_ctx = school_ctx.get_group(&model.url);
     let class_ctx = group_ctx.get_class(&model.url);
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
+    use fluent::fluent_args;
     div![
         C!{"column is-10"},
         table![
@@ -257,11 +261,11 @@ pub fn timetable(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
             thead![
             tr![
                 td![
-                    "Günler/Saatler"
+                    t!["days"], "/", t!["hours"]
                 ],
                 (0..group_ctx.group.hour as i32).map(|h|
                     td![
-                        &h+1, ". Saat",
+                        &h+1, ". ", t!["hour"],
                         {
                             let hour_index: usize = h as usize;
                             ev(Ev::Click, move |_event|
@@ -277,7 +281,7 @@ pub fn timetable(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
                 limitations.iter().enumerate().map(|d|
                 tr![
                     td![
-                        &d.1.day.name.to_uppercase(),
+                        t![t!("day", fluent_args!["dayId" => &d.1.day.id])],
                         {
                             let day_index = d.0;
                             ev(Ev::Click, move |_event|
@@ -295,7 +299,7 @@ pub fn timetable(model: &Model, school_ctx:&SchoolContext)->Node<Msg>{
         ],
         input![
             attrs!{
-                At::Type=>"button", At::Class=>"button is-primary", At::Value=>"Kaydet"
+                At::Type=>"button", At::Class=>"button is-primary", At::Value=> t!["save"]
             },
             ev(Ev::Click, |event| {
                 event.prevent_default();

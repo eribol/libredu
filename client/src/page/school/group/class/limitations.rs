@@ -368,6 +368,7 @@ pub fn limitations(model: &Model, group_ctx: &GroupContext, lang: &I18n)->Node<M
     let class_ctx = group_ctx.get_class(&model.url);
     use crate::{create_t, with_dollar_sign};
     create_t![lang];
+    use fluent::fluent_args;
     div![
         C!{"column"},
         div![
@@ -396,7 +397,7 @@ pub fn limitations(model: &Model, group_ctx: &GroupContext, lang: &I18n)->Node<M
                     limitations.iter().enumerate().map(|d|
                         tr![
                             td![
-                                &d.1.day.name.to_uppercase(),
+                                t![t!("day", fluent_args!["dayId" => &d.1.day.id])],
                                 {
                                     let day_index = d.0;
                                     ev(Ev::Click, move |_event|
@@ -460,7 +461,7 @@ pub fn limitations(model: &Model, group_ctx: &GroupContext, lang: &I18n)->Node<M
                 C!{"column is-1"},
                 input![
                     attrs!{
-                        At::Type=>"button", At::Class=>"button is-primary", At::Value=> t!["save-for-all"]
+                        At::Type=>"button", At::Class=>"button is-primary", At::Value=> t!["save-for-all-classes"]
                     },
                     ev(Ev::Click, |event| {
                         event.prevent_default();

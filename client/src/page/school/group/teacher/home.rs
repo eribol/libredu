@@ -3,6 +3,7 @@ use crate::page::school::detail;
 use serde::*;
 use crate::page::school::detail::{SchoolContext};
 use crate::page::school::group::teacher::{activities, limitations, timetables};
+use crate::i18n::I18n;
 
 #[derive()]
 pub enum Msg{
@@ -55,7 +56,7 @@ pub struct Model{
     pub tab: String
 }
 
-pub fn init(mut url: Url, orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolContext)-> Model{
+pub fn init(url: Url, orders: &mut impl Orders<Msg>, school_ctx: &mut SchoolContext)-> Model{
     let mut model = Model::default();
     model.page = Pages::Loading;
     if let Some(teachers) = &school_ctx.teachers{
@@ -170,23 +171,23 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>, school
     }
 }
 
-pub fn view(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
+pub fn view(model: &Model, school_ctx: &SchoolContext, lang: &I18n)->Node<Msg>{
     let group_ctx = school_ctx.get_group(&model.url);
     div![
         C!{"columns"},
         match &model.page{
-            Pages::Home => home(model, school_ctx),
+            Pages::Home => home(model, school_ctx, lang),
             Pages::Activity(m) => {
                 div![
                     C!{"column is-full"},
-                    activities::view(m, school_ctx).map_msg(Msg::Activities)
+                    activities::view(m, school_ctx, lang).map_msg(Msg::Activities)
                 ]
             }
             Pages::Limitation(m) => {
-                limitations::view(m, school_ctx).map_msg(Msg::Limitations)
+                limitations::view(m, school_ctx, lang).map_msg(Msg::Limitations)
             }
             Pages::Timetable(m) => {
-                timetables::view(m, school_ctx).map_msg(Msg::Timetables)
+                timetables::view(m, school_ctx, lang).map_msg(Msg::Timetables)
             }
             Pages::NotFound => {
                 div!["Öğretmen veya Sayfa bulunamadı."]
@@ -196,19 +197,19 @@ pub fn view(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
     ]
 }
 
-fn home(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
+fn home(model: &Model, school_ctx: &SchoolContext, lang: &I18n)->Node<Msg>{
     let teacher_ctx = school_ctx.get_teacher(&model.url);
+    use crate::{create_t, with_dollar_sign};
+    create_t![lang];
     div![
         C!{"column is-half"},
         div![
             C!{"field"},
-            label![C!{"label"}, "Adı:"],
+            label![C!{"label"}, t!["name"]],
             p![C!{"control has-icons-left"},
                 input![C!{"input"},
                     attrs!{
                         At::Type=>"text",
-                        At::Name=>"first_name",
-                        At::Id=>"first_name",
                         At::Disabled => model.form.is_active.as_at_value(),
                         At::Value => &model.form.first_name,
                     },
@@ -217,13 +218,11 @@ fn home(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
             ]
         ],
         div![C!{"field"},
-            label![C!{"label"}, "Soyadı:"],
+            label![C!{"label"}, t!["lastname"]],
             p![C!{"control has-icons-left"},
                 input![C!{"input"},
                     attrs!{
                         At::Type=>"text",
-                        At::Name=>"last_name",
-                        At::Id=>"last_name",
                         At::Disabled => model.form.is_active.as_at_value(),
                         At::Value => &model.form.last_name,
                     },
@@ -232,13 +231,11 @@ fn home(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
             ]
         ],
         div![C!{"field"},
-            label![C!{"label"}, "E-posta adresi:"],
+            label![C!{"label"}, t!["your-email"]],
             p![C!{"control has-icons-left"},
                 input![C!{"input"},
                     attrs!{
                         At::Type=>"text",
-                        At::Name=>"email",
-                        At::Id=>"email",
                         At::Disabled=> model.form.is_active.as_at_value(),
                         At::Value => &model.form.email,
                     },
@@ -249,7 +246,7 @@ fn home(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
         if !teacher_ctx.teacher.is_active{
         div![
             div![C!{"field"},
-                label![C!{"label"}, "Telefon numarası:"],
+                label![C!{"label"}, t!["mobile-number"]],
                 div![
                     C!{"field-body"},
                     div![
@@ -283,7 +280,7 @@ fn home(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
                 ]
             ],
             div![C!{"field"},
-                label![C!{"label"}, "Şifre:"],
+                label![C!{"label"}, t!["password"]],
                 p![C!{"control has-icons-left"},
                     input![C!{"input"},
                         attrs!{
@@ -295,7 +292,7 @@ fn home(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
                 ]
             ],
             div![C!{"field"},
-                label![C!{"label"}, "Şifre(tekrar):"],
+                label![C!{"label"}, t!["password"], "(tekrar):"],
                 p![C!{"control has-icons-left"},
                     input![C!{"input"},
                         attrs!{
@@ -309,7 +306,7 @@ fn home(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
             div![C!{"field"},
                 input![
                     C!{"button is-primary"},
-                    "Bilgileri Güncelle",
+                    t!["update"],
                     ev(Ev::Click, |event| {
                         event.prevent_default();
                         Msg::SubmitUpdate
@@ -318,11 +315,11 @@ fn home(model: &Model, school_ctx: &SchoolContext)->Node<Msg>{
             ],
             p![
                 C!{"help is-danger"},
-                "Uyarı: Bir öğretmene, eğer daha önce telefon, eposta ve şifre ataması yapılmamışsa bu sayfadan bu bilgileri ekleyebilirsiniz."
+                t!["teacher-warning1"],
             ],
             p![
                 C!{"help is-danger"},
-                "Uyarı2: Bir öğretmene ait telefon, eposta veya şifre ataması yapılmışsa, bu öğretmenin bilgilerini ancak öğretmen giriş yapıp değiştirebilir."
+                t!["teacher-warning2"],
             ]
         ]
         }
