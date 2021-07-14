@@ -4,6 +4,7 @@ Libredu is free, online and open source generating timetables schedules for scho
 - It is easyto use but under development(somethings could change).
 - Developed with [Rust](https://rust-lang.org) and [Seed](https://seed-rs.org)
 - No a lot of features like alternatives. No colors, no options.
+
 ---
 If you want to create a desktop app for it, you can look at page/school/group/generate.rs file. 
 Libredu uses webassembly(thanks to rust wasm and seed). And it is realy fast but still, will increase the speed. But desktop apps will be more faster.
