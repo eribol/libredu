@@ -63,8 +63,8 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
         }
         UpMsg::Signin { form } => {
             let auth_token = AuthToken::new(EntityId::new());
-            let _ = connection::register(form, &auth_token).await;
-            DownMsg::Signin
+            let r = connection::register(form, &auth_token).await;
+            r
         },
         UpMsg::Register(token, email) => {
             println!("email geldi");
