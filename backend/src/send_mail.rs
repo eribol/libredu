@@ -4,7 +4,7 @@ use lettre::{Message, SendmailTransport, Transport};
 pub fn send_mail(email: String, body: String){
 let email = Message::builder()
     .from(
-        format!(r#"info@gmail.com"#).parse().unwrap()
+        format!(r#"info@libredu.com"#).parse().unwrap()
     )
     .to(email.parse().unwrap())
     .subject("Üyelik Onay")
