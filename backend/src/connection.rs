@@ -42,22 +42,22 @@ pub async fn set_user(id: i32, auth_token: &AuthToken) -> redis::RedisResult<()>
     Ok(())
 }
 
-pub async fn register(user: SigninForm, auth_token: &AuthToken) -> redis::RedisResult<()> {
+pub async fn register(user: SigninForm, auth_token: &AuthToken) -> DownMsg{
     let client = REDISDB.write().await;
-    let mut con = client.get_connection()?;
+    let mut con = client.get_connection().unwrap();
     let _user: i32 = redis::cmd("hset")
         .arg(auth_token.clone().into_string())
         .arg(&user.email)
         .arg(serde_json::to_string(&user).unwrap())
-        .query(&mut con)?;
+        .query(&mut con).unwrap_or(0);
     redis::cmd("expire")
         .arg(auth_token.clone().into_string())
         .arg(60*60);
     let d = dotenvy::var("DOMAIN_NAME").unwrap();
     
     let html = create_html(d, user.email.clone(),  auth_token.clone().into_string().trim().to_string());
-    send_mail(user.email, html).await;
-    Ok(())
+    let register = send_mail(user.email, html).await;
+    register
 }
 
 fn create_html(d: String, email: String, token: String)->String{

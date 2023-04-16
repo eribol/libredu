@@ -2,8 +2,9 @@ use lettre::message::header::ContentType;
 use lettre::{
     AsyncSendmailTransport, AsyncTransport, Message, SendmailTransport, Tokio1Executor,
 };
+use shared::DownMsg;
 
-pub async fn send_mail(email: String, body: String){
+pub async fn send_mail(email: String, body: String)->DownMsg{
 let email = Message::builder()
     .from(
         format!(r#"info@libredu.org"#).parse().unwrap()
@@ -15,5 +16,8 @@ let email = Message::builder()
     .unwrap();
     
     let sender = AsyncSendmailTransport::<Tokio1Executor>::new();
-    sender.send(email).await.unwrap();
+    match sender.send(email).await{
+        Ok(_)=> return DownMsg::Signin,
+        Err(_)=>return DownMsg::SigninError("Signin Error".to_string())
+    }
 }
