@@ -1,10 +1,10 @@
 use lettre::message::header::ContentType;
 use lettre::{Message, SendmailTransport, Transport};
 
-pub fn send_mail(sender: String, email: String, password: String, body: String){
+pub fn send_mail(email: String, body: String){
 let email = Message::builder()
     .from(
-        format!(r#"{sender:?}@gmail.com"#).parse().unwrap()
+        format!(r#"info@gmail.com"#).parse().unwrap()
     )
     .to(email.parse().unwrap())
     .subject("Üyelik Onay")

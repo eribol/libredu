@@ -54,10 +54,9 @@ pub async fn register(user: SigninForm, auth_token: &AuthToken) -> redis::RedisR
         .arg(auth_token.clone().into_string())
         .arg(60*60);
     let d = dotenvy::var("DOMAIN_NAME").unwrap();
-    let email_username = dotenvy::var("EMAIL_USERNAME").unwrap();
-    let email_password = dotenvy::var("EMAIL_PASSWORD").unwrap();
+    
     let html = create_html(d, user.email.clone(),  auth_token.clone().into_string().trim().to_string());
-    send_mail(email_username, user.email, email_password, html);
+    send_mail(user.email, html);
     Ok(())
 }
 
