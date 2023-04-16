@@ -19,8 +19,13 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
             }
             DownMsg::LoggedOut => crate::app::on_logged_out_msg(),
             DownMsg::LoggedOutError(_) => (),
-            DownMsg::SigninError(_e) => (),
-            DownMsg::Signin => crate::app::signin::register().set(true),
+            DownMsg::SigninError(e) => {
+                println!("Singin Error {e}");
+            },
+            DownMsg::Signin => {
+                println!("Signed");
+                crate::app::signin::register().set(true)
+            },
             DownMsg::Registered(user) => crate::app::login::set_and_store_logged_user(user),
             DownMsg::ResgiterErrors => println!("Regist error"),
             DownMsg::GetSchool { id, name } => {
