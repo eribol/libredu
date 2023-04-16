@@ -15,5 +15,5 @@ let email = Message::builder()
     .unwrap();
     
     let sender = AsyncSendmailTransport::<Tokio1Executor>::new();
-    let result = sender.send(email).await;
+    sender.send(email).await.unwrap();
 }
