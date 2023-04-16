@@ -63,8 +63,8 @@ pub async fn register(user: SigninForm, auth_token: &AuthToken) -> redis::RedisR
 fn create_html(d: String, email: String, token: String)->String{
     let r = format!(r#"<!DOCTYPE html>
     <html>
-    <body><p>Hesabınızı aktifleştirmek için linke tıklayın</p>
-    <a href={d:?}/register/{token:?}/{email:?}></a>
+    <body><p>Hesabınızı aktifleştirmek için linke <a href={d:?}/register/{token:?}/{email:?}>tıklayın</a></p>
+    
     </body>
     </html>
     "#);
