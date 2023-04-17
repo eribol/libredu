@@ -12,8 +12,12 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
         });
         match down_msg {
             // ------ Auth ------
-            DownMsg::LoginError(error) => crate::app::login::set_login_error(error),
+            DownMsg::LoginError(error) => {
+                println!("Login Error {error}");
+                crate::app::login::set_login_error(error);
+            },
             DownMsg::LoggedIn(user) => {
+                println!("Login");
                 get_school();
                 crate::app::login::set_and_store_logged_user(user)
             }
@@ -128,7 +132,9 @@ pub fn send_msg(msg: UpMsg) {
     Task::start(async {
         match connection().send_up_msg(msg).await {
             Err(_error) => {}
-            Ok(_msg) => (),
+            Ok(_msg) => {
+                println!("error occured")
+            },
         }
     });
 }
