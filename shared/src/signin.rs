@@ -1,7 +1,7 @@
 use moonlight::{Deserialize, Serialize, *};
 use validator::{Validate, ValidationError, ValidationErrors};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, Default)]
 #[serde(crate = "serde")]
 pub struct SigninForm {
     #[validate(length(min = 2, max = 100))]
@@ -21,5 +21,8 @@ pub struct SigninForm {
 impl SigninForm{
     pub fn is_valid(&self)-> Result<(), ValidationErrors>{
         self.validate()
+    }
+    pub fn has_error(&self, field: &'static str)->bool{
+        ValidationErrors::has_error(&self.is_valid(), field)
     }
 }
