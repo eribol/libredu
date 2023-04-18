@@ -2,7 +2,7 @@ use super::login_user;
 use crate::i18n;
 use shared::UpMsg;
 use std::borrow::Cow;
-use zoon::named_color::BLUE_5;
+use zoon::named_color::{BLUE_5, RED_5};
 use zoon::{eprintln, *};
 
 #[static_ref]
@@ -16,7 +16,7 @@ fn password() -> &'static Mutable<String> {
 }
 
 #[static_ref]
-fn login_error() -> &'static Mutable<Option<Cow<'static, str>>> {
+pub fn login_error() -> &'static Mutable<Option<Cow<'static, str>>> {
     Mutable::new(None)
 }
 
@@ -79,6 +79,12 @@ pub fn login_page() -> impl Element {
                 .s(Borders::all(Border::new().solid().color(BLUE_5)))
                 .label(El::new().s(Align::center()).child_signal(i18n::t!("login")))
                 .on_click(|| login()),
+        ).item_signal(
+            login_error().signal_cloned().map_some(|e| 
+                Label::new()
+                .s(Font::new().weight(FontWeight::Number(10)).color(RED_5))
+                .label(e)
+            )
         )
 }
 

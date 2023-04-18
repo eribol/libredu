@@ -19,6 +19,7 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
             DownMsg::LoggedIn(user) => {
                 println!("Login");
                 get_school();
+                crate::app::login::login_error().set(None);
                 crate::app::login::set_and_store_logged_user(user)
             }
             DownMsg::LoggedOut => crate::app::on_logged_out_msg(),
