@@ -8,6 +8,10 @@ pub fn signin_form() -> &'static Mutable<SigninForm> {
     Mutable::new(SigninForm::default())
 }
 #[static_ref]
+pub fn server_error() -> &'static Mutable<Option<Cow<'static, str>>> {
+    Mutable::new(None)
+}
+#[static_ref]
 fn first_name_error() -> &'static Mutable<Option<Cow<'static, str>>> {
     Mutable::new(None)
 }

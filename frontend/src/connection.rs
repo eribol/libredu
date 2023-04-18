@@ -1,5 +1,7 @@
-use crate::{app::login::get_school, *};
-use shared::{msgs::{classes::ClassDownMsgs, teachers::TeacherDownMsgs, lectures::LecturesDownMsg, timetables::TimetablesDownMsgs}, DownMsg, UpMsg};
+use std::borrow::Cow;
+
+use crate::{app::{login::get_school, signin::server_error}, *};
+use shared::{msgs::{classes::ClassDownMsgs, teachers::TeacherDownMsgs, lectures::LecturesDownMsg, timetables::TimetablesDownMsgs}, DownMsg, UpMsg, signin};
 use zoon::println;
 
 #[static_ref]
@@ -25,7 +27,7 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
             DownMsg::LoggedOut => crate::app::on_logged_out_msg(),
             DownMsg::LoggedOutError(_) => (),
             DownMsg::SigninError(e) => {
-                println!("Singin Error {e}");
+                server_error().set(Some(Cow::from(e)))
             },
             DownMsg::Signin => {
                 println!("Signed");
