@@ -33,8 +33,12 @@ pub async fn login(email: String, password: String) -> sqlx::Result<LoginUser> {
     //user
 }
 
-pub async fn signin2(form: shared::signin::SigninForm){
-    
+pub async fn is_user_exist(email: &String)-> sqlx::Result<LoginUser>{
+    let db = connection::sql::POSTGRES.read().await;
+    let user: sqlx::Result<LoginUser> =sqlx::query_as(r#"
+        select id, first_name, password from users where email = $1
+    "#).bind(&email).fetch_one(&*db).await;
+    user
 }
 pub async fn signin(form: shared::signin::SigninForm) -> DownMsg {
     let db = connection::sql::POSTGRES.read().await;
