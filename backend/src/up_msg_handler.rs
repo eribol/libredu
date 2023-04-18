@@ -3,7 +3,7 @@ use crate::{
         self, get_user,
         school::{add_school, auth, get_school, update_school},
     },
-    user::{self},
+    user::{self, is_user_exist},
 };
 use moon::*;
 use shared::{
@@ -62,9 +62,14 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
             }
         }
         UpMsg::Signin { form } => {
-            let auth_token = AuthToken::new(EntityId::new());
-            let r = connection::register(form, &auth_token).await;
-            r
+            match is_user_exist(&form.email).await{
+                Ok(_) => DownMsg::SigninError("This email is registered".to_string()),
+                Err(_) => {
+                    let auth_token = AuthToken::new(EntityId::new());
+                    let r = connection::register(form, &auth_token).await;
+                    r
+                }
+            }
         },
         UpMsg::Register(token, email) => {
             println!("email geldi");
