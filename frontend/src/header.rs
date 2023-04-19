@@ -24,8 +24,19 @@ fn right_nav()-> impl Element{
             match user{
                 Some(u) => {
                     Row::new()
+                        .s(Gap::new().x(5))
                         .item(
                             Link::new().label(&u.first_name).to(Route::Logout)
+                        ).item(
+                            Column::new()
+                            .s(Cursor::new(CursorIcon::Pointer))
+                            .item(
+                                Link::new().label("").update_raw_el(|raw_el|
+                                    raw_el.attr("class", "fa-solid fa-arrow-right-from-bracket")
+                                )
+                                .to(Route::Logout)
+                            )
+                            
                         )
                 },
                 None => {
