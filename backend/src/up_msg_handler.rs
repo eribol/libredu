@@ -75,7 +75,6 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
             println!("email geldi");
             let r = connection::get_register(token, email).await;
             r
-            //DownMsg::Register
         },
         UpMsg::AddSchool { name } => add_school(auth_token, name).await,
         UpMsg::GetSchool => {
