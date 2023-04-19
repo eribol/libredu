@@ -136,7 +136,7 @@ pub fn send_msg(msg: UpMsg) {
         match connection().send_up_msg(msg).await {
             Err(_error) => {}
             Ok(_msg) => {
-                println!("error occured")
+                //println!("error occured")
             },
         }
     });
