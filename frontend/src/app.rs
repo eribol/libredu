@@ -23,6 +23,7 @@ pub enum Pages {
     Home,
     Login,
     Signin,
+    User
     //NotFound
 }
 

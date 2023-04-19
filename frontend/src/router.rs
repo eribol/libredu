@@ -67,6 +67,9 @@ pub fn router() -> &'static Router<Route> {
             Route::Home => {
                 app::set_page_id(Pages::Home);
             }
+            Route::User => {
+                app::set_page_id(Pages::User)
+            }
         }
     })
 }
@@ -82,6 +85,8 @@ pub enum Route {
     Logout,
     #[route("register", token, email)]
     Register {token: String, email: String},
+    #[route("user")]
+    User,
     #[route()]
     Home,
 }

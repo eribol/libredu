@@ -9,7 +9,10 @@ pub fn root() -> impl Element {
         .item_signal(app::pages().signal_cloned().map(|page| match page {
             app::Pages::Home => home().into_raw_element(),
             app::Pages::Login => super::login::login_page().into_raw_element(),
-            super::Pages::Signin => super::signin::signin_page().into_raw_element(), //_ => Label::new().label(format!("{:?}", page)).into_raw_element()
+            app::Pages::Signin => super::signin::signin_page().into_raw_element(),
+            app::Pages::User => Row::new().item(
+                Column::new().item(Label::new().label("This is menus page"))
+            ).item(Column::new().item(Label::new().label("This is submenu page"))).into_raw_element()
         }))
 }
 

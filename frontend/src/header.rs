@@ -26,7 +26,7 @@ fn right_nav()-> impl Element{
                     Row::new()
                         .s(Gap::new().x(5))
                         .item(
-                            Link::new().label(&u.first_name).to(Route::Logout)
+                            Link::new().label(&u.first_name).to(Route::User)
                         ).item(
                             Column::new()
                             .s(Cursor::new(CursorIcon::Pointer))
