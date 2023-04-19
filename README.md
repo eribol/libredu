@@ -2,7 +2,7 @@
 ---
 Libredu is free, online and open source generating timetables schedules for schools.
 - It is easy to use but under development(somethings could change).
-- Developed with [Rust](https://rust-lang.org) and [Seed](https://seed-rs.org)
+- Developed with [Rust](https://rust-lang.org) and [MoonZoon](https://github.com/MoonZoon/MoonZoon)
 - No a lot of features like alternatives. No colors, no options.
 
 
