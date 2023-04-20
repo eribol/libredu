@@ -1,12 +1,23 @@
 use moonlight::*;
+use validator::{Validate, ValidationErrors};
 pub type UserId = EntityId;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Validate)]
 #[serde(crate = "serde")]
 pub struct AddClass {
+    #[validate(length(min=1, max = 5))]
     pub kademe: String,
+    #[validate(length(min=1, max = 5))]
     pub sube: String,
     pub group_id: i32,
+}
+impl AddClass{
+    pub fn is_valid(&self)-> Result<(), ValidationErrors>{
+        self.validate()
+    }
+    pub fn has_error(&self, field: &'static str)->bool{
+        ValidationErrors::has_error(&self.is_valid(), field)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

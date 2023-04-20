@@ -246,6 +246,13 @@ pub fn register_view() -> impl Element {
                 .label(El::new().s(Align::center()).child_signal(i18n::t!("login")))
                 .on_click(|| signin()),
         )
+        .item_signal(
+            server_error().signal_cloned().map_some(|e| 
+                Label::new()
+                .s(Font::new().weight(FontWeight::Number(10)).color(RED_6))
+                .label(e)
+            )
+        )
 }
 
 use crate::connection::*;

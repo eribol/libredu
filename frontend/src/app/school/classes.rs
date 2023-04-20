@@ -70,7 +70,7 @@ fn grade_view() -> impl Element {
 fn branch_view() -> impl Element {
     Column::new()
         .s(Align::center())
-        .item(Label::new().label("Şube"))
+        .item(Label::new().label("Şube").s(Align::center()))
         .item(text_inputs::default().on_change(change_branch).id("sube"))
 }
 fn update() -> impl Element {
@@ -79,11 +79,14 @@ fn update() -> impl Element {
 
 fn classes_view() -> impl Element {
     Column::new()
-        .s(Gap::both(5))
+        .s(Gap::both(2))
         .items_signal_vec(classes2().signal_vec_cloned().map(|col| {
-            Row::new().items_signal_vec(col.signal_vec_cloned().map(|row| {
+            Row::new()
+            .s(Gap::new().x(2))
+            .items_signal_vec(col.signal_vec_cloned().map(|row| {
                 let a = Mutable::new(false);
                 Column::new()
+                    //.s(Align::center())
                     .s(Borders::all_signal(a.signal().map_bool(
                         || Border::new().width(1).color(BLUE_3).solid(),
                         || Border::new().width(1).color(BLUE_1).solid(),
@@ -91,9 +94,14 @@ fn classes_view() -> impl Element {
                     .s(RoundedCorners::all(2))
                     .s(Width::exact(140))
                     .s(Height::exact(75))
+                    .s(Align::new().center_y())
                     .on_hovered_change(move |b| a.set(b))
-                    .item(Button::new().label(format!("{} {}", row.kademe, row.sube)))
-                    .item(Button::new().label_signal(t!("delete")).on_press(move || del_class(row.id)))
+                    .item(
+                        Button::new().label(format!("{} {}", row.kademe, row.sube))
+                    )
+                    .item(
+                        Button::new().label_signal(t!("delete")).on_press(move || del_class(row.id))
+                    )
                 //.on_click(move || super::teacher::open_modal(row.clone()))
             }))
         }))
@@ -164,10 +172,6 @@ pub fn change_timetable(value: String) {
     create_chunks();
 }
 
-fn is_timetable_selected(id: i32) -> impl Signal<Item = bool> {
-    selected_timetable().signal_ref(move |i| i == &id).dedupe()
-}
-
 fn del_class(id: i32) {
     //let id = id.parse::<i32>().unwrap();
     send_msg(UpMsg::Classes(ClassUpMsgs::DelClass(id)))
@@ -207,6 +211,12 @@ fn class_form() -> AddClass {
 fn add_class() {
     use crate::connection::*;
     use shared::*;
-    let msg = UpMsg::Classes(ClassUpMsgs::AddClass(class_form()));
-    send_msg(msg);
+    let form = class_form();
+    if let Ok(_) = form.is_valid(){
+        let msg = UpMsg::Classes(
+            ClassUpMsgs::AddClass(form)
+        );
+        send_msg(msg);
+    }
+    
 }

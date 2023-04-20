@@ -1,5 +1,5 @@
 use moonlight::{Deserialize, Serialize, *};
-use validator::{Validate, ValidationError, ValidationErrors};
+use validator::{Validate, ValidationErrors};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, Default)]
 #[serde(crate = "serde")]
