@@ -8,7 +8,7 @@ use crate::{
 use shared::models::school::FullSchool;
 use zoon::{*, named_color::RED_6};
 
-use super::{school, teachers::teachers};
+use super::{school, teachers::{self, teachers}};
 
 pub fn home() -> impl Element {
     Column::new()

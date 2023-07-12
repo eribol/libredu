@@ -1,5 +1,5 @@
 use zoon::*;
-use crate::{i18n::{t, lang, self}, app, router::Route};
+use crate::{i18n::{t, lang, self}, app::{self, school::school}, router::Route};
 
 pub fn root() -> impl Element {
     Row::new()
@@ -10,9 +10,23 @@ pub fn root() -> impl Element {
 fn left_nav()-> impl Element{
     Row::new()
     .s(Align::new().left())
+    .s(Gap::new().x(10))
     .item(
-        Link::new().label("Libredu").to(Route::Home)
-    ) 
+        Link::new()
+        .label(
+            Label::new().label("Libredu")
+            .s(Font::new().weight(FontWeight::Medium))
+        ).to(Route::Home)
+    )
+    .item_signal(
+        school().signal_cloned().map_some(|_|
+            RawHtmlEl::new("a")
+            //.style("font-color", "blue")
+            .attr("target", "_blank")
+            .attr("href", "https:timetable.libredu.org")
+            .child("Generate")
+        )
+    )
 }
 
 fn right_nav()-> impl Element{

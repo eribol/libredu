@@ -24,19 +24,26 @@ pub async fn add_class(id: i32, form: AddClass) -> DownMsg {
         .bind(&id)
         .bind(&form.group_id)
         .fetch(&*db);
-        if let Some(class) = row.try_next().await.unwrap() {
-            let class = shared::models::class::Class {
-                id: class.try_get("id").unwrap(),
-                kademe: class.try_get("kademe").unwrap(),
-                sube: class.try_get("sube").unwrap(),
-                group_id: class.try_get("group_id").unwrap(),
-            };
-            let c_msg = ClassDownMsgs::AddedClass(class);
-            DownMsg::Classes(c_msg)
-        } else {
+        if let Ok(query) = row.try_next().await{
+            if let Some(class) = query {
+                let class = shared::models::class::Class {
+                    id: class.try_get("id").unwrap(),
+                    kademe: class.try_get("kademe").unwrap(),
+                    sube: class.try_get("sube").unwrap(),
+                    group_id: class.try_get("group_id").unwrap(),
+                };
+                let c_msg = ClassDownMsgs::AddedClass(class);
+                DownMsg::Classes(c_msg)
+            } 
+            else {
+                DownMsg::Classes(ClassDownMsgs::AddClassError("Failed to add class".to_string()))
+            }
+        }
+        else{
             DownMsg::Classes(ClassDownMsgs::AddClassError("Class add failed".to_string()))
         }
-    } else {
+    } 
+    else {
         DownMsg::Classes(ClassDownMsgs::AddClassError("Form group_id error".to_string()))
     }
 }
@@ -71,74 +78,18 @@ pub async fn del_class(class_id: i32, school_id: i32) -> DownMsg {
     .bind(&school_id)
     .fetch(&*db);
     if let Some(_) = row.try_next().await.unwrap() {
+        del_class_acts(class_id).await;
         return DownMsg::Classes(ClassDownMsgs::DeletedClass(class_id))
     }
     DownMsg::Classes(ClassDownMsgs::DeletedClass(class_id))
 }
 
-/*
-pub async fn get_limitations(auth_token: Option<AuthToken>, class_id: i32) -> DownMsg {
-    match auth::auth(auth_token).await {
-        Some(manager) => match get_school(manager).await {
-            DownMsg::GetSchool { .. } => {
-                let db = POSTGRES.read().await;
-                let mut row = sqlx::query(
-                    r#"select class_id, day, hours from class_available
-                        where class_id = $1"#,
-                )
-                .bind(&class_id)
-                .fetch(&*db);
-                let mut limitations = vec![];
-                while let Some(class) = row.try_next().await.unwrap() {
-                    let c = ClassLimitation {
-                        class_id: class.try_get("class_id").unwrap(),
-                        day: class.try_get("day").unwrap(),
-                        hours: class.try_get("hours").unwrap(),
-                        //group_id: class.try_get("group_id").unwrap(),
-                    };
-                    limitations.push(c);
-                }
-                DownMsg::Classes(shared::msgs::classes::ClassDownMsgs::GetLimitations(
-                    limitations,
-                ))
-            }
-            _ => DownMsg::AuthError("Not school".to_string()),
-        },
-        None => DownMsg::AuthError("No auth".to_string()),
-    }
+pub async fn del_class_acts(id: i32){
+    //use moon::tokio_stream::StreamExt;
+    let db = POSTGRES.write().await;
+    let _ = sqlx::query(
+        r#"delete from activities where $1 = any(classes)"#,
+    )
+    .bind(&id)
+    .execute(&*db).await;
 }
-
-pub async fn get_activities(auth_token: Option<AuthToken>, class_id: i32) -> DownMsg {
-    match auth::auth(auth_token).await {
-        Some(manager) => match get_school(manager).await {
-            DownMsg::GetSchool { .. } => {
-                let db = POSTGRES.read().await;
-                let mut row = sqlx::query(
-                    r#"select * from activities
-                        where $1 = any(classes)"#,
-                )
-                .bind(&class_id)
-                .fetch(&*db);
-                let mut activities = vec![];
-                while let Some(act) = row.try_next().await.unwrap() {
-                    let a = Activity {
-                        id: act.try_get("id").unwrap(),
-                        subject: act.try_get("subject").unwrap(),
-                        hour: act.try_get("hour").unwrap(),
-                        classes: act.try_get("classes").unwrap(),
-                        teachers: act.try_get("teachers").unwrap(),
-                        partner_activity: act.try_get("partner_activity").unwrap(),
-                        blocks: act.try_get("blocks").unwrap(),
-                    };
-                    activities.push(a);
-                }
-                DownMsg::Classes(shared::msgs::classes::ClassDownMsgs::GetActivities(
-                    activities,
-                ))
-            }
-            _ => DownMsg::AuthError("Not school".to_string()),
-        },
-        None => DownMsg::AuthError("No auth".to_string()),
-    }
-}
-*/

@@ -1,7 +1,7 @@
 use crate::{
     connection::{
         self, get_user,
-        school::{add_school, auth, get_school, update_school},
+        school::{add_school, auth, get_school, update_school}, forget_password, reset_password,
     },
     user::{self, is_user_exist},
 };
@@ -61,6 +61,15 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
                 Err(e) => DownMsg::LoggedOutError(e.to_string()),
             }
         }
+        UpMsg::ForgetPassword { email } => {
+            match is_user_exist(&email).await{
+                Ok(_) => forget_password::forget_password(email).await,
+                Err(_) => DownMsg::ResetPassword
+            }
+        },
+        UpMsg::ResetPassword(form) => {
+            reset_password::reset_password(form).await
+        },
         UpMsg::Signin { form } => {
             match is_user_exist(&form.email).await{
                 Ok(_) => DownMsg::SigninError("This email is registered".to_string()),
@@ -72,7 +81,6 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
             }
         },
         UpMsg::Register(token, email) => {
-            println!("email geldi");
             let r = connection::get_register(token, email).await;
             r
         },

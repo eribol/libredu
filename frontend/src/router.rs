@@ -1,4 +1,4 @@
-use crate::{app::{self, Pages}, connection::send_msg};
+use crate::{app::{self, Pages, forget_password, reset_password}, connection::send_msg};
 use std::collections::VecDeque;
 use shared::UpMsg;
 use zoon::{*, println};
@@ -42,6 +42,17 @@ pub fn router() -> &'static Router<Route> {
                 }
                 app::set_page_id(Pages::Login);
             }
+            Route::ForgetPassword => {
+                if app::is_user_logged() {
+                    return router().replace(Route::Home);
+                }
+                app::set_page_id(Pages::ForgetPassword);
+            }
+            Route::ResetPassword{token, email} => {
+                reset_password::email().set(email);
+                reset_password::token().set(token);
+                app::set_page_id(Pages::ResetPassword);
+            }
             Route::Signin => {
                 if app::is_user_logged() {
                     return router().replace(Route::Home);
@@ -79,6 +90,10 @@ pub fn router() -> &'static Router<Route> {
 pub enum Route {
     #[route("login")]
     Login,
+    #[route("forget_password")]
+    ForgetPassword,
+    #[route("reset", token, email)]
+    ResetPassword {token: String, email: String},
     #[route("signin")]
     Signin,
     #[route("logout")]

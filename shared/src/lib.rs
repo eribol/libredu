@@ -1,7 +1,7 @@
 use models::{
     lectures::{AddLecture, Lecture},
     school::FullSchool,
-    timetables::{AddTimetable, Timetable},
+    timetables::{AddTimetable, Timetable}, users::ResetForm,
 };
 use moonlight::*;
 use msgs::{
@@ -32,6 +32,8 @@ pub struct School {
 pub enum UpMsg {
     // ------ Auth ------
     Login { email: String, password: String },
+    ForgetPassword{email: String},
+    ResetPassword(ResetForm),
     Signin { form: signin::SigninForm },
     Logout,
     AddSchool { name: String },
@@ -62,6 +64,7 @@ pub enum DownMsg {
     SigninError(String),
     Signin,
     Register,
+    ResetPassword,
     LoggedOut,
     LoggedOutError(String),
     Registered(User),

@@ -3,10 +3,12 @@ use std::collections::BTreeSet;
 use zoon::*;
 
 pub mod login;
+pub mod forget_password;
 pub mod school;
 pub mod signin;
 pub mod view;
 pub mod register;
+pub mod reset_password;
 use shared::User;
 pub static LANG_STORAGE_KEY: &str = "tr";
 
@@ -23,7 +25,9 @@ pub enum Pages {
     Home,
     Login,
     Signin,
-    User
+    User,
+    ForgetPassword,
+    ResetPassword
     //NotFound
 }
 

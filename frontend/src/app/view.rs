@@ -9,6 +9,8 @@ pub fn root() -> impl Element {
         .item_signal(app::pages().signal_cloned().map(|page| match page {
             app::Pages::Home => home().into_raw_element(),
             app::Pages::Login => super::login::login_page().into_raw_element(),
+            app::Pages::ForgetPassword => super::forget_password::root().into_raw_element(),
+            app::Pages::ResetPassword => super::reset_password::reset_password().into_raw_element(),
             app::Pages::Signin => super::signin::signin_page().into_raw_element(),
             app::Pages::User => Row::new().item(
                 Column::new().item(Label::new().label("This is menus page"))

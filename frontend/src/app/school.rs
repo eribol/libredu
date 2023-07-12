@@ -38,7 +38,13 @@ pub fn school_page() -> impl Element {
     El::new().child_signal(school().signal_ref(|schl| {
         match schl {
             Some(_s) => Column::new()
+                .s(Padding::new().top(50))
                 .s(Gap::new().y(50))
+                .item(
+                    Label::new()
+                    .s(Align::new().center_x())
+                    .label(&_s.name)
+                )
                 .item(school_tabs())
                 .item_signal(selected_page().signal_ref(|page| match page {
                     SchoolPages::Home => homepage::home().into_raw_element(),

@@ -1,17 +1,12 @@
 use std::io::ErrorKind;
 
 use crate::{tokio::sync::RwLock, user::signin, send_mail::send_mail};
-use moon::{Lazy, *, futures::TryStreamExt};
+use moon::{Lazy, *};
 use redis::{self, RedisError};
 use shared::{User, signin::SigninForm, DownMsg};
-use sqlx::Row;
-
-use self::sql::POSTGRES;
 pub mod school;
 pub mod sql;
-pub mod forget_password;
-pub mod reset_password;
-pub mod sessions;
+pub mod new_password;
 
 static REDISDB: Lazy<RwLock<redis::Client>> =
     Lazy::new(|| RwLock::new(redis::Client::open("redis://127.0.0.1:6379/").unwrap()));
@@ -28,6 +23,7 @@ pub async fn get_user(
         .arg("sessions")
         .arg(auth)
         .query(&mut con)?;
+    println!("aaa {:?}", &user);
     if user == auth.split(":").nth(0).unwrap().parse::<i32>().unwrap(){
         return Ok(user)
     }
@@ -39,39 +35,14 @@ pub async fn get_user(
 pub async fn set_user(id: i32, auth_token: &AuthToken) -> redis::RedisResult<()> {
     let client = REDISDB.write().await;
     let mut con = client.get_connection()?;
-    println!("set user oluyor");
     let _user: i32 = redis::cmd("hset")
         .arg("sessions")
-        .arg(&auth_token.clone().into_string())
+        .arg(auth_token.clone().into_string())
         .arg(id)
         .query(&mut con)?;
-    println!("user set user oldu");
-    set_session_pg(id, &auth_token.clone().into_string()).await.expect("pg hatası");
-    println!("pg user set user oldu");
-    Ok(())
-}
-pub async fn set_session_pg(id: i32, token: &String) -> sqlx::Result<()> {
-    let db = POSTGRES.read().await;  
-    let mut _user = sqlx::query(r#"insert into session(user_id, key) values($1, $2)"#)
-        .bind(&id)
-        .bind(&token)
-        .fetch(&*db);
-    if let Some(_) = _user.try_next().await.unwrap(){
-        println!("noluyor lan");
-    }
     Ok(())
 }
 
-pub async fn get_sessions_pg(id: i32, token: &String) -> redis::RedisResult<()> {
-    let db = POSTGRES.read().await; 
-    let mut user = sqlx::query(r#"delete from session where user_id = $1 returning key"#)
-        .bind(&id)
-        .fetch(&*db);
-    while let Some(key) = user.try_next().await.unwrap(){
-        del_user(id, key.try_get("key").unwrap()).await;
-    }
-    Ok(())
-}
 pub async fn register(user: SigninForm, auth_token: &AuthToken) -> DownMsg{
     let client = REDISDB.write().await;
     let mut con = client.get_connection().unwrap();
@@ -116,15 +87,10 @@ pub async fn get_register(auth_token: String, email: String) -> DownMsg {
 pub async fn del_user(id: i32, auth: String) -> redis::RedisResult<()> {
     let client = REDISDB.write().await;
     let mut con = client.get_connection()?;
-    let user: i32 = redis::cmd("hget")
+    let _user = redis::cmd("hdel")
         .arg("sessions")
-        .arg(auth.clone())
-        .query(&mut con)?;
-    if user == id{
-        let _user: i32 = redis::cmd("hdel")
-        .arg("sessions")
+        .arg(format!("{}:{}", id, auth))
         .arg(auth)
         .query(&mut con)?;
-    }
     Ok(())
 }

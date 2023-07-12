@@ -5,3 +5,4 @@ pub mod lectures;
 pub mod school;
 pub mod teacher;
 pub mod timetables;
+pub mod users;

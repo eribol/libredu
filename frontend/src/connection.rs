@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
-use crate::{app::{login::get_school, signin::server_error}, *};
-use shared::{msgs::{classes::ClassDownMsgs, teachers::TeacherDownMsgs, lectures::LecturesDownMsg, timetables::TimetablesDownMsgs}, DownMsg, UpMsg, signin};
+use crate::{app::{login::get_school, signin::server_error, forget_password, school::{classes::add_class_error, teachers::get_teachers}, login_user}, *};
+use shared::{msgs::{classes::ClassDownMsgs, teachers::TeacherDownMsgs, lectures::LecturesDownMsg, timetables::TimetablesDownMsgs}, DownMsg, UpMsg};
 use zoon::println;
 
 #[static_ref]
@@ -45,21 +45,21 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
             DownMsg::Teachers(t_dmsg) => {
                 match t_dmsg{
                     TeacherDownMsgs::GetTeachers(tchrs) => {
+                        println!("teachers");
                         crate::app::school::teachers::teachers()
                             .lock_mut()
                             .replace_cloned(tchrs.clone());
-                        crate::app::school::teachers::create_chunks()
                     },
                     TeacherDownMsgs::AddedTeacher(teacher) => {
                         crate::app::school::teachers::teachers()
                         .lock_mut()
                         .push_cloned(teacher);
-                        crate::app::school::teachers::create_chunks()
                     },
                     TeacherDownMsgs::DeletedTeacher(id) => {
-                        crate::app::school::teachers::teachers()
-                            .lock_mut().retain(|t| t.id != id);
-                        crate::app::school::teachers::create_chunks()
+                        if id != login_user().get_cloned().unwrap().id{
+                            crate::app::school::teachers::teachers()
+                            .lock_mut().retain(|t| t.id != id );  
+                        }
                     },
                     _ => ()
                 }
@@ -70,18 +70,15 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
                         crate::app::school::lectures::lectures()
                             .lock_mut()
                             .replace_cloned(lectures);
-                        crate::app::school::lectures::create_chunks()
                     },
                     LecturesDownMsg::AddedLecture(lecture) => {
                         crate::app::school::lectures::lectures()
                             .lock_mut()
                             .push_cloned(lecture);
-                        crate::app::school::lectures::create_chunks()
                     },
                     LecturesDownMsg::DeletedLecture(id) => {
                         crate::app::school::lectures::lectures()
                             .lock_mut().retain(|t| t.id != id);
-                        crate::app::school::lectures::create_chunks()
                     }
                     _ => ()
                 } 
@@ -96,7 +93,10 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
                         .push_cloned(class.clone()),
                     ClassDownMsgs::DeletedClass(id) => {
                         crate::app::school::classes::classes()
-                            .lock_mut().retain(|t| t.id != id);
+                            .lock_mut().retain(|t| t.id != id );
+                    },
+                    ClassDownMsgs::AddClassError(e)=>{
+                        add_class_error().set(Some(e))
                     }
                     _ => (),
                 };
@@ -124,7 +124,7 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
                     _ => (),
                 };
             },
-            
+            DownMsg::ResetPassword => forget_password::is_sent().set(true),
             _ => (),
         }
     })

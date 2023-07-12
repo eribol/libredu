@@ -51,7 +51,7 @@ pub async fn get_teachers(id: i32) -> shared::DownMsg {
         inner join school_users on user_id = id where school_users.school_id = $1"#,
     )
     .bind(&id)
-    .fetch(&*POSTGRES.write().await);
+    .fetch(&*POSTGRES.read().await);
     let mut teachers = vec![];
     while let Some(teacher) = teachers_query.try_next().await.unwrap() {
         let t = Teacher {
@@ -67,20 +67,31 @@ pub async fn get_teachers(id: i32) -> shared::DownMsg {
 
 pub async fn del_teacher(id: i32, school_id: i32) -> shared::DownMsg {
     //use moon::tokio_stream::StreamExt;
-    let db = POSTGRES.write().await;
+    let db = POSTGRES.read().await;
     let mut teacher_query = sqlx::query(
-        r#"delete from school_users where school_id = $1 and user_id = $2 returning user_id"#,
+        r#"delete from school_users where school_id = $1 and user_id = $2 and role != 1 returning user_id"#,
     )
     .bind(school_id)
     .bind(&id)
     .fetch(&*db);
-    if let Some(teacher) = teacher_query.try_next().await.unwrap() {
-        let mut del_user = sqlx::query(
+    while let Some(_teacher) = teacher_query.try_next().await.unwrap() {
+        let _del_user = sqlx::query(
             r#"delete from users where id = $1 and is_active = false returning id"#,
         )
         .bind(school_id)
         .bind(&id)
         .fetch(&*db);
+        del_teacher_acts(id).await;
     }
     shared::DownMsg::Teachers(TeacherDownMsgs::DeletedTeacher(id))
+}
+
+pub async fn del_teacher_acts(id: i32){
+    //use moon::tokio_stream::StreamExt;
+    let db = POSTGRES.read().await;
+    let _ = sqlx::query(
+        r#"delete from activities where $1 = any(teachers)"#,
+    )
+    .bind(&id)
+    .execute(&*db).await;
 }

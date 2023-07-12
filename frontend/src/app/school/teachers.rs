@@ -84,6 +84,13 @@ fn first_name_view() -> impl Element {
                 .text("")
                 .on_change(change_first_name),
         )
+        .item_signal(
+            first_name_error()
+            .signal_cloned()
+            .map_some(
+                |e| Label::new().label(e).s(Font::new().color(RED_5).weight(FontWeight::Light)).s(Align::center())
+            )
+        )
 }
 fn last_name_view() -> impl Element {
     Column::new()
@@ -99,6 +106,13 @@ fn last_name_view() -> impl Element {
                 .text("")
                 .on_change(change_last_name),
         )
+        .item_signal(
+            last_name_error()
+            .signal_cloned()
+            .map_some(
+                |e| Label::new().label(e).s(Font::new().color(RED_5).weight(FontWeight::Light)).s(Align::center())
+            )
+        )
 }
 fn short_name_view() -> impl Element {
     Column::new()
@@ -112,7 +126,15 @@ fn short_name_view() -> impl Element {
                 .s(Align::center())
                 .id("short_name")
                 .text("")
+                .on_focused_change(|_|() )
                 .on_change(change_short_name),
+        )
+        .item_signal(
+            short_name_error()
+            .signal_cloned()
+            .map_some(
+                |e| Label::new().label(e).s(Font::new().color(RED_5).weight(FontWeight::Light)).s(Align::center())
+            )
         )
 }
 fn update() -> impl Element {
@@ -120,24 +142,22 @@ fn update() -> impl Element {
 }
 
 fn teachers_view() -> impl Element {
-    Column::new()
-        .s(Gap::both(5))
-        .items_signal_vec(teachers2().signal_vec_cloned().map(|col| {
-            Row::new().items_signal_vec(col.signal_vec_cloned().map(|row| {
-                let a = Mutable::new(false);
-                Column::new()
-                    .s(Borders::all_signal(a.signal().map_bool(
-                        || Border::new().width(1).color(BLUE_3).solid(),
-                        || Border::new().width(1).color(BLUE_1).solid(),
-                    )))
-                    .s(RoundedCorners::all(2))
-                    .s(Width::exact(140))
-                    .s(Height::exact(75))
-                    .on_hovered_change(move |b| a.set(b))
-                    .item(Button::new().label(format!("{} {}", row.first_name, row.last_name)))
-                    .item(Button::new().label_signal(t!("delete")).on_press(move || del_teacher(row.id)))
-                //.on_click(move || super::teacher::open_modal(row.clone()))
-            }))
+    Row::new()
+    .multiline()
+    .s(Gap::both(5))
+    .items_signal_vec(teachers().signal_vec_cloned().map(|teacher| {
+        let a = Mutable::new(false);
+        Column::new()
+            .s(Borders::all_signal(a.signal().map_bool(
+                || Border::new().width(1).color(BLUE_3).solid(),
+                || Border::new().width(1).color(BLUE_1).solid(),
+            )))
+            .s(RoundedCorners::all(2))
+            .s(Width::exact(140))
+            .s(Height::exact(75))
+            .on_hovered_change(move |b| a.set(b))
+            .item(Button::new().label(format!("{} {}", teacher.first_name, teacher.last_name)))
+            .item(Button::new().label_signal(t!("delete")).on_press(move || del_teacher(teacher.id)))
         }))
 }
 
@@ -146,12 +166,24 @@ fn first_name() -> &'static Mutable<String> {
     Mutable::new("".to_string())
 }
 #[static_ref]
+fn first_name_error() -> &'static Mutable<Option<String>> {
+    Mutable::new(None)
+}
+#[static_ref]
 fn last_name() -> &'static Mutable<String> {
     Mutable::new("".to_string())
 }
 #[static_ref]
+fn last_name_error() -> &'static Mutable<Option<String>> {
+    Mutable::new(None)
+}
+#[static_ref]
 fn short_name() -> &'static Mutable<String> {
     Mutable::new("".to_string())
+}
+#[static_ref]
+fn short_name_error() -> &'static Mutable<Option<String>> {
+    Mutable::new(None)
 }
 
 #[static_ref]
@@ -160,14 +192,17 @@ fn role() -> &'static Mutable<i32> {
 }
 
 fn change_first_name(value: String) {
+    first_name_error().set(None);
     first_name().set(value)
 }
 
 fn change_last_name(value: String) {
+    last_name_error().set(None);
     last_name().set(value)
 }
 
 fn change_short_name(value: String) {
+    short_name_error().set(None);
     short_name().set(value)
 }
 
@@ -186,9 +221,23 @@ fn teacher_form() -> AddTeacher {
 fn add_teacher() {
     use crate::connection::*;
     use shared::*;
-    let t_msg = TeacherUpMsgs::AddTeacher(teacher_form());
-    let msg = UpMsg::Teachers(t_msg);
-    send_msg(msg)
+    let form = teacher_form();
+    if let Err(e) = form.is_valid(){
+        if form.has_error("first_name"){
+            first_name_error().set(Some("Firstname is not valid".to_string()));
+        }
+        if form.has_error("last_name"){
+            last_name_error().set(Some("Lastname is not valid".to_string()));
+        }
+        if form.has_error("short_name"){
+            short_name_error().set(Some("Short name is not valid".to_string()));
+        }
+    }
+    else{
+        let t_msg = TeacherUpMsgs::AddTeacher(form);
+        let msg = UpMsg::Teachers(t_msg);
+        send_msg(msg)
+    }
 }
 
 fn del_teacher(id: i32) {
@@ -205,21 +254,7 @@ pub fn teachers() -> &'static MutableVec<Teacher> {
     MutableVec::new_with_values(vec![])
 }
 
-#[static_ref]
-pub fn teachers2() -> &'static MutableVec<MutableVec<Teacher>> {
-    MutableVec::new_with_values(vec![])
-}
-
-pub fn create_chunks() {
-    let teachs = teachers().lock_mut().to_vec();
-    let teachs = teachs
-        .chunks(10)
-        .map(|c| MutableVec::new_with_values(c.into()))
-        .collect();
-    teachers2().lock_mut().replace_cloned(teachs);
-}
-
-fn get_teachers() {
+pub fn get_teachers() {
     let t_msg = TeacherUpMsgs::GetTeachers;
     send_msg(UpMsg::Teachers(t_msg))
 }

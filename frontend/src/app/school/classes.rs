@@ -32,6 +32,15 @@ fn form() -> impl Element {
         .item(grade_view())
         .item(branch_view())
         .item(update())
+        .item_signal(
+            add_class_error().signal_cloned().map_some(|e| 
+                Label::new()
+                .s(Font::new().weight(FontWeight::Light))
+                .s(Font::new().color(RED_5))
+                .s(Align::new().center_x())
+                .label(e)
+            )
+        )
 }
 fn groups_view() -> impl Element {
     Column::new()
@@ -78,33 +87,35 @@ fn update() -> impl Element {
 }
 
 fn classes_view() -> impl Element {
-    Column::new()
-        .s(Gap::both(2))
-        .items_signal_vec(classes2().signal_vec_cloned().map(|col| {
-            Row::new()
-            .s(Gap::new().x(2))
-            .items_signal_vec(col.signal_vec_cloned().map(|row| {
-                let a = Mutable::new(false);
-                Column::new()
-                    //.s(Align::center())
-                    .s(Borders::all_signal(a.signal().map_bool(
-                        || Border::new().width(1).color(BLUE_3).solid(),
-                        || Border::new().width(1).color(BLUE_1).solid(),
-                    )))
-                    .s(RoundedCorners::all(2))
-                    .s(Width::exact(140))
-                    .s(Height::exact(75))
-                    .s(Align::new().center_y())
-                    .on_hovered_change(move |b| a.set(b))
-                    .item(
-                        Button::new().label(format!("{} {}", row.kademe, row.sube))
-                    )
-                    .item(
-                        Button::new().label_signal(t!("delete")).on_press(move || del_class(row.id))
-                    )
-                //.on_click(move || super::teacher::open_modal(row.clone()))
-            }))
+    Row::new()
+    .s(Gap::new().x(2))
+    .multiline()
+    .items_signal_vec(
+        classes2().signal_vec_cloned()
+        .map(|row| {
+        let a = Mutable::new(false);
+        Column::new()
+        .s(Borders::all_signal(a.signal().map_bool(
+            || Border::new().width(1).color(BLUE_3).solid(),
+            || Border::new().width(1).color(BLUE_1).solid(),
+        )))
+        .s(RoundedCorners::all(2))
+        .s(Width::exact(140))
+        .s(Height::exact(75))
+        .s(Align::new().center_y())
+        .on_hovered_change(move |b| a.set(b))
+        .item(
+            Button::new().label(format!("{} {}", row.kademe, row.sube))
+        )
+        .item(
+            Button::new().label_signal(t!("delete")).on_press(move || del_class(row.id))
+        )
         }))
+}
+
+#[static_ref]
+pub fn add_class_error() -> &'static Mutable<Option<String>> {
+    Mutable::new(None)
 }
 
 #[static_ref]
@@ -138,17 +149,13 @@ pub fn timetables() -> &'static MutableVec<Timetable> {
     MutableVec::new_with_values(vec![])
 }
 #[static_ref]
-pub fn classes2() -> &'static MutableVec<MutableVec<Class>> {
+pub fn classes2() -> &'static MutableVec<Class> {
     get_classes();
     MutableVec::new_with_values(vec![])
 }
 
 pub fn create_chunks() {
     let clss = classes().lock_mut().to_vec().into_iter().filter(|c| c.group_id == selected_timetable().get()).collect::<Vec<Class>>();
-    let clss = clss
-        .chunks(10)
-        .map(|c| MutableVec::new_with_values(c.into()))
-        .collect();
     classes2().lock_mut().replace_cloned(clss);
 }
 

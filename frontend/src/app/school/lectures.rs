@@ -36,23 +36,44 @@ fn form() -> impl Element {
 
 fn grade_view() -> impl Element {
     Column::new()
-        .s(Align::center())
-        .item(Label::new().label("Ders Kademesi").s(Align::center()))
-        .item(text_inputs::default().id("grade").on_change(change_grade))
+    .s(Align::center())
+    .item(Label::new().label("Ders Kademesi").s(Align::center()))
+    .item(text_inputs::default().id("grade").on_change(change_grade))
+    .item_signal(
+        grade_error().signal_cloned().map_some(|s|
+            Label::new().label(s)
+            .s(Align::center())
+            .s(Font::new().weight(FontWeight::Light).color(RED_5))   
+        )
+    )
 }
 fn name_view() -> impl Element {
     Column::new()
-        .item(Label::new().label("Ders Adı").s(Align::center()))
-        .item(text_inputs::default().id("name").on_change(change_name))
+    .item(Label::new().label("Ders Adı").s(Align::center()))
+    .item(text_inputs::default().id("name").on_change(change_name))
+    .item_signal(
+        name_error().signal_cloned().map_some(|s|
+            Label::new().label(s)
+            .s(Align::center())
+            .s(Font::new().weight(FontWeight::Light).color(RED_5))   
+        )
+    )        
 }
 fn short_name_view() -> impl Element {
     Column::new()
-        .item(Label::new().label("Kısa Adı").s(Align::center()))
-        .item(
-            text_inputs::default()
-                .id("short_name")
-                .on_change(change_short_name),
+    .item(Label::new().label("Kısa Adı").s(Align::center()))
+    .item(
+        text_inputs::default()
+        .id("short_name")
+        .on_change(change_short_name),
+    )
+    .item_signal(
+        short_name_error().signal_cloned().map_some(|s|
+            Label::new().label(s)
+            .s(Align::center())
+            .s(Font::new().weight(FontWeight::Light).color(RED_5))   
         )
+    )
 }
 
 fn update() -> impl Element {
@@ -60,29 +81,37 @@ fn update() -> impl Element {
 }
 
 fn lectures_view() -> impl Element {
-    Column::new()
-        .on_viewport_size_change(|_, _| create_chunks())
-        .s(Gap::new().y(5))
-        //.s(Width::exact_signal(screen_width().signal().map(|a| a / 2)))
-        .items_signal_vec(lectures2().signal_vec_cloned().map(|col| {
-            Row::new()
-                .s(Gap::new().x(5))
-                .items_signal_vec(col.signal_vec_cloned().map(|r| {
-                    let a = Mutable::new(false);
-                    Column::new()
-                        .s(Borders::all_signal(a.signal().map_bool(
-                            || Border::new().width(1).color(BLUE_3).solid(),
-                            || Border::new().width(1).color(BLUE_1).solid(),
-                        )))
-                        .s(RoundedCorners::all(2))
-                        .s(Width::exact(140))
-                        .s(Height::exact(75))
-                        .on_hovered_change(move |b| a.set(b))
-                        .item(Button::new().label(format!("{} ({})", if r.short_name.len() == 0{
-                            &r.name
-                        }else{&r.short_name}, &r.kademe)))
-                        .item(Button::new().label_signal( t!("delete")).on_press(move || del_lecture(r.id)))
-                }))
+    Row::new()
+    .s(Gap::new().y(5))
+    .s(Gap::new().x(5))
+    .multiline()
+    .items_signal_vec(lectures().signal_vec_cloned().map(|r| {
+        let a = Mutable::new(false);
+        Column::new()
+        .s(Borders::all_signal(a.signal().map_bool(
+            || Border::new().width(1).color(BLUE_3).solid(),
+            || Border::new().width(1).color(BLUE_1).solid(),
+        )))
+        .s(RoundedCorners::all(2))
+        .s(Width::exact(140))
+        .s(Height::exact(75))
+        .on_hovered_change(move |b| a.set(b))
+            .item(
+                Button::new()
+                .s(Width::fill())
+                .s(Height::fill())
+                .label(
+                    format!("{} ({})", if r.short_name.len() == 0{
+                        &r.name
+                    }else{
+                        &r.short_name
+                    }, &r.kademe))
+                )
+                .item(Button::new()
+                .s(Width::fill())
+                .s(Height::fill())
+                .label_signal( t!("delete")).on_press(move || del_lecture(r.id))
+            )
         }))
 }
 
@@ -92,22 +121,6 @@ pub fn lectures() -> &'static MutableVec<Lecture> {
     MutableVec::new_with_values(vec![])
 }
 
-#[static_ref]
-pub fn lectures2() -> &'static MutableVec<MutableVec<Lecture>> {
-    //get_lectures();
-    MutableVec::new_with_values(vec![])
-}
-
-pub fn create_chunks() {
-    let width = screen_width().get();
-    println!("{width:?}");
-    let lects = lectures().lock_mut().to_vec();
-    let lects = lects
-        .chunks((width / 150) as usize)
-        .map(|c| MutableVec::new_with_values(c.into()))
-        .collect();
-    lectures2().lock_mut().replace_cloned(lects);
-}
 #[static_ref]
 fn grade() -> &'static Mutable<String> {
     Mutable::new("".to_string())
@@ -121,6 +134,20 @@ fn name() -> &'static Mutable<String> {
 #[static_ref]
 fn short_name() -> &'static Mutable<String> {
     Mutable::new("".to_string())
+}
+#[static_ref]
+fn grade_error() -> &'static Mutable<Option<String>> {
+    Mutable::new(None)
+}
+
+#[static_ref]
+fn name_error() -> &'static Mutable<Option<String>> {
+    Mutable::new(None)
+}
+
+#[static_ref]
+fn short_name_error() -> &'static Mutable<Option<String>> {
+    Mutable::new(None)
 }
 
 fn change_name(value: String) {
@@ -141,13 +168,27 @@ pub fn get_lectures() {
 fn add_lecture() {
     use crate::connection::*;
     use shared::*;
-    let msg = LecturesUpMsg::AddLecture(
-        AddLecture {
+    let form = AddLecture {
             kademe: grade().get_cloned(),
             name: name().get_cloned(),
             short_name: short_name().get_cloned(),
-        });
-    send_msg(UpMsg::Lectures(msg));
+    };
+    if let Err(_e) = form.is_valid(){
+        if form.has_error("name"){
+            name_error().set(Some("Name is not valid".to_string()))
+        }
+        if form.has_error("short_name"){
+            short_name_error().set(Some("Short name is not valid".to_string()))
+        }
+        if form.has_error("grade"){
+            grade_error().set(Some("Grade is not valid".to_string()))
+        }
+    }
+    else{
+        let msg = LecturesUpMsg::AddLecture(form);
+        send_msg(UpMsg::Lectures(msg));
+    }
+    
 }
 
 fn del_lecture(id: i32){

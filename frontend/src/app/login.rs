@@ -1,5 +1,6 @@
 use super::login_user;
 use crate::i18n;
+use crate::router::Route;
 use shared::UpMsg;
 use std::borrow::Cow;
 use zoon::named_color::{BLUE_5, RED_5};
@@ -39,7 +40,7 @@ pub fn set_and_store_logged_user(user: shared::User) {
     password().take();
     login_user().set(Some(user));
     crate::router::router()
-        .go(crate::router::previous_route().unwrap_or(crate::router::Route::Home));
+    .go(crate::router::previous_route().unwrap_or(crate::router::Route::Home));
 }
 
 pub fn login_page() -> impl Element {
@@ -79,7 +80,18 @@ pub fn login_page() -> impl Element {
                 .s(Borders::all(Border::new().solid().color(BLUE_5)))
                 .label(El::new().s(Align::center()).child_signal(i18n::t!("login")))
                 .on_click(|| login()),
-        ).item_signal(
+        )
+        .item(
+           Row::new()
+           .item(
+                Link::new().label("Sign in").to(Route::Signin)
+           )
+           .item("  ")
+           .item(
+               Link::new().label("Forget Password").to(Route::ForgetPassword)
+            )
+        )
+        .item_signal(
             login_error().signal_cloned().map_some(|e| 
                 Label::new()
                 .s(Font::new().weight(FontWeight::Number(10)).color(RED_5))
