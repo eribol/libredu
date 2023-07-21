@@ -100,7 +100,7 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
                     }
                     _ => (),
                 };
-                crate::app::school::classes::create_chunks()
+                //crate::app::school::classes::create_chunks()
             },
             DownMsg::Timetables(msg) => {
                 match msg {
