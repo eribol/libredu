@@ -1,7 +1,7 @@
 use crate::models::class::*;
 use moonlight::*;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(crate = "serde")]
 pub enum ClassUpMsgs {
     GetClasses,

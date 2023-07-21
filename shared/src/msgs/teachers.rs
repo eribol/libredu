@@ -1,7 +1,7 @@
 use crate::models::teacher::*;
 use moonlight::*;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(crate = "serde")]
 pub enum TeacherUpMsgs {
     GetTeachers,

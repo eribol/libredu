@@ -27,7 +27,7 @@ pub struct School {
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(crate = "serde")]
 pub enum UpMsg {
     // ------ Auth ------
