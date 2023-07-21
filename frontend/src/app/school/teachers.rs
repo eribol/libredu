@@ -148,6 +148,10 @@ fn teachers_view() -> impl Element {
     .items_signal_vec(teachers().signal_vec_cloned().map(|teacher| {
         let a = Mutable::new(false);
         Column::new()
+            .element_below_signal(
+                crate::modals::del_signal(teacher.id).map_true(move ||
+                crate::modals::del_modal_all(&teacher.id.to_string(), teacher.id, UpMsg::Teachers(TeacherUpMsgs::DelTeacher(teacher.id))))
+            )
             .s(Borders::all_signal(a.signal().map_bool(
                 || Border::new().width(1).color(BLUE_3).solid(),
                 || Border::new().width(1).color(BLUE_1).solid(),
@@ -156,8 +160,23 @@ fn teachers_view() -> impl Element {
             .s(Width::exact(140))
             .s(Height::exact(75))
             .on_hovered_change(move |b| a.set(b))
-            .item(Button::new().label(format!("{} {}", teacher.first_name, teacher.last_name)))
-            .item(Button::new().label_signal(t!("delete")).on_press(move || del_teacher(teacher.id)))
+            .update_raw_el(|raw| 
+                raw.attr("title", &format!("{} {}", teacher.first_name, teacher.last_name))
+            )
+            .item(
+                Button::new()
+                .label(format!("{}", teacher.short_name))
+            )
+            .item({
+                let a = Mutable::new_and_signal(false);
+                Button::new()
+                .s(Font::new()
+                    .weight_signal(a.0.signal().map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight))
+                    .color_signal(a.0.signal().map_bool(|| RED_8, || RED_4)))
+                .s(Align::new().bottom())
+                .on_hovered_change(move |h| a.0.set_neq(h))
+                .label_signal(t!("delete")).on_press(move || crate::modals::del_modal().set(Some(teacher.id)))
+            })
         }))
 }
 

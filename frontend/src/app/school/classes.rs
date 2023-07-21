@@ -91,10 +91,14 @@ fn classes_view() -> impl Element {
     .s(Gap::new().x(2))
     .multiline()
     .items_signal_vec(
-        classes2().signal_vec_cloned()
+        classes().signal_vec_cloned()
         .map(|row| {
         let a = Mutable::new(false);
         Column::new()
+        .element_below_signal(
+            crate::modals::del_signal(row.id).map_true(move ||
+            crate::modals::del_modal_all(&row.id.to_string(), row.id, UpMsg::Classes(ClassUpMsgs::DelClass(row.id))))
+        )
         .s(Borders::all_signal(a.signal().map_bool(
             || Border::new().width(1).color(BLUE_3).solid(),
             || Border::new().width(1).color(BLUE_1).solid(),
@@ -107,10 +111,17 @@ fn classes_view() -> impl Element {
         .item(
             Button::new().label(format!("{} {}", row.kademe, row.sube))
         )
-        .item(
-            Button::new().label_signal(t!("delete")).on_press(move || del_class(row.id))
-        )
-        }))
+        .item({
+            let a = Mutable::new_and_signal(false);
+            Button::new()
+            .s(Font::new()
+                .weight_signal(a.0.signal().map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight))
+                .color_signal(a.0.signal().map_bool(|| RED_8, || RED_4)))
+            .s(Align::new().bottom())
+            .label_signal(t!("delete")).on_press(move || crate::modals::del_modal().set(Some(row.id)))
+            .on_hovered_change(move|h| a.0.set_neq(h))
+        })
+    }))
 }
 
 #[static_ref]
@@ -148,16 +159,6 @@ pub fn timetables() -> &'static MutableVec<Timetable> {
     get_timetables();
     MutableVec::new_with_values(vec![])
 }
-#[static_ref]
-pub fn classes2() -> &'static MutableVec<Class> {
-    get_classes();
-    MutableVec::new_with_values(vec![])
-}
-
-pub fn create_chunks() {
-    let clss = classes().lock_mut().to_vec().into_iter().filter(|c| c.group_id == selected_timetable().get()).collect::<Vec<Class>>();
-    classes2().lock_mut().replace_cloned(clss);
-}
 
 fn change_branch(value: String) {
     branch().set(value)
@@ -176,7 +177,6 @@ pub fn change_timetable(value: String) {
             .replace_cloned(vec![0; timetable.hour as usize]);
     };
     selected_timetable().set(id);
-    create_chunks();
 }
 
 fn del_class(id: i32) {

@@ -1,5 +1,5 @@
 use super::classes::timetables;
-use shared::models::timetables::AddTimetable;
+use shared::{models::timetables::AddTimetable, UpMsg};
 use zoon::{named_color::*, *};
 use crate::{i18n::t, elements::{text_inputs, buttons}};
 use shared::msgs::timetables::*;
@@ -41,21 +41,37 @@ fn update() -> impl Element {
 }
 
 fn timetables_view() -> impl Element {
-    Row::new().items_signal_vec(
+    Row::new()
+    .items_signal_vec(
         timetables()
             .signal_vec_cloned()
+            
             .map(|timetable| {
                 let a = Mutable::new(false);
-                Column::new().s(Borders::all_signal(a.signal().map_bool(
-                        || Border::new().width(1).color(BLUE_3).solid(),
-                        || Border::new().width(1).color(BLUE_1).solid(),
-                    )))
-                    .s(RoundedCorners::all(2))
-                    .s(Width::exact(140))
-                    .s(Height::exact(75))
-                    .on_hovered_change(move |b| a.set(b))
-                    .item(Label::new().label(timetable.name).s(Align::center()))
-                    .item(Label::new().label_signal(t!("delete")).s(Align::center()).on_click(move|| del_timetable(timetable.id)))
+                Column::new()
+                .element_below_signal(
+                    crate::modals::del_signal(timetable.id).map_true(move ||
+                    crate::modals::del_modal_all(&timetable.id.to_string(), timetable.id, UpMsg::Timetables(TimetablesUpMsgs::DelTimetable(timetable.id))))
+                )
+                .s(Borders::all_signal(a.signal().map_bool(
+                    || Border::new().width(1).color(BLUE_3).solid(),
+                    || Border::new().width(1).color(BLUE_1).solid(),
+                )))
+                .s(RoundedCorners::all(2))
+                .s(Width::exact(140))
+                .s(Height::exact(75))
+                .on_hovered_change(move |b| a.set(b))
+                .item(Label::new().label(timetable.name).s(Align::center()))
+                .item({
+                    let a = Mutable::new_and_signal(false);
+                    Button::new()
+                    .s(Font::new()
+                    .weight_signal(a.0.signal().map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight))
+                    .color_signal(a.0.signal().map_bool(|| RED_8, || RED_4)))
+                    .s(Align::new().bottom())
+                    .on_hovered_change(move |h| a.0.set_neq(h))
+                    .label_signal(t!("delete")).s(Align::center()).on_click(move|| crate::modals::del_modal().set(Some(timetable.id)))
+                })
             })
     )
 }
