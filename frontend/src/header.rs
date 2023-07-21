@@ -24,7 +24,7 @@ fn left_nav()-> impl Element{
             //.style("font-color", "blue")
             .attr("target", "_blank")
             .attr("href", "https://timetabling.libredu.org")
-            .child("Generate")
+            .child("Timetabling")
         )
     )
 }
