@@ -20,11 +20,7 @@ fn left_nav()-> impl Element{
     )
     .item_signal(
         school().signal_cloned().map_some(|_|
-            RawHtmlEl::new("a")
-            //.style("font-color", "blue")
-            .attr("target", "_blank")
-            .attr("href", "https://timetabling.libredu.org")
-            .child("Timetabling")
+            Link::new().to("https://timetabling.libredu.org").new_tab(NewTab::new()).label("Timetabling")
         )
     )
 }
