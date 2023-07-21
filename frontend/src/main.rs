@@ -6,6 +6,7 @@ mod elements;
 mod header;
 mod i18n;
 mod router;
+mod modals;
 pub static DAYS: [&str; 7] = [
     "monday",
     "tuesday",
