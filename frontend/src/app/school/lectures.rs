@@ -5,6 +5,7 @@ use zoon::named_color::*;
 use zoon::{println, *};
 
 use crate::connection::send_msg;
+use crate::modals::{del_modal, del_signal};
 use crate::{
     app::screen_width,
     elements::text_inputs,
@@ -143,10 +144,6 @@ fn lectures_view() -> impl Element {
     .items_signal_vec(lectures().signal_vec_cloned().map(|r| {
         let a = Mutable::new(false);
         Column::new()
-        .element_below_signal(
-            crate::modals::del_signal(r.id).map_true(move ||
-            crate::modals::del_modal_all(&r.id.to_string(), UpMsg::Lectures(LecturesUpMsg::DelLecture(r.id))))
-        )
         .s(Borders::all_signal(a.signal().map_bool(
             || Border::new().width(1).color(BLUE_3).solid(),
             || Border::new().width(1).color(BLUE_1).solid(),
@@ -168,16 +165,27 @@ fn lectures_view() -> impl Element {
                     &r.short_name
                 }, &r.kademe))
         )
-        .item({
-            let a = Mutable::new_and_signal(false);
-            Button::new()
-            .s(Font::new()
-                .weight_signal(a.0.signal().map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight))
-                .color_signal(a.0.signal().map_bool(|| RED_8, || RED_4)))
-            .s(Align::new().bottom())
-            .on_hovered_change(move |h| a.0.set_neq(h))
-            .label_signal( t!("delete")).on_press(move || crate::modals::del_modal().set(Some(r.id)))
-        })
+        .item_signal(
+            del_signal(r.id)
+            .map_bool(move || 
+                crate::modals::del_modal_all(&r.id.to_string(), UpMsg::Lectures(LecturesUpMsg::DelLecture(r.id))).into_raw_element(), 
+                move || Row::new().item({
+                    let a = Mutable::new_and_signal(false);
+                    Button::new()
+                    .s(Font::new()
+                    .weight_signal(a.0.signal().map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight))
+                    .color_signal(a.0.signal().map_bool(|| RED_8, || RED_4)))
+                    .s(Align::new().bottom().center_x())
+                    .on_hovered_change(move |h| a.0.set_neq(h))
+                    .label_signal( t!("delete"))
+                    .update_raw_el(|raw| raw.event_handler(move |event: events::Click|{
+                        crate::modals::del_modal().set(Some(r.id));
+                        event.prevent_default();
+                        event.stop_propagation();
+                    }))
+                }).into_raw_element()
+            )
+        )
     }))
 }
 
