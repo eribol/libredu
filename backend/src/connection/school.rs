@@ -1,6 +1,6 @@
-use moon::{tokio_stream::StreamExt, *};
-use shared::{models::{school::FullSchool, timetables::AddTimetable}, DownMsg, msgs::timetables::TimetablesDownMsgs};
-use sqlx::{FromRow, Row};
+use moon::*;
+use shared::{models::{school::FullSchool, timetables::AddTimetable}, DownMsg};
+use sqlx::FromRow;
 
 use super::sql::POSTGRES;
 
@@ -64,21 +64,21 @@ pub async fn update_school(auth_token: Option<AuthToken>, form: &FullSchool) -> 
             let school: sqlx::Result<School> = sqlx::query_as(
             "update school set name = $2, manager = $3, tel = $4 where manager = $1 returning id, name",
         )
-        .bind(&token)
+        .bind(token)
         .bind(&form.name)
-        .bind(&form.manager)
+        .bind(form.manager)
         .bind(&form.phone)
         //.bind(&form.location)
         .fetch_one(&*POSTGRES.write().await)
         .await;
             match school {
                 Ok(school) => {
-                    return DownMsg::AddedSchool(shared::School {
+                    DownMsg::AddedSchool(shared::School {
                         id: school.id,
                         name: school.name,
                     })
                 }
-                Err(e) => return DownMsg::AddSchoolError(e.to_string()),
+                Err(e) => DownMsg::AddSchoolError(e.to_string()),
             }
         }
         Err(e) => DownMsg::AddSchoolError(e.to_string()),
@@ -89,7 +89,7 @@ pub async fn get_school(manager: i32) -> sqlx::Result<School> {
     let db = POSTGRES.read().await;
     let school: sqlx::Result<School> =
         sqlx::query_as(r#"select id, name from school where manager = $1"#)
-            .bind(&manager)
+            .bind(manager)
             .fetch_one(&*db)
             .await;
     school

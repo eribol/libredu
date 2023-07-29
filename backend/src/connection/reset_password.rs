@@ -1,8 +1,8 @@
 use bcrypt::hash;
 use moon::*;
 use shared::{DownMsg, models::users::ResetForm, User};
-use crate::connection::{self, set_user};
-use crate::{send_mail::{self, send_mail}, user::LoginUser};
+use crate::connection::set_user;
+use crate::user::LoginUser;
 use super::REDISDB;
 
 pub async fn reset_password(form: ResetForm)-> DownMsg{
@@ -23,11 +23,11 @@ pub async fn reset_password(form: ResetForm)-> DownMsg{
                     first_name: u.first_name,
                     auth_token: AuthToken::new(token)
                 };
-                set_user(user.id, &user.auth_token).await;
+                set_user(user.id, &user.auth_token).await.expect("User not set");
                 println!("set user oldu");
                 return DownMsg::LoggedIn(user)
             },
-            Err(e)=>{
+            Err(_e)=>{
                 return DownMsg::LoginError("Not found user".to_string())
             }
         }
@@ -41,23 +41,4 @@ async fn get_token(email: &String, auth_token: &String)-> bool{
         .arg(auth_token.clone())
         .query(&mut con).unwrap();
     email == &mail
-}
-
-async fn set_token(email: &String, auth_token: &String)-> bool{
-    let client = REDISDB.write().await;
-    let mut con = client.get_connection().unwrap();
-    let mail: String  = redis::cmd("set")
-        .arg(auth_token.clone())
-        .query(&mut con).unwrap();
-    email == &mail
-}
-
-pub async fn del_reset(id: i32, auth: String) -> redis::RedisResult<()> {
-    let client = REDISDB.write().await;
-    let mut con = client.get_connection()?;
-    let _user = redis::cmd("hdel")
-        .arg("reset_passwords")
-        .arg(auth)
-        .query(&mut con)?;
-    Ok(())
 }

@@ -1,7 +1,7 @@
 use moon::{AuthToken, EntityId};
 use shared::DownMsg;
 
-use crate::send_mail::{self, send_mail};
+use crate::send_mail::send_mail;
 
 use super::REDISDB;
 
