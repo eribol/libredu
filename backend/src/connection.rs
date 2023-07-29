@@ -16,7 +16,7 @@ static REDISDB: Lazy<RwLock<redis::Client>> =
     Lazy::new(|| RwLock::new(redis::Client::open("redis://127.0.0.1:6379/").unwrap()));
 
 async fn get_connection() -> redis::RedisResult<redis::Connection> {
-    let client = REDISDB.write().await;
+    let client = REDISDB.read().await;
     client.get_connection()
 }
 pub async fn get_user(
@@ -36,7 +36,7 @@ pub async fn get_user(
 }
 
 pub async fn set_user(id: i32, auth_token: &AuthToken) -> redis::RedisResult<()> {
-    let client = REDISDB.write().await;
+    let client = REDISDB.read().await;
     let mut con = client.get_connection()?;
     println!("set user oluyor");
     let _user: i32 = redis::cmd("hset")
@@ -72,7 +72,7 @@ pub async fn _get_sessions_pg(id: i32, _token: &String) -> redis::RedisResult<()
     Ok(())
 }
 pub async fn register(user: SigninForm, auth_token: &AuthToken) -> DownMsg{
-    let client = REDISDB.write().await;
+    let client = REDISDB.read().await;
     let mut con = client.get_connection().unwrap();
     let _user: i32 = redis::cmd("hset")
         .arg(auth_token.clone().into_string())
@@ -102,7 +102,7 @@ fn create_html(d: String, email: String, token: String)->String{
     r
 }
 pub async fn get_register(auth_token: String, email: String) -> DownMsg {
-    let client = REDISDB.write().await;
+    let client = REDISDB.read().await;
     let mut con = client.get_connection().unwrap();
     let _user: String = redis::cmd("hget")
         .arg(auth_token)
@@ -113,7 +113,7 @@ pub async fn get_register(auth_token: String, email: String) -> DownMsg {
     user2
 }
 pub async fn del_user(id: i32, auth: String) -> redis::RedisResult<()> {
-    let client = REDISDB.write().await;
+    let client = REDISDB.read().await;
     let mut con = client.get_connection()?;
     let user: i32 = redis::cmd("hget")
         .arg("sessions")

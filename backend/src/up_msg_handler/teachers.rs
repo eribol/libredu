@@ -7,7 +7,7 @@ use super::auth::POSTGRES;
 use moon::tokio_stream::StreamExt;
 
 pub async fn add_teacher(id: i32, form: AddTeacher) -> DownMsg {
-    let db = POSTGRES.write().await;
+    let db = POSTGRES.read().await;
     let mut row = sqlx::query(
         r#"insert into users(first_name, last_name, short_name) 
                         values($1, $2, $3) 

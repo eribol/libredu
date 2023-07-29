@@ -7,7 +7,7 @@ use super::auth::POSTGRES;
 use moon::tokio_stream::StreamExt;
 
 pub async fn add_class(id: i32, form: AddClass) -> DownMsg {
-    let db = POSTGRES.write().await;
+    let db = POSTGRES.read().await;
     let mut school_group =
         sqlx::query(r#"select * from class_groups where id = $1 and school = $2"#)
             .bind(form.group_id)

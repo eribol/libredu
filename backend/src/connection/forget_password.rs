@@ -15,7 +15,7 @@ pub async fn forget_password(email: String)-> DownMsg{
     DownMsg::ResetPassword
 }
 async fn add_token(email: String, auth_token: AuthToken){
-    let client = REDISDB.write().await;
+    let client = REDISDB.read().await;
     let mut con = client.get_connection().unwrap();
     let _user: String = redis::cmd("set")
         .arg(auth_token.clone().into_string())

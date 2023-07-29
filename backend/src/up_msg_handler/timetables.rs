@@ -5,7 +5,7 @@ use shared::{DownMsg, msgs::timetables::*};
 use sqlx::Row;
 
 pub async fn add_timetable(form: AddTimetable, school_id: i32) -> DownMsg {
-    let db = POSTGRES.write().await;            
+    let db = POSTGRES.read().await;            
     let mut timetable_query = sqlx::query(r#"insert into class_groups(school, name, hour) values($1, $2, $3) returning id, name, hour"#)
         .bind(school_id)
         .bind(&form.name)

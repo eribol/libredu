@@ -35,7 +35,7 @@ pub async fn reset_password(form: ResetForm)-> DownMsg{
     DownMsg::ResetPassword
 }
 async fn get_token(email: &String, auth_token: &String)-> bool{
-    let client = REDISDB.write().await;
+    let client = REDISDB.read().await;
     let mut con = client.get_connection().unwrap();
     let mail: String  = redis::cmd("get")
         .arg(auth_token.clone())
