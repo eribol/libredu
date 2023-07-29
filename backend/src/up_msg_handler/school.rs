@@ -6,7 +6,7 @@ use sqlx::Row;
 pub async fn get_school(manager: i32) -> DownMsg {
     let db = POSTGRES.read().await;
     let mut query = sqlx::query(r#"select id, name from school where manager = $1"#)
-        .bind(&manager)
+        .bind(manager)
         .fetch(&*db);
     if let Ok(row) = query.try_next().await {
         if let Some(row2) = row {

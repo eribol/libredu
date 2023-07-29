@@ -1,5 +1,4 @@
-use super::school::*;
-use moon::*;
+
 use shared::models::lectures::{AddLecture, Lecture};
 use shared::DownMsg;
 use shared::msgs::lectures::LecturesDownMsg;
@@ -16,7 +15,7 @@ pub async fn add_lecture(id: i32, lecture_form: AddLecture) -> DownMsg {
     )
         .bind(&lecture_form.kademe)
         .bind(&lecture_form.name)
-        .bind(&id)
+        .bind(id)
         .bind(&lecture_form.short_name)
         .fetch(&*db);
         if let Some(lec) = row.try_next().await.unwrap() {
@@ -35,6 +34,23 @@ pub async fn add_lecture(id: i32, lecture_form: AddLecture) -> DownMsg {
     }
 }
 
+pub async fn update_lecture(school_id: i32,lecture_form: Lecture) -> DownMsg {
+    let db = POSTGRES.write().await;
+    let _row = sqlx::query(
+        r#"update subjects set kademe = $1, name = $2, short_name = $3
+        where id = $4 and school = $5
+        returning id, kademe, name, short_name"#,
+    )
+    .bind(&lecture_form.kademe)
+    .bind(&lecture_form.name)
+    .bind(&lecture_form.short_name)
+    .bind(lecture_form.id)
+    .bind(school_id)
+    .execute(&*db).await;
+    let l_msg = LecturesDownMsg::AddedLecture(lecture_form);
+    DownMsg::Lectures(l_msg)
+}
+
 pub async fn get_lectures(id: i32) -> DownMsg {
     let db = POSTGRES.write().await;
     let mut lectures: Vec<Lecture> = vec![];
@@ -42,7 +58,7 @@ pub async fn get_lectures(id: i32) -> DownMsg {
         r#"select id, kademe, name, short_name from subjects
         where school = $1"#,
     )
-        .bind(&id)
+        .bind(id)
         .fetch(&*db);
     while let Some(lec) = row.try_next().await.unwrap() {
         lectures.push(Lecture {
@@ -60,8 +76,8 @@ pub async fn del_lecture(id: i32, school_id: i32) -> DownMsg {
     let mut row = sqlx::query(
         r#"delete from subjects where id = $1 and school = $2 returning id"#,
     )
-        .bind(&id)
-        .bind(&school_id)
+        .bind(id)
+        .bind(school_id)
         .fetch(&*db);
     if let Some(_) = row.try_next().await.unwrap() {
         return DownMsg::Lectures(LecturesDownMsg::DeletedLecture(id))

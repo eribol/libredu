@@ -10,8 +10,8 @@ pub async fn add_class(id: i32, form: AddClass) -> DownMsg {
     let db = POSTGRES.write().await;
     let mut school_group =
         sqlx::query(r#"select * from class_groups where id = $1 and school = $2"#)
-            .bind(&form.group_id)
-            .bind(&id)
+            .bind(form.group_id)
+            .bind(id)
             .fetch(&*db);
     if let Some(_) = school_group.try_next().await.unwrap() {
         let mut row = sqlx::query(
@@ -21,8 +21,8 @@ pub async fn add_class(id: i32, form: AddClass) -> DownMsg {
         )
         .bind(&form.kademe)
         .bind(&form.sube)
-        .bind(&id)
-        .bind(&form.group_id)
+        .bind(id)
+        .bind(form.group_id)
         .fetch(&*db);
         if let Ok(query) = row.try_next().await{
             if let Some(class) = query {
@@ -54,7 +54,7 @@ pub async fn get_classes(id: i32) -> DownMsg {
         r#"select id, kademe, sube, group_id from classes
                         where school = $1"#,
     )
-    .bind(&id)
+    .bind(id)
     .fetch(&*db);
     let mut classes = vec![];
     while let Some(class) = row.try_next().await.unwrap() {
@@ -74,8 +74,8 @@ pub async fn del_class(class_id: i32, school_id: i32) -> DownMsg {
     let mut row = sqlx::query(
         r#"delete from classes where id = $1 and school = $2 returning id"#,
     )
-    .bind(&class_id)
-    .bind(&school_id)
+    .bind(class_id)
+    .bind(school_id)
     .fetch(&*db);
     if let Some(_) = row.try_next().await.unwrap() {
         del_class_acts(class_id).await;
@@ -86,10 +86,10 @@ pub async fn del_class(class_id: i32, school_id: i32) -> DownMsg {
 
 pub async fn del_class_acts(id: i32){
     //use moon::tokio_stream::StreamExt;
-    let db = POSTGRES.write().await;
+    let db = POSTGRES.read().await;
     let _ = sqlx::query(
         r#"delete from activities where $1 = any(classes)"#,
     )
-    .bind(&id)
+    .bind(id)
     .execute(&*db).await;
 }
