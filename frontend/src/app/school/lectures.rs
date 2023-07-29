@@ -8,7 +8,7 @@ use crate::connection::send_msg;
 use crate::{
     app::screen_width,
     elements::text_inputs,
-    i18n::t,
+    i18n::{t, t_s},
 };
 
 pub fn home() -> impl Element {
@@ -115,13 +115,24 @@ fn buttons()->impl Element{
 }
 fn add() -> impl Element {
     Button::new()
+    .s(Width::fill())
+    .s(Borders::all(Border::new().width(1).color(BLUE_3).solid()))
     .label_signal(
         selected_lecture()
         .signal()
-        .map_option(|_| Label::new().label_signal(t!("update")).on_click(update_lecture),||
-            Label::new().label_signal(t!("add")).on_click(add_lecture)
+        .map_option(|_| 
+            t_s!("update"),||
+            t_s!("add")
         )
     )
+    .on_click(||{
+        if selected_lecture().get_cloned().is_some(){
+            update_lecture()
+        }
+        else{
+            add_lecture()
+        }
+    })
 }
 
 fn lectures_view() -> impl Element {
