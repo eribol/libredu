@@ -7,6 +7,7 @@ pub enum TeacherUpMsgs {
     GetTeachers,
     AddTeacher(AddTeacher),
     DelTeacher(i32),
+    UpdateTeacher(Teacher)
 }
 
 #[derive(Debug, Serialize, Deserialize)]

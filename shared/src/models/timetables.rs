@@ -13,6 +13,13 @@ pub struct Timetable {
     pub name: String,
     pub hour: i32,
 }
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(crate = "serde")]
+pub struct TimetableSchedules{
+    pub group_id: i32,
+    pub starts: Vec<NaiveTime>,
+    pub ends: Vec<NaiveTime>
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(crate = "serde")]

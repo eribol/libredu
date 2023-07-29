@@ -1,7 +1,6 @@
 use models::{
-    lectures::{AddLecture, Lecture},
     school::FullSchool,
-    timetables::{AddTimetable, Timetable}, users::ResetForm,
+    users::ResetForm,
 };
 use moonlight::*;
 use msgs::{

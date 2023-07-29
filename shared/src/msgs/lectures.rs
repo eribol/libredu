@@ -7,6 +7,7 @@ pub enum LecturesUpMsg{
     GetLectures,
     AddLecture(AddLecture),
     DelLecture(i32),
+    UpdateLecture(Lecture)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
