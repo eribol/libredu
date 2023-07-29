@@ -3,8 +3,7 @@ use std::io::ErrorKind;
 use crate::{tokio::sync::RwLock, user::signin, send_mail::send_mail};
 use moon::{Lazy, *, futures::TryStreamExt};
 use redis::{self, RedisError};
-use shared::{User, signin::SigninForm, DownMsg};
-use sqlx::Row;
+use shared::{signin::SigninForm, DownMsg};
 
 use self::sql::POSTGRES;
 pub mod school;
@@ -28,11 +27,11 @@ pub async fn get_user(
         .arg("sessions")
         .arg(auth)
         .query(&mut con)?;
-    if user == auth.split(":").nth(0).unwrap().parse::<i32>().unwrap(){
-        return Ok(user)
+    if user == auth.split(':').next().unwrap().parse::<i32>().unwrap(){
+        Ok(user)
     }
     else{
-        return Err(RedisError::from(std::io::Error::new(ErrorKind::NotFound, "E")))
+        Err(RedisError::from(std::io::Error::new(ErrorKind::NotFound, "E")))
     }
 }
 
@@ -53,8 +52,8 @@ pub async fn set_user(id: i32, auth_token: &AuthToken) -> redis::RedisResult<()>
 pub async fn set_session_pg(id: i32, token: &String) -> sqlx::Result<()> {
     let db = POSTGRES.read().await;  
     let mut _user = sqlx::query(r#"insert into session(user_id, key) values($1, $2)"#)
-        .bind(&id)
-        .bind(&token)
+        .bind(id)
+        .bind(token)
         .fetch(&*db);
     if let Some(_) = _user.try_next().await.unwrap(){
         println!("noluyor lan");
@@ -62,13 +61,13 @@ pub async fn set_session_pg(id: i32, token: &String) -> sqlx::Result<()> {
     Ok(())
 }
 
-pub async fn get_sessions_pg(id: i32, token: &String) -> redis::RedisResult<()> {
+pub async fn _get_sessions_pg(id: i32, _token: &String) -> redis::RedisResult<()> {
     let db = POSTGRES.read().await; 
     let mut user = sqlx::query(r#"delete from session where user_id = $1 returning key"#)
-        .bind(&id)
+        .bind(id)
         .fetch(&*db);
-    while let Some(key) = user.try_next().await.unwrap(){
-        del_user(id, key.try_get("key").unwrap()).await;
+    while let Some(_key) = user.try_next().await.unwrap(){
+        //del_user(id, key.try_get("key").unwrap()).await;
     }
     Ok(())
 }
@@ -86,8 +85,8 @@ pub async fn register(user: SigninForm, auth_token: &AuthToken) -> DownMsg{
     let d = dotenvy::var("DOMAIN_NAME").unwrap();
     
     let html = create_html(d, user.email.clone(),  auth_token.clone().into_string().trim().to_string());
-    let register = send_mail(user.email, html).await;
-    register
+    
+    send_mail(user.email, html).await
 }
 
 fn create_html(d: String, email: String, token: String)->String{
