@@ -1,15 +1,15 @@
 use crate::{
     connection::{
         self, get_user,
-        school::{add_school, auth, get_school, update_school}, forget_password, reset_password,
+        school::{add_school, get_school, update_school}, forget_password, reset_password,
     },
     user::{self, is_user_exist},
 };
 use moon::*;
 use shared::{
     msgs::{
-        classes::{ClassUpMsgs},
-        teachers::{TeacherDownMsgs, TeacherUpMsgs}, lectures::{LecturesUpMsg, LecturesDownMsg}, timetables::TimetablesUpMsgs,
+        classes::ClassUpMsgs,
+        teachers::TeacherUpMsgs, lectures::LecturesUpMsg, timetables::TimetablesUpMsgs,
     },
     *,
 };
@@ -75,14 +75,14 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
                 Ok(_) => DownMsg::SigninError("This email is registered".to_string()),
                 Err(_) => {
                     let auth_token = AuthToken::new(EntityId::new());
-                    let r = connection::register(form, &auth_token).await;
-                    r
+                    
+                    connection::register(form, &auth_token).await
                 }
             }
         },
         UpMsg::Register(token, email) => {
-            let r = connection::get_register(token, email).await;
-            r
+            
+            connection::get_register(token, email).await
         },
         UpMsg::AddSchool { name } => add_school(auth_token, name).await,
         UpMsg::GetSchool => {
@@ -128,7 +128,7 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
                         TeacherUpMsgs::GetTeachers => get_teachers(id).await,
                         TeacherUpMsgs::AddTeacher(form) => add_teacher(id, form).await,
                         TeacherUpMsgs::DelTeacher(user_id) => del_teacher(user_id, id).await,
-                        _ => DownMsg::Teachers(TeacherDownMsgs::AddTeacherError("".to_string())),
+                        TeacherUpMsgs::UpdateTeacher(form) => update_teacher(form).await,
                     }
                 } else {
                     school_msg
@@ -146,8 +146,9 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
                         TimetablesUpMsgs::GetTimetable => timetables::get_class_groups(id).await,
                         TimetablesUpMsgs::AddTimetable(form) => timetables::add_timetable(form, id).await,
                         TimetablesUpMsgs::DelTimetable(group_id) => timetables::del_timetable(id, group_id).await,
-                        //TeacherUpMsgs::DelTeacher(user_id) => del_teacher(user_id, id).await,
-                        _ => DownMsg::Teachers(TeacherDownMsgs::AddTeacherError("".to_string())),
+                        TimetablesUpMsgs::GetSchedules(group_id) => timetables::get_schedules(group_id).await,
+                        TimetablesUpMsgs::UpdateSchedules(group_id, schedules) => timetables::update_schedules(group_id, schedules).await,
+                        //TeacherUpMsgs::DelTeacher(user_id) => del_teacher(user_id, id).await
                     }
                 } else {
                     school_msg
@@ -165,6 +166,7 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
                     match l_msg {
                         LecturesUpMsg::GetLectures => lectures::get_lectures(id).await,
                         LecturesUpMsg::AddLecture(form) => lectures::add_lecture(id, form).await,
+                        LecturesUpMsg::UpdateLecture(form) => lectures::update_lecture(id, form).await,
                         LecturesUpMsg::DelLecture(l_id) => lectures::del_lecture(l_id, id).await,
                     }
                 }    

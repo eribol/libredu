@@ -1,5 +1,6 @@
 login = Giriş Yap
 signin = Üye Ol
+forget-password = Şifremi Unuttum
 tr = Tr
 en = En
 turkish = Türkçe
@@ -8,6 +9,8 @@ update = Güncelle
 add = Ekle
 delete = Sil
 edit = Düzenle
+hide = Gizle
+seek = Göster
 
 #Home page
 libredu-information = Libredu okullar için bir yazılım kümesidir, ders dağıtımı ve yıllık plan oluşturma gibi.
@@ -15,6 +18,7 @@ libredu-information = Libredu okullar için bir yazılım kümesidir, ders dağ�
 #Login Page
 email = E-posta
 password = Şifre
+login-request-failed = Giriş Hatalı
 
 #Signin Page
 first_name = Adınız
@@ -25,6 +29,8 @@ short_name = Kısa Ad
 # Okul Ekleme Sayfası
 add-school = Okul Ekle
 school-name = Okul Adı
+school-principle = Okul Müdürü
+phone-number = Telefon Numarası
 
 #Okul sayfası
 teachers = Öğretmenler
@@ -35,6 +41,8 @@ homepage = Anasayfa
 
 #Sınıflar
 add-class = Sınıfı Ekle
+branch = Şube
+grade = Kademe
 
 #Teachers Page
 teacher-role = Öğretmen Profili
@@ -44,6 +52,13 @@ deputy-principal = Müdür Yardımcısı
 school-counselor = Rehber Öğretmen
 teacher = Öğretmen
 
+#Lecture Page
+lecture-grade = Ders Kademesi
+lecture-name = Ders Adı
+lecture-shortname = Ders Kısa Adı
+
+#Timetables
+timetable = Ders Programı
 #Günler
 monday = Pazartesi
 tuesday = Salı

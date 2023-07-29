@@ -1,7 +1,5 @@
-use super::login_user;
 use crate::i18n;
 use crate::router::Route;
-use shared::UpMsg;
 use shared::models::users::ResetForm;
 use std::borrow::Cow;
 use zoon::named_color::{BLUE_5, RED_5};
@@ -53,11 +51,12 @@ pub fn reset_password()->impl Element{
         .s(RoundedCorners::all(10))
         .s(Borders::all(Border::new().solid().color(BLUE_5)))
         .label(El::new().s(Align::center()).child_signal(i18n::t!("login")))
-        .on_click(|| send_mail()),
+        .on_click(send_mail),
     )
     .item(
         Row::new()
-       .item(
+        .s(Gap::new().x(25))
+        .item(
             Link::new().label("Sign in").to(Route::Signin)
         )
         .item(" veya ")
@@ -106,9 +105,9 @@ fn send_mail() {
             password: password().get_cloned(),
             password2: password2().get_cloned()
         };
-        if let Err(e) = form.is_valid(){
+        if let Err(_e) = form.is_valid(){
             if form.has_error("email"){
-                email_error().set(Some(Cow::Borrowed("Email is nt valid")))
+                email_error().set(Some(Cow::Borrowed("Email is not valid")))
             }
             if form.has_error("password2"){
                 password_error().set(Some(Cow::Borrowed("Password is not valid")))

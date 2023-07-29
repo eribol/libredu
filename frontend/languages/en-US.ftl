@@ -1,13 +1,16 @@
 login = Log In
 signin = Sign In
+forget-password = Forget Password
 tr = Tr
 en = En
 turkish = Turkish
 english = English
 update = Update
-add = Ekle
+add = Add
 delete = Delete
 edit = Edit
+hide = Hide
+seek = Show
 
 #Home Page
 libredu-information = Libredu is a collection softwares for schools like timetabling, creating curriculum.
@@ -15,6 +18,7 @@ libredu-information = Libredu is a collection softwares for schools like timetab
 #Login Page
 email = E-mail
 password = Password
+login-request-failed = Login Error
 
 #Signin Page
 first_name = First Name
@@ -25,6 +29,8 @@ short_name = Short Name
 #Add School Page
 add-school = Add School
 school-name = School Name
+school-principle = The Principle
+phone-number = Phone Number
 
 #School Page
 teachers = Teachers
@@ -35,6 +41,8 @@ homepage = Home Page
 
 #Classes
 add-class = Add Class
+branch = Branch
+grade = Grade
 
 #Teachers Page
 teacher-role = Teacher Role
@@ -44,6 +52,13 @@ deputy-principal = Deputy Vice Principle
 school-counselor = Counselor
 teacher = Teacher
 
+#Lecture Page
+lecture-grade = Lecture Grade
+lecture-name = Lecture Name
+lecture-shortname = Lecture Sortname
+
+#Timetables
+timetable = Timetable
 #Days
 monday = Monday
 tuesday = Tuesday

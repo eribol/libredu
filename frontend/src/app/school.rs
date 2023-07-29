@@ -38,8 +38,7 @@ pub fn school_page() -> impl Element {
     El::new().child_signal(school().signal_ref(|schl| {
         match schl {
             Some(_s) => Column::new()
-                .s(Padding::new().top(50))
-                .s(Gap::new().y(50))
+                .s(Gap::new().y(10))
                 .item(
                     Label::new()
                     .s(Align::new().center_x())
@@ -47,11 +46,11 @@ pub fn school_page() -> impl Element {
                 )
                 .item(school_tabs())
                 .item_signal(selected_page().signal_ref(|page| match page {
-                    SchoolPages::Home => homepage::home().into_raw_element(),
-                    SchoolPages::Classes => classes::home().into_raw_element(),
-                    SchoolPages::Teachers => teachers::home().into_raw_element(),
-                    SchoolPages::Lectures => lectures::home().into_raw_element(),
-                    SchoolPages::Timetabling => timetables::home().into_raw_element(),
+                    SchoolPages::Home => El::new().child(homepage::home()),
+                    SchoolPages::Classes => El::new().child(classes::home()),
+                    SchoolPages::Teachers => El::new().child(teachers::home()),
+                    SchoolPages::Lectures => El::new().child(lectures::home()),
+                    SchoolPages::Timetabling => El::new().child(timetables::home()),
                 })),
             None => Column::new().item(Row::new().item(add_school::add_school_page())),
         }
@@ -61,8 +60,8 @@ pub fn school_page() -> impl Element {
 
 fn school_tabs() -> impl Element {
     Row::new()
-        .s(Gap::new().x(50))
-        .s(Align::center())
+    .s(Gap::new().x(50))
+    .s(Align::center())
         .s(Font::new().weight(FontWeight::Medium))
         .items(SchoolPages::iter().map(|page| {
             Button::new()
@@ -92,7 +91,7 @@ enum SchoolPages {
 }
 
 impl SchoolPages {
-    fn label<'a>(&'a self) -> &'a str {
+    fn label(&self) -> &str {
         match self {
             Self::Classes => "classes",
             Self::Teachers => "teachers",

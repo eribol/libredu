@@ -1,4 +1,4 @@
-use crate::{app::{self, Pages, forget_password, reset_password}, connection::send_msg};
+use crate::{app::{self, Pages, reset_password}, connection::send_msg};
 use std::collections::VecDeque;
 use shared::UpMsg;
 use zoon::{*, println};
@@ -36,7 +36,7 @@ pub fn router() -> &'static Router<Route> {
         };
 
         match route {
-            Route::Login => {
+            Route::Login =>{
                 if app::is_user_logged() {
                     return router().replace(Route::Home);
                 }

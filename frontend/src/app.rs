@@ -14,7 +14,7 @@ pub static LANG_STORAGE_KEY: &str = "tr";
 
 pub fn root() -> impl Element {
     Column::new()
-        .s(Padding::new().top(15).right(10).left(10))
+        .s(Padding::new().top(10).right(10).left(10))
         .item(header::root())
         .item(view::root())
         .on_viewport_size_change(|width, _height| change_screen_width(width))
@@ -71,7 +71,7 @@ fn logged_user() -> impl Signal<Item = Option<User>> {
 }
 
 pub fn is_user_logged() -> bool {
-    if let Some(_) = login_user().get_cloned() {
+    if login_user().get_cloned().is_some() {
         return true;
     }
     false

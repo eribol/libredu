@@ -10,7 +10,8 @@ use shared::{
     msgs::{classes::ClassUpMsgs, timetables::TimetablesUpMsgs},
     UpMsg,
 };
-use zoon::{named_color::*, println, *, web_sys::EventTarget};
+use zoon::named_color::*;
+use zoon::*;
 
 pub fn home() -> impl Element {
     Column::new()
@@ -45,7 +46,7 @@ fn form() -> impl Element {
 fn groups_view() -> impl Element {
     Column::new()
         .s(Align::center())
-        .item(Label::new().label("Select Timetable Group"))
+        .item(Label::new().label_signal(t!("timetable")))
         .item(
             RawHtmlEl::new("select").children_signal_vec(timetables().signal_vec_cloned().map(
                 |group| {
@@ -68,7 +69,7 @@ fn groups_view() -> impl Element {
 fn grade_view() -> impl Element {
     Column::new()
         .s(Align::center())
-        .item(Label::new().label("Kademe").s(Align::center()))
+        .item(Label::new().label_signal(t!("grade")).s(Align::center()))
         .item(
             text_inputs::default()
                 .id("grade")
@@ -79,7 +80,7 @@ fn grade_view() -> impl Element {
 fn branch_view() -> impl Element {
     Column::new()
         .s(Align::center())
-        .item(Label::new().label("Şube").s(Align::center()))
+        .item(Label::new().label_signal(t!("branch")).s(Align::center()))
         .item(text_inputs::default().on_change(change_branch).id("sube"))
 }
 fn update() -> impl Element {
@@ -97,7 +98,7 @@ fn classes_view() -> impl Element {
         Column::new()
         .element_below_signal(
             crate::modals::del_signal(row.id).map_true(move ||
-            crate::modals::del_modal_all(&row.id.to_string(), row.id, UpMsg::Classes(ClassUpMsgs::DelClass(row.id))))
+            crate::modals::del_modal_all(&row.id.to_string(), UpMsg::Classes(ClassUpMsgs::DelClass(row.id))))
         )
         .s(Borders::all_signal(a.signal().map_bool(
             || Border::new().width(1).color(BLUE_3).solid(),
@@ -179,20 +180,6 @@ pub fn change_timetable(value: String) {
     selected_timetable().set(id);
 }
 
-fn del_class(id: i32) {
-    //let id = id.parse::<i32>().unwrap();
-    send_msg(UpMsg::Classes(ClassUpMsgs::DelClass(id)))
-}
-
-fn send_msg(msg: UpMsg) {
-    use crate::connection::*;
-    Task::start(async {
-        match connection().send_up_msg(msg).await {
-            Err(_error) => {}
-            Ok(_msg) => (),
-        }
-    });
-}
 fn get_timetables() {
     use crate::connection::*;
     use shared::*;

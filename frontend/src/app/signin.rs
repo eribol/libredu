@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::i18n;
+use crate::i18n::{self, t};
 use zoon::{eprintln, named_color::*, println, *};
 
 #[static_ref]
@@ -119,64 +119,66 @@ pub fn registered()->impl Element{
 pub fn register_view() -> impl Element {
     
     Column::new()
+    .s(Align::center())
+    .s(Width::exact(250))
+    .s(Gap::new().y(15))
+    .item(
+        Label::new()
         .s(Align::center())
-        .s(Gap::new().y(15))
-        .item(
+        .label_signal(i18n::t!("login"))
+        .s(Font::new().weight(FontWeight::SemiBold)),
+    )
+    .item(
+        TextInput::new()
+        .s(Width::fill())
+        .s(Align::center())
+        .s(Height::exact(30))
+        .s(Borders::all(Border::new().solid().color(BLUE_5)))
+        .id("first_name")
+        .placeholder(Placeholder::with_signal(i18n::t!("first_name")))
+        .input_type(InputType::text())
+        .on_change(change_first_name)
+        .update_raw_el(|raw_el|
+            raw_el.event_handler(|_event: events::FocusOut| first_name_validate())
+        )
+    )
+    .item_signal(
+        first_name_error().signal_cloned().map_some(|e| 
             Label::new()
-                .s(Align::center())
-                .label_signal(i18n::t!("login"))
-                .s(Font::new().weight(FontWeight::SemiBold)),
+            .s(Font::new().weight(FontWeight::Number(10)).color(RED_6))
+            .label_signal(t!(e))
         )
-        .item(
-            TextInput::new()
-                .s(Align::center())
-                .s(Height::exact(30))
-                .s(Borders::all(Border::new().solid().color(BLUE_5)))
-                .id("first_name")
-                .placeholder(Placeholder::with_signal(i18n::t!("first_name")))
-                .input_type(InputType::text())
-                .on_change(change_first_name)
-                .update_raw_el(|raw_el|
-                    raw_el.event_handler(|_event: events::FocusOut| first_name_validate())
-                )
+    )
+    .item(
+        TextInput::new()
+        .s(Align::center())
+        .s(Height::exact(30))
+        .s(Borders::all(Border::new().solid().color(BLUE_5)))
+        .id("last_name")
+        .placeholder(Placeholder::with_signal(i18n::t!("last_name")))
+        .input_type(InputType::text())
+        .on_change(change_last_name)
+        .update_raw_el(|raw_el|
+            raw_el.event_handler(|_event: events::FocusOut| last_name_validate())
         )
-        .item_signal(
-            first_name_error().signal_cloned().map_some(|e| 
-                Label::new()
-                .s(Font::new().weight(FontWeight::Number(10)).color(RED_6))
-                .label(e)
-            )
+    )
+    .item_signal(
+        last_name_error().signal_cloned().map_some(|e| 
+            Label::new()
+            .s(Font::new().weight(FontWeight::Number(10)).color(RED_6))
+            .label(e)
         )
-        .item(
-            TextInput::new()
-                .s(Align::center())
-                .s(Height::exact(30))
-                .s(Borders::all(Border::new().solid().color(BLUE_5)))
-                .id("last_name")
-                .placeholder(Placeholder::with_signal(i18n::t!("last_name")))
-                .input_type(InputType::text())
-                .on_change(change_last_name)
-                .update_raw_el(|raw_el|
-                    raw_el.event_handler(|_event: events::FocusOut| last_name_validate())
-                )
-        )
-        .item_signal(
-            last_name_error().signal_cloned().map_some(|e| 
-                Label::new()
-                .s(Font::new().weight(FontWeight::Number(10)).color(RED_6))
-                .label(e)
-            )
-        )
-        .item(
-            TextInput::new()
-                .s(Align::center())
-                .s(Height::exact(30))
-                .s(Borders::all(Border::new().solid().color(BLUE_5)))
-                .id("email")
-                .placeholder(Placeholder::with_signal(i18n::t!("email")))
-                .input_type(InputType::text())
-                .on_change(change_email)
-                .update_raw_el(|raw_el|
+    )
+    .item(
+        TextInput::new()
+        .s(Align::center())
+        .s(Height::exact(30))
+        .s(Borders::all(Border::new().solid().color(BLUE_5)))
+        .id("email")
+        .placeholder(Placeholder::with_signal(i18n::t!("email")))
+        .input_type(InputType::text())
+        .on_change(change_email)
+        .update_raw_el(|raw_el|
                     raw_el.event_handler(|_event: events::FocusOut| email_validate())
                 )
         ).item_signal(
@@ -244,7 +246,7 @@ pub fn register_view() -> impl Element {
                 .s(RoundedCorners::all(10))
                 .s(Borders::all(Border::new().solid().color(BLUE_5)))
                 .label(El::new().s(Align::center()).child_signal(i18n::t!("login")))
-                .on_click(|| signin()),
+                .on_click(signin),
         )
         .item_signal(
             server_error().signal_cloned().map_some(|e| 
@@ -272,7 +274,7 @@ fn signin() {
                 }
             });
         }
-        Err(e) =>{
+        Err(_e) =>{
             user.has_error("first_name");
         }
     }

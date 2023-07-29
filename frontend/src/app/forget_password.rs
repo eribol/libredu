@@ -1,10 +1,7 @@
-use super::login_user;
 use crate::i18n;
 use crate::router::Route;
-use shared::UpMsg;
-use std::borrow::Cow;
-use zoon::named_color::{BLUE_5, RED_5};
-use zoon::{eprintln, *};
+use zoon::named_color::BLUE_5;
+use zoon::*;
 
 
 #[static_ref]
@@ -33,10 +30,10 @@ fn is_sent_view()->impl Element{
 pub fn root()->impl Element{
     Column::new()
     .item_signal(
-        is_sent().signal().map_true(|| is_sent_view())
+        is_sent().signal().map_true(is_sent_view)
     )
     .item_signal(
-        is_sent().signal().map_false(|| forget_password())
+        is_sent().signal().map_false(forget_password)
     )
 }
 pub fn forget_password()->impl Element{
@@ -65,7 +62,7 @@ pub fn forget_password()->impl Element{
                 .s(RoundedCorners::all(10))
                 .s(Borders::all(Border::new().solid().color(BLUE_5)))
                 .label(El::new().s(Align::center()).child_signal(i18n::t!("login")))
-                .on_click(|| send_mail()),
+                .on_click(send_mail),
         )
         .item(
            Row::new()
@@ -86,7 +83,7 @@ fn send_mail() {
     Task::start(async {
         let msg = UpMsg::ForgetPassword { email: email().get_cloned() };
         match connection().send_up_msg(msg).await {
-            Err(error) => {
+            Err(_error) => {
             }
             Ok(_msg) => (),
         }

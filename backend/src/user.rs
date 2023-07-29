@@ -1,6 +1,6 @@
 use crate::connection::{self, set_user};
 use bcrypt::{hash, verify};
-use chrono;
+
 use moon::*;
 use shared::{DownMsg, User};
 
@@ -37,7 +37,7 @@ pub async fn is_user_exist(email: &String)-> sqlx::Result<LoginUser>{
     let db = connection::sql::POSTGRES.read().await;
     let user: sqlx::Result<LoginUser> =sqlx::query_as(r#"
         select id, first_name, password from users where email = $1
-    "#).bind(&email).fetch_one(&*db).await;
+    "#).bind(email).fetch_one(&*db).await;
     user
 }
 pub async fn signin(form: shared::signin::SigninForm) -> DownMsg {
@@ -51,7 +51,7 @@ pub async fn signin(form: shared::signin::SigninForm) -> DownMsg {
         .bind(&form.last_name)
         .bind(&form.email)
         .bind(hash(&form.password, 10).unwrap())
-        .bind(&chrono::Utc::now())
+        .bind(chrono::Utc::now())
         .fetch_one(&*db)
         .await;
         match user{

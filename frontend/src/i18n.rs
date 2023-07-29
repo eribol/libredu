@@ -44,7 +44,7 @@ pub fn lang() -> &'static Mutable<Lang> {
     fn store_lang(lang: Lang) {
         if let Err(error) = local_storage().insert(app::LANG_STORAGE_KEY, &lang) {
             // @TODO translate and show error
-            return eprintln!("failed to store lang: {error:#}");
+            eprintln!("failed to store lang: {error:#}")
         }
     }
     fn set_html_lang(lang: Lang) {

@@ -1,18 +1,19 @@
 use crate::connection::send_msg;
-use crate::elements::{buttons, text_inputs};
+use crate::elements::text_inputs;
 use crate::i18n::t;
 use shared::msgs::teachers::TeacherUpMsgs;
 use shared::{
     models::teacher::{AddTeacher, Teacher},
     UpMsg,
 };
-use zoon::{named_color::*, *};
+use zoon::{named_color::*, *, println};
 
 pub fn home() -> impl Element {
     Column::new()
         .s(Padding::new().top(10))
         .s(Gap::new().y(5))
-        .item(form())
+        .item_signal(hide().signal().map_false(form))
+        .item(hide_and_seek())
         .item(teachers_view())
 }
 
@@ -31,7 +32,7 @@ fn form() -> impl Element {
         .item(first_name_view())
         .item(last_name_view())
         .item(short_name_view())
-        .item(update())
+        .item(buttons())
 }
 fn role_view() -> impl Element {
     Column::new()
@@ -81,7 +82,7 @@ fn first_name_view() -> impl Element {
             text_inputs::default()
                 .s(Align::center())
                 .id("first_name")
-                .text("")
+                .text(first_name().get_cloned())
                 .on_change(change_first_name),
         )
         .item_signal(
@@ -103,7 +104,7 @@ fn last_name_view() -> impl Element {
             text_inputs::default()
                 .s(Align::center())
                 .id("last_name")
-                .text("")
+                .text(last_name().get_cloned())
                 .on_change(change_last_name),
         )
         .item_signal(
@@ -125,7 +126,7 @@ fn short_name_view() -> impl Element {
             text_inputs::default()
                 .s(Align::center())
                 .id("short_name")
-                .text("")
+                .text(short_name().get_cloned())
                 .on_focused_change(|_|() )
                 .on_change(change_short_name),
         )
@@ -137,8 +138,42 @@ fn short_name_view() -> impl Element {
             )
         )
 }
-fn update() -> impl Element {
-    buttons::default_with_signal(t!("add")).on_click(add_teacher)
+
+fn buttons()->impl Element{
+    Column::new()
+    .s(Gap::new().y(5))
+    .item(add())
+}
+fn add() -> impl Element {
+    Button::new()
+    .label_signal(
+        selected_teacher()
+        .signal()
+        .map_option(|_| Label::new().label_signal(t!("update")).on_click(update_teacher),||
+            Label::new().label_signal(t!("add")).on_click(add_teacher)
+        )
+    )
+}
+
+fn hide_and_seek()->impl Element{
+    let (a, _b) = Mutable::new_and_signal(false);
+    Button::new()
+    .s(Borders::all_signal(a.signal().map_bool(||
+        Border::new().width(1).color(BLUE_5).solid(), ||
+        Border::new().width(1).color(BLUE_1).solid()
+    )))
+    .s(Width::exact_signal(
+        crate::app::screen_width().signal().map(|a| a / 4),
+    ))
+    .s(Height::exact(25))
+    .s(Align::center())
+    .on_hovered_change(move |h| a.set(h))
+    .label_signal(hide()
+        .signal()
+        .map_bool(|| 
+            Label::new().label_signal(t!("seek")),|| 
+            Label::new().label_signal(t!("hide")))
+    ).on_click(|| hide().set(!hide().get()))
 }
 
 fn teachers_view() -> impl Element {
@@ -148,36 +183,47 @@ fn teachers_view() -> impl Element {
     .items_signal_vec(teachers().signal_vec_cloned().map(|teacher| {
         let a = Mutable::new(false);
         Column::new()
-            .element_below_signal(
-                crate::modals::del_signal(teacher.id).map_true(move ||
-                crate::modals::del_modal_all(&teacher.id.to_string(), teacher.id, UpMsg::Teachers(TeacherUpMsgs::DelTeacher(teacher.id))))
+        .s(Background::new()
+            .color_signal(
+                is_selected(teacher.id).map_true(|| RED_3)
             )
-            .s(Borders::all_signal(a.signal().map_bool(
-                || Border::new().width(1).color(BLUE_3).solid(),
-                || Border::new().width(1).color(BLUE_1).solid(),
-            )))
-            .s(RoundedCorners::all(2))
-            .s(Width::exact(140))
-            .s(Height::exact(75))
-            .on_hovered_change(move |b| a.set(b))
-            .update_raw_el(|raw| 
-                raw.attr("title", &format!("{} {}", teacher.first_name, teacher.last_name))
-            )
-            .item(
-                Button::new()
-                .label(format!("{}", teacher.short_name))
-            )
-            .item({
-                let a = Mutable::new_and_signal(false);
-                Button::new()
-                .s(Font::new()
-                    .weight_signal(a.0.signal().map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight))
-                    .color_signal(a.0.signal().map_bool(|| RED_8, || RED_4)))
+        )
+        .element_below_signal(
+            crate::modals::del_signal(teacher.id).map_true(move ||
+            crate::modals::del_modal_all(&teacher.id.to_string(), UpMsg::Teachers(TeacherUpMsgs::DelTeacher(teacher.id))))
+        )
+        .s(Borders::all_signal(a.signal().map_bool(
+            || Border::new().width(1).color(BLUE_3).solid(),
+            || Border::new().width(1).color(BLUE_1).solid(),
+        )))
+        .s(RoundedCorners::all(2))
+        .s(Width::exact(140))
+        .s(Height::exact(75))
+        .on_hovered_change(move |b| a.set(b))
+        .on_click(move ||select_teacher(teacher.id))
+        .update_raw_el(|raw| 
+            raw.attr("title", &format!("{} {}", teacher.first_name, teacher.last_name))
+        )
+        .item(
+            Button::new()
+            .label(teacher.short_name.to_string())
+        )
+        .item({
+            let a = Mutable::new_and_signal(false);
+            Button::new()
+            .s(Font::new()
+                .weight_signal(a.0.signal().map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight))
+                .color_signal(a.0.signal().map_bool(|| RED_8, || RED_4)))
                 .s(Align::new().bottom())
                 .on_hovered_change(move |h| a.0.set_neq(h))
-                .label_signal(t!("delete")).on_press(move || crate::modals::del_modal().set(Some(teacher.id)))
-            })
-        }))
+                .label_signal(t!("delete"))
+                .update_raw_el(|raw| raw.event_handler(move |event: events::Click|{
+                    event.prevent_default();
+                    event.stop_propagation();
+                    crate::modals::del_modal().set(Some(teacher.id))
+                }))
+        })
+    }))
 }
 
 #[static_ref]
@@ -210,6 +256,49 @@ fn role() -> &'static Mutable<i32> {
     Mutable::new(0)
 }
 
+#[static_ref]
+fn hide() -> &'static Mutable<bool> {
+    Mutable::new(false)
+}
+
+#[static_ref]
+fn selected_teacher() -> &'static Mutable<Option<i32>> {
+    Mutable::new(None)
+}
+fn select_teacher(id: i32){
+    if let Some(_id) = selected_teacher().get_cloned(){
+        if id == _id{
+            clear_data();    
+        }
+        else{
+            let teacher = teachers().lock_mut().to_vec();
+            let teacher = teacher.into_iter().find(|t| t.id == id).unwrap();
+            create_selected(teacher);
+        }
+    }
+    else{
+        let teacher = teachers().lock_mut().to_vec();
+        let teacher = teacher.into_iter().find(|t| t.id == id).unwrap();
+        create_selected(teacher);
+    }
+}
+fn create_selected(teacher: Teacher){
+    hide().set(false);
+    last_name().set(teacher.last_name);
+    first_name().set(teacher.first_name);
+    short_name().set(teacher.short_name);
+    selected_teacher().set(Some(teacher.id));
+}
+fn clear_data(){
+    hide().set(false);
+    last_name().set("".to_string());
+    first_name().set("".to_string());
+    short_name().set("".to_string());
+    selected_teacher().set(None);
+}
+fn is_selected(id: i32)->impl Signal<Item = bool>{
+    selected_teacher().signal().map_option(move |s| s == id, || false).dedupe()
+}
 fn change_first_name(value: String) {
     first_name_error().set(None);
     first_name().set(value)
@@ -237,11 +326,9 @@ fn teacher_form() -> AddTeacher {
     }
 }
 
-fn add_teacher() {
-    use crate::connection::*;
-    use shared::*;
+fn validate_form()->bool{
     let form = teacher_form();
-    if let Err(e) = form.is_valid(){
+    if let Err(_e) = form.is_valid(){
         if form.has_error("first_name"){
             first_name_error().set(Some("Firstname is not valid".to_string()));
         }
@@ -251,22 +338,37 @@ fn add_teacher() {
         if form.has_error("short_name"){
             short_name_error().set(Some("Short name is not valid".to_string()));
         }
+        return false
     }
-    else{
+    true
+}
+
+fn add_teacher() {
+    use crate::connection::*;
+    use shared::*;
+    let form = teacher_form();
+    if validate_form(){
+        println!("update");
         let t_msg = TeacherUpMsgs::AddTeacher(form);
         let msg = UpMsg::Teachers(t_msg);
         send_msg(msg)
     }
 }
-
-fn del_teacher(id: i32) {
-    use crate::connection::*;
-    use shared::*;
-    let t_msg = TeacherUpMsgs::DelTeacher(id);
-    let msg = UpMsg::Teachers(t_msg);
-    send_msg(msg)
+fn update_teacher(){
+    let form = teacher_form();
+    if validate_form(){
+        let id = selected_teacher().get_cloned().unwrap();
+        let teacher = Teacher{
+            id,
+            first_name: form.first_name,
+            last_name: form.last_name,
+            short_name: form.short_name
+        };
+        let t_msg = TeacherUpMsgs::UpdateTeacher(teacher);
+        let msg = UpMsg::Teachers(t_msg);
+        send_msg(msg)
+    }
 }
-
 #[static_ref]
 pub fn teachers() -> &'static MutableVec<Teacher> {
     get_teachers();

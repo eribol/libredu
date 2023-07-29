@@ -4,7 +4,7 @@ use zoon::*;
 
 pub fn root() -> impl Element {
     Column::new()
-        .s(Padding::new().top(10))
+        //.s(Padding::new().top(5))
         .s(Align::center())
         .item_signal(app::pages().signal_cloned().map(|page| match page {
             app::Pages::Home => home().into_raw_element(),

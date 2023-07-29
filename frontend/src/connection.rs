@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
-use crate::{app::{login::get_school, signin::server_error, forget_password, school::{classes::add_class_error, teachers::get_teachers}, login_user}, *};
-use shared::{msgs::{classes::ClassDownMsgs, teachers::TeacherDownMsgs, lectures::LecturesDownMsg, timetables::TimetablesDownMsgs}, DownMsg, UpMsg};
+use crate::{app::{login::get_school, signin::server_error, forget_password, school::classes::{add_class_error, selected_timetable_hour}, login_user}, *};
+use shared::{msgs::{classes::ClassDownMsgs, teachers::TeacherDownMsgs, lectures::LecturesDownMsg, timetables::{TimetablesDownMsgs, TimetablesUpMsgs}}, DownMsg, UpMsg};
 use zoon::println;
 
 #[static_ref]
@@ -120,6 +120,26 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
                     TimetablesDownMsgs::DeletedTimetable(id) => {
                         crate::app::school::classes::timetables()
                             .lock_mut().retain(|t| t.id != id);
+                    }
+                    TimetablesDownMsgs::GetSchedules(mut schedules) => {
+                        if schedules.starts.len() != selected_timetable_hour().lock_mut().len(){
+                            schedules.starts = vec![NaiveTime::parse_from_str("00:00", "%H:%M").unwrap(); selected_timetable_hour().lock_mut().len()];
+                            send_msg(
+                                UpMsg::Timetables(
+                                    TimetablesUpMsgs::UpdateSchedules(schedules.group_id, schedules.clone())
+                                )
+                            );
+                        }
+                        if schedules.ends.len() != selected_timetable_hour().lock_mut().len(){
+                            schedules.ends = vec![NaiveTime::parse_from_str("00:00", "%H:%M").unwrap(); selected_timetable_hour().lock_mut().len()];
+                            send_msg(
+                                UpMsg::Timetables(
+                                    TimetablesUpMsgs::UpdateSchedules(schedules.group_id, schedules.clone())
+                                )
+                            );
+                        }
+                        crate::app::school::timetables::timetable_schedules()
+                            .set(Some(schedules));
                     }
                     _ => (),
                 };

@@ -10,13 +10,13 @@ pub fn default_with_signal<'a>(
     let (a, _b) = Mutable::new_and_signal_cloned(false);
     Button::new()
         .s(Borders::all_signal(a.signal().map_bool(
-            || Border::new().width(1).color(BLUE_3).solid(),
+            || Border::new().width(1).color(BLUE_5).solid(),
             || Border::new().width(1).color(BLUE_1).solid(),
         )))
         .s(Height::exact(50))
         .s(RoundedCorners::all(2))
         .label(Label::new().label_signal(label).s(Align::center()))
-        .on_focused_change(move |hovered| a.set(hovered))
+        .on_hovered_change(move |hovered| a.set(hovered))
 }
 
 pub fn _default(

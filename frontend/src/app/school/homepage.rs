@@ -8,7 +8,7 @@ use crate::{
 use shared::models::school::FullSchool;
 use zoon::{*, named_color::RED_6};
 
-use super::{school, teachers::{self, teachers}};
+use super::{school, teachers::teachers};
 
 pub fn home() -> impl Element {
     Column::new()
@@ -41,7 +41,7 @@ fn form() -> impl Element {
 fn name_view() -> impl Element {
     Column::new()
         //.s(Padding::new().x(150))
-        .item(Label::new().label("Okul Adı:").s(Align::center()))
+        .item(Label::new().label_signal(t!("school-name")).s(Align::center()))
         .s(Align::center())
         .item(
             text_inputs::default()
@@ -66,7 +66,7 @@ fn manager_view() -> impl Element {
     Column::new()
         //.s(Padding::new().x(150))
         .s(Align::center())
-        .item(Label::new().label("Okul Müdürü").s(Align::center()))
+        .item(Label::new().label_signal(t!("school-principle")).s(Align::center()))
         .item(
             RawHtmlEl::new("select").children_signal_vec(teachers().signal_vec_cloned().map(
                 |teacher| {
@@ -92,7 +92,7 @@ fn phone_view() -> impl Element {
         
         .s(Align::center())
         .s(Width::exact(500))
-        .item(Label::new().label("Telefon numarası").s(Align::center()))
+        .item(Label::new().label_signal(t!("phone-number")).s(Align::center()))
         .item(
             text_inputs::default()
                 .s(Width::exact(300))
