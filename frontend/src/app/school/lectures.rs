@@ -138,7 +138,6 @@ fn add() -> impl Element {
 
 fn lectures_view() -> impl Element {
     Row::new()
-    .s(Gap::new().y(5))
     .s(Gap::new().x(5))
     .multiline()
     .items_signal_vec(lectures().signal_vec_cloned().map(|r| {
@@ -169,26 +168,25 @@ fn lectures_view() -> impl Element {
             del_signal(r.id)
             .map_bool(move || 
                 crate::modals::del_modal_all(&r.id.to_string(), UpMsg::Lectures(LecturesUpMsg::DelLecture(r.id))).into_raw_element(), 
-                move || Row::new().item({
-                    let a = Mutable::new_and_signal(false);
-                    Button::new()
-                    .s(Font::new()
-                    .weight_signal(a.0.signal().map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight))
-                    .color_signal(a.0.signal().map_bool(|| RED_8, || RED_4)))
-                    .s(Align::new().bottom().center_x())
-                    .on_hovered_change(move |h| a.0.set_neq(h))
-                    .label_signal( t!("delete"))
-                    .update_raw_el(|raw| raw.event_handler(move |event: events::Click|{
-                        crate::modals::del_modal().set(Some(r.id));
-                        event.prevent_default();
-                        event.stop_propagation();
-                    }))
-                }).into_raw_element()
+                move || delete_view(r.id).into_raw_element()
             )
         )
     }))
 }
-
+fn delete_view(id: i32)->impl Element{
+    let a = Mutable::new_and_signal(false);
+    Button::new()
+    .s(Font::new()
+    .weight_signal(a.0.signal().map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight))
+    .color_signal(a.0.signal().map_bool(|| RED_8, || RED_4)))
+    .s(Align::new().bottom().center_x())
+    .on_hovered_change(move |h| a.0.set_neq(h))
+    .label_signal( t!("delete"))
+    .update_raw_el(|raw| raw.event_handler(move |event: events::Click|{
+        crate::modals::del_modal().set(Some(id));
+        event.stop_propagation();
+    }))
+}
 #[static_ref]
 pub fn lectures() -> &'static MutableVec<Lecture> {
     get_lectures();

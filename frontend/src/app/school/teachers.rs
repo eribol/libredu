@@ -183,14 +183,11 @@ fn teachers_view() -> impl Element {
     .items_signal_vec(teachers().signal_vec_cloned().map(|teacher| {
         let a = Mutable::new(false);
         Column::new()
+        .s(Align::new().center_y())
         .s(Background::new()
             .color_signal(
                 is_selected(teacher.id).map_true(|| RED_3)
             )
-        )
-        .element_below_signal(
-            crate::modals::del_signal(teacher.id).map_true(move ||
-            crate::modals::del_modal_all(&teacher.id.to_string(), UpMsg::Teachers(TeacherUpMsgs::DelTeacher(teacher.id))))
         )
         .s(Borders::all_signal(a.signal().map_bool(
             || Border::new().width(1).color(BLUE_3).solid(),
@@ -208,24 +205,27 @@ fn teachers_view() -> impl Element {
             Button::new()
             .label(teacher.short_name.to_string())
         )
-        .item({
-            let a = Mutable::new_and_signal(false);
-            Button::new()
-            .s(Font::new()
-                .weight_signal(a.0.signal().map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight))
-                .color_signal(a.0.signal().map_bool(|| RED_8, || RED_4)))
-                .s(Align::new().bottom())
-                .on_hovered_change(move |h| a.0.set_neq(h))
-                .label_signal(t!("delete"))
-                .update_raw_el(|raw| raw.event_handler(move |event: events::Click|{
-                    event.prevent_default();
-                    event.stop_propagation();
-                    crate::modals::del_modal().set(Some(teacher.id))
-                }))
-        })
+        .item_signal(
+            crate::modals::del_signal(teacher.id).map_bool(move ||
+            crate::modals::del_modal_all(&teacher.id.to_string(), UpMsg::Teachers(TeacherUpMsgs::DelTeacher(teacher.id))).into_raw_element(), move ||
+            delete_view(teacher.id).into_raw_element())
+        )
     }))
 }
-
+fn delete_view(id: i32)->impl Element{
+    let a = Mutable::new_and_signal(false);
+    Button::new()
+    .s(Font::new()
+    .weight_signal(a.0.signal().map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight))
+    .color_signal(a.0.signal().map_bool(|| RED_8, || RED_4)))
+    .s(Align::new().bottom().center_x())
+    .on_hovered_change(move |h| a.0.set_neq(h))
+    .label_signal( t!("delete"))
+    .update_raw_el(|raw| raw.event_handler(move |event: events::Click|{
+        crate::modals::del_modal().set(Some(id));
+        event.stop_propagation();
+    }))
+}
 #[static_ref]
 fn first_name() -> &'static Mutable<String> {
     Mutable::new("".to_string())

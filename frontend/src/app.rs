@@ -9,6 +9,7 @@ pub mod signin;
 pub mod view;
 pub mod register;
 pub mod reset_password;
+pub mod admin;
 use shared::User;
 pub static LANG_STORAGE_KEY: &str = "tr";
 
@@ -27,7 +28,8 @@ pub enum Pages {
     Signin,
     User,
     ForgetPassword,
-    ResetPassword
+    ResetPassword,
+    Admin
     //NotFound
 }
 
@@ -75,6 +77,18 @@ pub fn is_user_logged() -> bool {
         return true;
     }
     false
+}
+pub fn is_user_admin() -> bool {
+    if let Some(u) = login_user().get_cloned() {
+        return u.is_admin;
+    }
+    false
+}
+pub fn is_admin() -> impl Signal<Item= bool> {
+    if let Some(u) = login_user().get_cloned() {
+        return Mutable::new(u.is_admin).signal();
+    }
+    Mutable::new(false).signal()
 }
 ///-----------
 // Functions

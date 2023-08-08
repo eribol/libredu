@@ -11,7 +11,7 @@ pub async fn forget_password(email: String)-> DownMsg{
     let d = dotenvy::var("DOMAIN_NAME").unwrap();
     let html = create_html(d, email.clone(),  auth_token.clone().into_string());
     let _ = add_token(email.clone(), auth_token).await;
-    let _register = send_mail(email.clone(), html).await;
+    let _register = send_mail(email.clone(), html, String::from("Şifre Yenileme Talebi")).await;
     DownMsg::ResetPassword
 }
 async fn add_token(email: String, auth_token: AuthToken){

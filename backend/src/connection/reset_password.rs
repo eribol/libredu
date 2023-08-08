@@ -9,19 +9,21 @@ pub async fn reset_password(form: ResetForm)-> DownMsg{
     if get_token(&form.email, &form.token).await{
         println!("reset geldi");
         let db = super::sql::POSTGRES.read().await;
-        let user: sqlx::Result<LoginUser> = sqlx::query_as(r#"update users set password = $2 where email = $1 returning id, first_name, password"#)
+        let user: sqlx::Result<LoginUser> = 
+        sqlx::query_as(r#"update users set password = $2 where email = $1 returning id, first_name, password, is_active, is_admin"#)
             .bind(&form.email)
             .bind(hash(&form.password, 10).unwrap())
             .fetch_one(&*db)
             .await;
         match user{
             Ok(u)=>{
-                println!("user doğru");
                 let token = format!("{}:{}", u.id, EntityId::new());
                 let user = User{
                     id: u.id,
                     first_name: u.first_name,
-                    auth_token: AuthToken::new(token)
+                    auth_token: AuthToken::new(token),
+                    is_admin: u.is_admin,
+                    is_active: u.is_active
                 };
                 set_user(user.id, &user.auth_token).await.expect("User not set");
                 println!("set user oldu");

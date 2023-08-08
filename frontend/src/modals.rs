@@ -8,8 +8,7 @@ pub fn del_modal_all(modal_id: &str, msg: UpMsg) -> impl zoon::Element
         //.s(Background::new().color(hsluv!(200,100,100)))
         //.s(Borders::all(Border::new().width(1).solid()))
         //.s(zoon::Width::exact(50))
-        .s(zoon::Align::new().center_x())
-        .s(zoon::Padding::all(5))
+        .s(zoon::Align::new().center_x().bottom())
         .s(Gap::new().x(10))
         .item(
             Button::new()

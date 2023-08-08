@@ -11,6 +11,9 @@ delete = Delete
 edit = Edit
 hide = Hide
 seek = Show
+hours = Hours
+hour = Hour
+principle = Princpile
 
 #Home Page
 libredu-information = Libredu is a collection softwares for schools like timetabling, creating curriculum.
@@ -59,6 +62,12 @@ lecture-shortname = Lecture Sortname
 
 #Timetables
 timetable = Timetable
+end-times = End Time
+start-times = Start Times
+new-timetable = New Timetable
+timetable-name = Timetable Name
+hour-of-day = Hour of the Day
+
 #Days
 monday = Monday
 tuesday = Tuesday
@@ -67,4 +76,5 @@ thursday = Thursday
 friday = Friday
 saturday = Saturday
 sunday = Sunday
+
 

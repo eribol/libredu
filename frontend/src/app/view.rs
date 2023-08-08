@@ -14,7 +14,8 @@ pub fn root() -> impl Element {
             app::Pages::Signin => super::signin::signin_page().into_raw_element(),
             app::Pages::User => Row::new().item(
                 Column::new().item(Label::new().label("This is menus page"))
-            ).item(Column::new().item(Label::new().label("This is submenu page"))).into_raw_element()
+            ).item(Column::new().item(Label::new().label("This is submenu page"))).into_raw_element(),
+            app::Pages::Admin => super::admin::root().into_raw_element()
         }))
 }
 

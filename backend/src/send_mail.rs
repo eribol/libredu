@@ -4,13 +4,13 @@ use lettre::{
 };
 use shared::DownMsg;
 
-pub async fn send_mail(email: String, body: String)->DownMsg{
+pub async fn send_mail(email: String, body: String, subject: String)->DownMsg{
 let email = Message::builder()
     .from(
         r#"info@libredu.org"#.to_string().parse().unwrap()
     )
     .to(email.parse().unwrap())
-    .subject("Üyelik Onay")
+    .subject(subject)
     .header(ContentType::TEXT_HTML)
     .body(body)
     .unwrap();

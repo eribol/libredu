@@ -5,7 +5,7 @@ use models::{
 use moonlight::*;
 use msgs::{
     classes::{ClassDownMsgs, ClassUpMsgs},
-    teachers::{TeacherDownMsgs, TeacherUpMsgs}, lectures::{LecturesUpMsg, LecturesDownMsg}, timetables::{TimetablesUpMsgs, TimetablesDownMsgs},
+    teachers::{TeacherDownMsgs, TeacherUpMsgs}, lectures::{LecturesUpMsg, LecturesDownMsg}, timetables::{TimetablesUpMsgs, TimetablesDownMsgs}, admin::{AdminDownMsgs, AdminUpMsgs},
 };
 pub mod models;
 pub mod msgs;
@@ -18,6 +18,8 @@ pub struct User {
     pub id: i32,
     pub first_name: String,
     pub auth_token: AuthToken,
+    pub is_active: bool,
+    pub is_admin: bool
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(crate = "serde")]
@@ -42,7 +44,8 @@ pub enum UpMsg {
     Classes(ClassUpMsgs),
     Teachers(TeacherUpMsgs),
     Lectures(LecturesUpMsg),
-    Timetables(TimetablesUpMsgs)
+    Timetables(TimetablesUpMsgs),
+    Admin(AdminUpMsgs)
 }
 
 impl UpMsg {
@@ -77,5 +80,6 @@ pub enum DownMsg {
     Classes(ClassDownMsgs),
     Teachers(TeacherDownMsgs),
     Lectures(LecturesDownMsg),
-    Timetables(TimetablesDownMsgs)
+    Timetables(TimetablesDownMsgs),
+    Admin(AdminDownMsgs)
 }

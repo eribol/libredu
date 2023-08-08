@@ -3,7 +3,7 @@ use crate::{
         self, get_user,
         school::{add_school, get_school, update_school}, forget_password, reset_password,
     },
-    user::{self, is_user_exist},
+    user::{self, is_user_exist, get_user_with_id},
 };
 use moon::*;
 use shared::{
@@ -19,6 +19,7 @@ pub mod lectures;
 pub mod school;
 pub mod teachers;
 pub mod timetables;
+pub mod admin;
 
 pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
     let UpMsgRequest {
@@ -43,6 +44,8 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
                         id: u.id,
                         first_name: u.first_name,
                         auth_token,
+                        is_admin: u.is_admin,
+                        is_active: u.is_active
                     };
 
                     DownMsg::LoggedIn(user2)
@@ -147,7 +150,7 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
                         TimetablesUpMsgs::AddTimetable(form) => timetables::add_timetable(form, id).await,
                         TimetablesUpMsgs::DelTimetable(group_id) => timetables::del_timetable(id, group_id).await,
                         TimetablesUpMsgs::GetSchedules(group_id) => timetables::get_schedules(group_id).await,
-                        TimetablesUpMsgs::UpdateSchedules(group_id, schedules) => timetables::update_schedules(group_id, schedules).await,
+                        TimetablesUpMsgs::UpdateSchedules(schedules) => timetables::update_schedules(schedules).await,
                         //TeacherUpMsgs::DelTeacher(user_id) => del_teacher(user_id, id).await
                     }
                 } else {
@@ -158,7 +161,7 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
                 DownMsg::AuthError("Not Auth".to_string())
             }
         }
-        UpMsg::Lectures(l_msg) => 
+        UpMsg::Lectures(l_msg) =>{
             if let Some(auth) = auth_token {
                 let manager = get_user(&auth.into_string()).await;
                 let school_msg = crate::up_msg_handler::school::get_school(manager.unwrap()).await;
@@ -177,6 +180,27 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
             else {
                 DownMsg::AuthError("Not Auth".to_string())
             }
+        }
+        UpMsg::Admin(a_msg)=>{
+            if let Some(auth) = auth_token{
+                let user = get_user(auth.as_str()).await;
+                let u = get_user_with_id(user.unwrap()).await;
+                if let Ok(user) = u{
+                    if user.is_admin{
+                        admin::admin_msgs(a_msg).await    
+                    }
+                    else{
+                        DownMsg::AuthError("Not auth".to_string())    
+                    }
+                }
+                else{
+                    DownMsg::AuthError("Not auth".to_string())    
+                }
+            }
+            else{
+                DownMsg::AuthError("Not auth".to_string())    
+            }
+        }
     };
     if let Some(session) = sessions::by_session_id().wait_for(session_id).await {
         session.send_down_msg(&down_msg, cor_id).await;

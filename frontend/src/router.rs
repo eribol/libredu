@@ -42,6 +42,12 @@ pub fn router() -> &'static Router<Route> {
                 }
                 app::set_page_id(Pages::Login);
             }
+            Route::Admin =>{
+                if !app::is_user_admin() {
+                    return router().replace(Route::Home);
+                }
+                app::set_page_id(Pages::Admin);
+            }
             Route::ForgetPassword => {
                 if app::is_user_logged() {
                     return router().replace(Route::Home);
@@ -104,4 +110,6 @@ pub enum Route {
     User,
     #[route()]
     Home,
+    #[route("admin")]
+    Admin,
 }

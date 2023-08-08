@@ -1,6 +1,6 @@
 use crate::{
     elements::{buttons, text_inputs},
-    i18n::t,
+    i18n::t, modals::del_signal,
 };
 use shared::{
     models::{
@@ -96,10 +96,6 @@ fn classes_view() -> impl Element {
         .map(|row| {
         let a = Mutable::new(false);
         Column::new()
-        .element_below_signal(
-            crate::modals::del_signal(row.id).map_true(move ||
-            crate::modals::del_modal_all(&row.id.to_string(), UpMsg::Classes(ClassUpMsgs::DelClass(row.id))))
-        )
         .s(Borders::all_signal(a.signal().map_bool(
             || Border::new().width(1).color(BLUE_3).solid(),
             || Border::new().width(1).color(BLUE_1).solid(),
@@ -112,17 +108,26 @@ fn classes_view() -> impl Element {
         .item(
             Button::new().label(format!("{} {}", row.kademe, row.sube))
         )
-        .item({
-            let a = Mutable::new_and_signal(false);
-            Button::new()
-            .s(Font::new()
-                .weight_signal(a.0.signal().map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight))
-                .color_signal(a.0.signal().map_bool(|| RED_8, || RED_4)))
-            .s(Align::new().bottom())
-            .label_signal(t!("delete")).on_press(move || crate::modals::del_modal().set(Some(row.id)))
-            .on_hovered_change(move|h| a.0.set_neq(h))
-        })
+        .item_signal(
+            del_signal(row.id)
+            .map_bool(move||
+                crate::modals::del_modal_all(&row.id.to_string(), UpMsg::Classes(ClassUpMsgs::DelClass(row.id))).into_raw_element(),move||
+                delete_view(row.id).into_raw_element()
+            )
+        )
     }))
+}
+
+fn delete_view(id: i32)->impl Element{
+    let a = Mutable::new_and_signal(false);
+    Button::new()
+    .s(Font::new()
+        .weight_signal(a.0.signal().map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight))
+        .color_signal(a.0.signal().map_bool(|| RED_8, || RED_4)))
+    .s(Align::new().bottom())
+    .label_signal(t!("delete")).on_press(move || crate::modals::del_modal().set(Some(id)))
+    .on_hovered_change(move|h| a.0.set_neq(h))
+        
 }
 
 #[static_ref]

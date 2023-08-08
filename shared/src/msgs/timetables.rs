@@ -8,7 +8,7 @@ pub enum TimetablesUpMsgs {
     AddTimetable(AddTimetable),
     DelTimetable(i32),
     GetSchedules(i32),
-    UpdateSchedules(i32, TimetableSchedules)
+    UpdateSchedules(TimetableSchedules)
 }
 
 #[derive(Debug, Serialize, Deserialize)]

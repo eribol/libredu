@@ -79,7 +79,7 @@ pub async fn get_schedules(group_id: i32) -> DownMsg {
         )
     )
 }
-pub async fn update_schedules(group_id: i32, schedules: TimetableSchedules) -> DownMsg {
+pub async fn update_schedules(schedules: TimetableSchedules) -> DownMsg {
     let db = POSTGRES.read().await;
     let starts = &schedules.starts;
     let ends = &schedules.ends;
@@ -89,7 +89,7 @@ pub async fn update_schedules(group_id: i32, schedules: TimetableSchedules) -> D
     )
         .bind(&starts)
         .bind(&ends)
-        .bind(group_id)
+        .bind(&schedules.group_id)
         .fetch(&*db);
     groups_query.try_next().await.unwrap();
     DownMsg::Timetables(

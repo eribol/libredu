@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::{app::{login::get_school, signin::server_error, forget_password, school::classes::{add_class_error, selected_timetable_hour}, login_user}, *};
+use crate::{app::{login::get_school, signin::server_error, forget_password, school::classes::{add_class_error, selected_timetable_hour}, login_user, admin}, *};
 use shared::{msgs::{classes::ClassDownMsgs, teachers::TeacherDownMsgs, lectures::LecturesDownMsg, timetables::{TimetablesDownMsgs, TimetablesUpMsgs}}, DownMsg, UpMsg};
 use zoon::println;
 
@@ -126,7 +126,7 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
                             schedules.starts = vec![NaiveTime::parse_from_str("00:00", "%H:%M").unwrap(); selected_timetable_hour().lock_mut().len()];
                             send_msg(
                                 UpMsg::Timetables(
-                                    TimetablesUpMsgs::UpdateSchedules(schedules.group_id, schedules.clone())
+                                    TimetablesUpMsgs::UpdateSchedules(schedules.clone())
                                 )
                             );
                         }
@@ -134,7 +134,7 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
                             schedules.ends = vec![NaiveTime::parse_from_str("00:00", "%H:%M").unwrap(); selected_timetable_hour().lock_mut().len()];
                             send_msg(
                                 UpMsg::Timetables(
-                                    TimetablesUpMsgs::UpdateSchedules(schedules.group_id, schedules.clone())
+                                    TimetablesUpMsgs::UpdateSchedules(schedules.clone())
                                 )
                             );
                         }
@@ -145,6 +145,7 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
                 };
             },
             DownMsg::ResetPassword => forget_password::is_sent().set(true),
+            DownMsg::Admin(a_msg) => admin::msgs::get_msg(a_msg),
             _ => (),
         }
     })

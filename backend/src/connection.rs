@@ -36,8 +36,7 @@ pub async fn get_user(
 }
 
 pub async fn set_user(id: i32, auth_token: &AuthToken) -> redis::RedisResult<()> {
-    let client = REDISDB.read().await;
-    let mut con = client.get_connection()?;
+    let mut con = get_connection().await.unwrap();
     println!("set user oluyor");
     let _user: i32 = redis::cmd("hset")
         .arg("sessions")
@@ -86,7 +85,7 @@ pub async fn register(user: SigninForm, auth_token: &AuthToken) -> DownMsg{
     
     let html = create_html(d, user.email.clone(),  auth_token.clone().into_string().trim().to_string());
     
-    send_mail(user.email, html).await
+    send_mail(user.email, html, String::from("Üyelik Onayla")).await
 }
 
 fn create_html(d: String, email: String, token: String)->String{

@@ -11,6 +11,9 @@ delete = Sil
 edit = Düzenle
 hide = Gizle
 seek = Göster
+hours = Saatler
+hour = Saat
+principle = Müdür
 
 #Home page
 libredu-information = Libredu okullar için bir yazılım kümesidir, ders dağıtımı ve yıllık plan oluşturma gibi.
@@ -59,6 +62,11 @@ lecture-shortname = Ders Kısa Adı
 
 #Timetables
 timetable = Ders Programı
+end-times = Bitiş Saatleri
+start-times = Giriş Saatleri
+new-timetable = Yeni Ders Programı
+timetable-name = Ders Programı Adı
+hour-of-day = Günlük Ders Sayısı
 #Günler
 monday = Pazartesi
 tuesday = Salı
