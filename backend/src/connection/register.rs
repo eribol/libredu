@@ -62,14 +62,14 @@ pub async fn register(user: SigninForm, auth_token: &AuthToken) -> DownMsg{
 }
 
 fn create_html(d: String, email: String, token: String)->String{
-    let addr = format!(r"{d}/register/{token}/{email}");
-    let r = format!(r"<!DOCTYPE html>
+    let addr = format!(r#"{d}/register/{token}/{email}"#);
+    let r = format!(r#"<!DOCTYPE html>
     <html>
     <body><p>Hesabınızı aktifleştirmek için linke <a href={addr}>tıklayın</a></p>
     
     </body>
     </html>
-    ");
+    "#);
     println!("{r:?}");
     r
 }
