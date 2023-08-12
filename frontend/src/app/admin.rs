@@ -4,6 +4,8 @@ use zoon::{*, named_color::BLUE_2};
 use crate::connection::send_msg;
 use crate::i18n::t;
 
+use self::timetables::clear_data;
+
 use super::screen_width;
 
 pub mod msgs;
@@ -94,7 +96,11 @@ fn school_row(school: AdminSchool)->impl Element{
         .s(Width::exact(300))
         .s(Height::exact(HEIGHT))
         .s(Borders::all(Border::new().width(1).color(BLUE_2)))
-        .on_click(move|| select_school(school.school.id))
+        .on_click(move|| {
+            select_school(school.school.id);
+            clear_data();
+            
+        })
         .label(&school.school.id.to_string()))
     .item(
         Label::new()
@@ -138,6 +144,7 @@ fn select_school(id: i32){
     let sch = last_schools().lock_mut().to_vec();
     let schl = sch.into_iter().find(|s| s.school.id == id);
     self::school::school().set(schl);
+    self::school::get_timetables();
 }
 #[static_ref]
 fn last_schools()->&'static MutableVec<AdminSchool>{

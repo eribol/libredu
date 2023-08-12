@@ -45,6 +45,18 @@ pub fn lim_error()->&'static Mutable<String>{
     Mutable::new("".to_string())
 }
 
+pub fn clear_data(){
+    timetable().set(None);
+    lim_error().set("".to_string());
+    fix_acts().set(false);
+    fix_class_lim().set(false);
+    fix_teach_lim().set(false);
+    class_limitations().lock_mut().clear();
+    teachers_limitations().lock_mut().clear();
+    activities().lock_mut().clear();
+    use crate::app::admin::school::timetables;
+    timetables().lock_mut().clear();
+}
 
 pub fn select_timetable(tt: Timetable){
     timetable().set(Some(tt));
@@ -113,7 +125,8 @@ pub fn root()-> impl Element{
 fn fixes_view()->impl Element{
     Column::new()
     .item(
-        Label::new()
+        Column::new()
+        .item(Label::new()
         .label_signal(
             fix_class_lim()
             .signal()
@@ -130,6 +143,10 @@ fn fixes_view()->impl Element{
                 .signal()
                 .map_bool(|| GREEN_5, || RED_5)
             )
+        )).items_signal_vec(
+            class_limitations().signal_vec_cloned().map(|lim|{
+                Label::new().label(format!("{:?}", lim))
+            })
         )
     )
     .item(

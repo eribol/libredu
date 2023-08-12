@@ -16,7 +16,7 @@ pub fn timetables()->&'static MutableVec<Timetable>{
     MutableVec::new_with_values(vec![])
 }
 
-fn get_timetables(){
+pub fn get_timetables(){
     let school = school().get_cloned();
     if let Some(school) = school{
         let msg = AdminUpMsgs::GetTimetables(school.school.id);
@@ -52,6 +52,6 @@ fn title(school: &AdminSchool)->impl Element{
 fn timetables_view()->impl Element{
     Column::new()
     .items_signal_vec(timetables().signal_vec_cloned().map(|tt|{
-        Button::new().label(&tt.name).on_press(move || select_timetable(tt.clone()))
+        Button::new().label(&tt.name).on_click(move || select_timetable(tt.clone()))
     }))
 }

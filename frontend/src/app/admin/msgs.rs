@@ -6,7 +6,11 @@ pub fn get_msg(msg: AdminDownMsgs){
         AdminDownMsgs::GetSchool(school)=> super::school::school().set(Some(school)),
         AdminDownMsgs::GetTimetables(tts)=> super::school::timetables().lock_mut().replace_cloned(tts),
         AdminDownMsgs::GetClasses(clss)=> super::timetables::classes().lock_mut().replace_cloned(clss),
-        AdminDownMsgs::GetClassesLimitations(clss)=> super::timetables::class_limitations().lock_mut().replace_cloned(clss),
+        AdminDownMsgs::GetClassesLimitations(clss)=> {
+            use zoon::println;
+            println!("{:?}", clss);
+            super::timetables::class_limitations().lock_mut().replace_cloned(clss)
+        },
         AdminDownMsgs::GetTeachers(clss)=> super::timetables::teachers().lock_mut().replace_cloned(clss),
         AdminDownMsgs::GetTeachersLimitations(clss)=> {
             use zoon::println;
