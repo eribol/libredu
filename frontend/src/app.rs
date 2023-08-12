@@ -53,8 +53,10 @@ pub fn unfinished_mutations() -> &'static Mutable<BTreeSet<CorId>> {
 
 #[static_ref]
 pub fn screen_width() -> &'static Mutable<u32> {
-    //web_sys::Window::inner_width(&self)
-    Mutable::new(0)
+    use zoon::println;
+    let w = web_sys::window().unwrap().window().screen().unwrap().width().unwrap();
+    println!("{w:?}");
+    Mutable::new(w as u32)
 }
 
 pub fn change_screen_width(w: u32) {

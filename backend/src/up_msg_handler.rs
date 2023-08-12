@@ -13,6 +13,8 @@ use shared::{
     },
     *,
 };
+
+use self::admin::admin_msgs;
 pub mod auth;
 pub mod classes;
 pub mod lectures;
@@ -182,24 +184,7 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
             }
         }
         UpMsg::Admin(a_msg)=>{
-            if let Some(auth) = auth_token{
-                let user = get_user(auth.as_str()).await;
-                let u = get_user_with_id(user.unwrap()).await;
-                if let Ok(user) = u{
-                    if user.is_admin{
-                        admin::admin_msgs(a_msg).await    
-                    }
-                    else{
-                        DownMsg::AuthError("Not auth".to_string())    
-                    }
-                }
-                else{
-                    DownMsg::AuthError("Not auth".to_string())    
-                }
-            }
-            else{
-                DownMsg::AuthError("Not auth".to_string())    
-            }
+            admin_msgs(a_msg, auth_token).await
         }
     };
     if let Some(session) = sessions::by_session_id().wait_for(session_id).await {

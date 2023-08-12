@@ -22,7 +22,16 @@ fn left_nav()-> impl Element{
         school().signal_cloned().map_some(|_|
             Link::new().to("https://timetabling.libredu.org").new_tab(NewTab::new()).label("Timetabling")
         )
-    ).item_signal(is_admin().map_true(|| Link::new().label("Admin").to(Route::Admin)))
+    ).item_signal(
+        is_admin().map_true(|| 
+            Link::new()
+            .label("Admin")
+            .to(Route::Admin).on_click(||{
+                crate::app::admin::school::school().set(None);
+                crate::app::admin::timetables::timetable().set(None);
+            })
+        )
+    )
 }
 
 fn right_nav()-> impl Element{

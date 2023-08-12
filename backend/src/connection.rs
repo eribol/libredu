@@ -11,6 +11,7 @@ pub mod sql;
 pub mod forget_password;
 pub mod reset_password;
 pub mod sessions;
+pub mod admin;
 
 static REDISDB: Lazy<RwLock<redis::Client>> =
     Lazy::new(|| RwLock::new(redis::Client::open("redis://127.0.0.1:6379/").unwrap()));
