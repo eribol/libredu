@@ -138,7 +138,8 @@ fn add() -> impl Element {
 
 fn lectures_view() -> impl Element {
     Row::new()
-    .s(Gap::new().x(5))
+    .s(Padding::new().bottom(50).right(50).left(50))
+    .s(Gap::new().x(10).y(10))
     .multiline()
     .items_signal_vec(lectures().signal_vec_cloned().map(|r| {
         let a = Mutable::new(false);
@@ -149,8 +150,8 @@ fn lectures_view() -> impl Element {
         )))
         .s(RoundedCorners::all(2))
         .s(Width::exact(140))
-        .s(Height::exact(75))
-        .s(Background::new().color_signal(is_selected(r.id).map_true(|| RED_7)))
+        .s(Height::fill())
+        .s(Background::new().color_signal(is_selected(r.id).map_true(|| BLUE_3)))
         .on_hovered_change(move |b| a.set(b))
         .on_click(move ||select_lecture(r.id))
         .item(
@@ -158,7 +159,7 @@ fn lectures_view() -> impl Element {
             .s(Align::new().center_y())
             .s(Font::new().weight(FontWeight::Light))
             .label(
-                format!("{} ({})", if r.short_name.is_empty(){
+                format!("{} ({})", if !r.short_name.is_empty(){
                     &r.name
                 }else{
                     &r.short_name
