@@ -150,7 +150,7 @@ fn lectures_view() -> impl Element {
         )))
         .s(RoundedCorners::all(2))
         .s(Width::exact(140))
-        .s(Height::fill())
+        .s(Height::exact(150))
         .s(Background::new().color_signal(is_selected(r.id).map_true(|| BLUE_3)))
         .on_hovered_change(move |b| a.set(b))
         .on_click(move ||select_lecture(r.id))
