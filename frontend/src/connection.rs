@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use crate::{app::{login::get_school, signin::server_error, forget_password, school::classes::{add_class_error, selected_timetable_hour}, login_user, admin}, *};
-use shared::{msgs::{classes::ClassDownMsgs, teachers::TeacherDownMsgs, lectures::LecturesDownMsg, timetables::{TimetablesDownMsgs, TimetablesUpMsgs}}, DownMsg, UpMsg};
+use shared::{msgs::{classes::ClassDownMsgs, teachers::TeacherDownMsgs, lectures::LecturesDownMsg, timetables::{TimetablesDownMsgs, TimetablesUpMsgs}, messages::MessagesDownMsgs}, DownMsg, UpMsg};
 use zoon::println;
 
 #[static_ref]
@@ -146,6 +146,17 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
             },
             DownMsg::ResetPassword => forget_password::is_sent().set(true),
             DownMsg::Admin(a_msg) => admin::msgs::get_msg(a_msg),
+            DownMsg::Messages(msg) =>{
+                match msg{
+                    MessagesDownMsgs::GetMessages(msgs) =>{
+                        super::app::messages::msgs().lock_mut().replace_cloned(msgs);
+                    }
+                    MessagesDownMsgs::SentMessage(msg) =>{
+                        super::app::messages::msgs().lock_mut().push_cloned(msg);
+                    }
+                    _ => ()
+                }
+            }
             _ => (),
         }
     })

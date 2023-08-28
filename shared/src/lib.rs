@@ -5,7 +5,7 @@ use models::{
 use moonlight::*;
 use msgs::{
     classes::{ClassDownMsgs, ClassUpMsgs},
-    teachers::{TeacherDownMsgs, TeacherUpMsgs}, lectures::{LecturesUpMsg, LecturesDownMsg}, timetables::{TimetablesUpMsgs, TimetablesDownMsgs}, admin::{AdminDownMsgs, AdminUpMsgs},
+    teachers::{TeacherDownMsgs, TeacherUpMsgs}, lectures::{LecturesUpMsg, LecturesDownMsg}, timetables::{TimetablesUpMsgs, TimetablesDownMsgs}, admin::{AdminDownMsgs, AdminUpMsgs}, messages::{MessagesUpMsgs, MessagesDownMsgs},
 };
 pub mod models;
 pub mod msgs;
@@ -45,6 +45,7 @@ pub enum UpMsg {
     Teachers(TeacherUpMsgs),
     Lectures(LecturesUpMsg),
     Timetables(TimetablesUpMsgs),
+    Messages(MessagesUpMsgs),
     Admin(AdminUpMsgs)
 }
 
@@ -81,5 +82,6 @@ pub enum DownMsg {
     Teachers(TeacherDownMsgs),
     Lectures(LecturesDownMsg),
     Timetables(TimetablesDownMsgs),
+    Messages(MessagesDownMsgs),
     Admin(AdminDownMsgs)
 }

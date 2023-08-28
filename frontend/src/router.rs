@@ -43,7 +43,7 @@ pub fn router() -> &'static Router<Route> {
                 app::set_page_id(Pages::Login);
             }
             Route::Admin =>{
-                if !app::is_user_admin() {
+                if !app::is_admin(){
                     return router().replace(Route::Home);
                 }
                 app::set_page_id(Pages::Admin);

@@ -1,6 +1,7 @@
-use crate::header;
+use crate::{header, elements::text_inputs};
 use std::collections::BTreeSet;
-use zoon::*;
+use web_sys::Event;
+use zoon::{*, named_color::RED_4};
 
 pub mod login;
 pub mod forget_password;
@@ -10,15 +11,19 @@ pub mod view;
 pub mod register;
 pub mod reset_password;
 pub mod admin;
+pub mod messages;
 use shared::User;
+
+use self::messages::help_nav;
 pub static LANG_STORAGE_KEY: &str = "tr";
 
 pub fn root() -> impl Element {
     Column::new()
-        .s(Padding::new().top(10).right(10).left(10))
-        .item(header::root())
-        .item(view::root())
-        .on_viewport_size_change(|width, _height| change_screen_width(width))
+    .s(Padding::new().top(10).right(10).left(10))
+    .item(header::root())
+    .item(view::root())
+    .item_signal(logged_user().map_some(|u| help_nav()))
+    .on_viewport_size_change(|width, _height| change_screen_width(width))
 }
 
 #[derive(Debug, Clone)]
@@ -53,9 +58,7 @@ pub fn unfinished_mutations() -> &'static Mutable<BTreeSet<CorId>> {
 
 #[static_ref]
 pub fn screen_width() -> &'static Mutable<u32> {
-    use zoon::println;
     let w = web_sys::window().unwrap().window().screen().unwrap().width().unwrap();
-    println!("{w:?}");
     Mutable::new(w as u32)
 }
 
@@ -80,17 +83,17 @@ pub fn is_user_logged() -> bool {
     }
     false
 }
-pub fn is_user_admin() -> bool {
+pub fn is_user_admin() -> impl Signal<Item = bool> {
+    login_user().signal_cloned().map_option(|u| u.is_admin, || false).dedupe()
+}
+pub fn is_user_not_admin() -> impl Signal<Item = bool> {
+    login_user().signal_cloned().map_option(|u| !u.is_admin, || false).dedupe()
+}
+pub fn is_admin() -> bool {
     if let Some(u) = login_user().get_cloned() {
         return u.is_admin;
     }
     false
-}
-pub fn is_admin() -> impl Signal<Item= bool> {
-    if let Some(u) = login_user().get_cloned() {
-        return Mutable::new(u.is_admin).signal();
-    }
-    Mutable::new(false).signal()
 }
 ///-----------
 // Functions

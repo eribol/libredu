@@ -2,6 +2,8 @@ use moonlight::*;
 
 use crate::{School, User, models::{class::{Class, ClassLimitation}, timetables::{Timetable, Activity}, teacher::{Teacher, TeacherLimitation}}};
 
+use super::messages::Message;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(crate = "serde")]
 pub enum AdminUpMsgs{
@@ -15,7 +17,9 @@ pub enum AdminUpMsgs{
     GetTeachers(i32),
     UpdateClassLimitations(Vec<ClassLimitation>),
     UpdateTeacherLimitations(Vec<TeacherLimitation>),
-    DelAct(i32)
+    DelAct(i32),
+    GetSchoolMessages(i32),
+    SendMessage(Message)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -33,7 +37,10 @@ pub enum AdminDownMsgs{
     UpdateTeacherLimitationsError(String),
     UpdatedClassLimitations,
     UpdatedTeacherLimitations,
-    DeletedAct
+    DeletedAct,
+    GetSchoolMessages(Vec<Message>),
+    GetMessage(Message),
+    Empty
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

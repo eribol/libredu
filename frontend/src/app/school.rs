@@ -62,22 +62,21 @@ fn school_tabs() -> impl Element {
     Row::new()
     .s(Gap::new().x(50))
     .s(Align::center())
-        .s(Font::new().weight(FontWeight::Medium))
-        .items(SchoolPages::iter().map(|page| {
-            Button::new()
-                .s(
-                    Borders::new().bottom_signal(selected_page().signal_ref(move |p| {
-                        if p == &page {
-                            Border::new().width(2).solid().color(BLUE_5)
-                        } else {
-                            Border::new().width(0).solid().color(GRAY_0)
-                        }
-                    })),
-                )
-                //.s(Width::exact(150))
-                .on_click(move || change_page(page))
-                .label_signal(t!(format!("{}", page.label())))
-        }))
+    .s(Font::new().weight(FontWeight::Medium))
+    .items(SchoolPages::iter().map(|page| {
+        Button::new()
+        .s(
+            Borders::new().bottom_signal(selected_page().signal_ref(move |p| {
+                if p == &page {
+                    Border::new().width(2).solid().color(BLUE_5)
+                } else {
+                    Border::new().width(0).solid().color(GRAY_0)
+                }
+            })),
+        )
+        .on_click(move || change_page(page))
+        .label_signal(t!(format!("{}", page.label())))
+    }))
 }
 #[derive(Clone, Copy, IntoStaticStr, EnumIter, Debug, Default, PartialEq)]
 #[strum(crate = "strum")]

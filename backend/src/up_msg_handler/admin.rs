@@ -33,5 +33,7 @@ async fn run_msg(msg: AdminUpMsgs)->AdminDownMsgs{
         AdminUpMsgs::UpdateClassLimitations(lims) => crate::connection::admin::update_class_limitations(lims).await,
         AdminUpMsgs::UpdateTeacherLimitations(lims) => crate::connection::admin::update_teacher_limitations(lims).await,
         AdminUpMsgs::DelAct(act_id) => crate::connection::admin::del_act(act_id).await,
+        AdminUpMsgs::GetSchoolMessages(id) => super::connection::admin::get_school_messages(id).await,
+        AdminUpMsgs::SendMessage(msg) => super::connection::admin::new_message(msg).await
     }
 }

@@ -1,5 +1,5 @@
 use shared::{msgs::admin::{AdminSchool, AdminUpMsgs}, UpMsg};
-use zoon::{*, named_color::BLUE_2};
+use zoon::{*, named_color::BLUE_2, strum::{EnumIter, IntoStaticStr, IntoEnumIterator}};
 
 use crate::connection::send_msg;
 use crate::i18n::t;
@@ -11,13 +11,54 @@ use super::screen_width;
 pub mod msgs;
 pub mod school;
 pub mod timetables;
+pub mod messages;
 static HEIGHT: u32 = 42;
 
-pub fn root() -> impl Element {
+#[derive(Debug, Clone, EnumIter, IntoStaticStr)]
+#[strum(crate = "strum")]
+enum RootPage{
+    Schools,
+    Message
+}
+
+#[static_ref]
+fn page()->&'static Mutable<RootPage>{
+    Mutable::new(RootPage::Schools)
+}
+
+fn change_page(p: RootPage){
+    page().set(p)
+}
+
+pub fn root()->impl Element{
+    Column::new()
+    .s(Width::exact_signal(screen_width().signal()))
+    .s(Height::fill())
+    .s(Padding::new().top(10).right(10).left(10))
+    .item(tabs())
+    .item_signal(
+        page().signal_cloned().map(|p|{
+            match p{
+                RootPage::Schools=>schools_view().into_raw_element(),
+                RootPage::Message=>messages::messages_view().into_raw_element()
+            }
+        })
+    )
+}
+
+pub fn tabs()-> impl Element{
+    Row::new()
+    .s(Align::center())
+    .s(Gap::new().x(10))
+    .items(RootPage::iter().map(|p| 
+        Label::new()
+        .label(format!("{:?}", &p))
+        .on_click(move ||change_page(p.clone()))
+    ))
+}
+pub fn schools_view() -> impl Element {
     Column::new()
     .s(Width::growable())
-    .s(Padding::new().top(10).right(10).left(10))
-    .item(footer_view())
     .item(search_bar())
     .item_signal(
         self::school::school()
@@ -53,7 +94,6 @@ fn search_bar()->impl Element{
 fn schools()->impl Element{
     Column::new()
     .s(Padding::new().top(10))
-    .s(Width::exact_signal(screen_width().signal()))
     .item(school_title_row())
     .items_signal_vec(last_schools().signal_vec_cloned().map(|s|{
         school_row(s)
@@ -129,14 +169,6 @@ fn search_text()->impl Element{
     .s(Width::exact(500))
     .s(Height::exact(30))
     .s(Borders::new().top(Border::new().width(1)).bottom(Border::new().width(1)))
-}
-
-fn footer_view()->impl Element{
-    Column::with_tag(Tag::Footer)
-    .item("This is footer")
-    .update_raw_el(|raw|{
-        raw.style("bottom", "0").style("position", "fixed").style("width", "100%")
-    })
 }
 
 

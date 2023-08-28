@@ -1,8 +1,8 @@
 use moon::{*, tokio_stream::StreamExt};
-use shared::{models::{school::FullSchool, timetables::{AddTimetable, Timetable, Activity}, class::{Class, ClassLimitation}, teacher::{Teacher, TeacherLimitation}}, DownMsg, msgs::admin::{AdminDownMsgs, SchoolManager, AdminSchool}, School};
+use shared::{models::{school::FullSchool, timetables::{AddTimetable, Timetable, Activity}, class::{Class, ClassLimitation}, teacher::{Teacher, TeacherLimitation}}, DownMsg, msgs::{admin::{AdminDownMsgs, SchoolManager, AdminSchool}, messages::Message}, School};
 use sqlx::{FromRow, Row};
 
-use super::sql::POSTGRES;
+use super::{sql::POSTGRES, school::get_school};
 
 pub async fn get_classes(group_id: i32)-> AdminDownMsgs{
     let db = POSTGRES.read().await;
@@ -258,4 +258,54 @@ pub async fn del_act(act_id: i32) -> AdminDownMsgs {
     .bind(act_id)
     .execute(&*db).await;
     AdminDownMsgs::DeletedAct
+}
+
+pub async fn get_school_messages(id: i32)-> AdminDownMsgs{
+    let db = POSTGRES.read().await;
+    let mut query = sqlx::query(r#"select * from help_messages where school_id = $1"#,
+    )
+    .bind(&id)
+    .fetch(&*db);
+    let mut msgs = vec![];
+    while let Some(row) = query.try_next().await.unwrap(){
+        let m = Message{
+            sender_id: row.try_get("sender_id").unwrap(),
+            receiver_id: row.try_get("receiver_id").unwrap_or(1),
+            school_id: row.try_get("school_id").unwrap(),
+            school_name: row.try_get("school_name").unwrap(),
+            body: row.try_get("body").unwrap(),
+            send_time: row.try_get("send_time").unwrap(),
+            sent: row.try_get("sent").unwrap()
+        };
+        msgs.push(m);
+    }
+    AdminDownMsgs::GetSchoolMessages(msgs)
+}
+
+pub async fn new_message(form: Message)-> AdminDownMsgs{
+    let db = POSTGRES.read().await;
+    let mut a = sqlx::query(r#"insert into help_messages(sender_id, school_name,school_id, body, sent, send_time, receiver_id) 
+        values($1, $2, $3, $4, $5, $6, $7) returning sender_id, school_name,school_id, body, sent, send_time, receiver_id"#,
+    )
+    .bind(&1)
+    .bind(&form.school_name)
+    .bind(&form.school_id)
+    .bind(&form.body)
+    .bind(&form.sent)
+    .bind(&form.send_time)
+    .bind(&form.receiver_id)
+    .fetch(&*db);
+    if let Some(row) = a.try_next().await.unwrap(){
+        let m = Message{
+            sender_id: row.try_get("sender_id").unwrap(),
+            receiver_id: row.try_get("receiver_id").unwrap(),
+            school_id: row.try_get("school_id").unwrap(),
+            school_name: row.try_get("school_name").unwrap(),
+            body: row.try_get("body").unwrap(),
+            send_time: row.try_get("send_time").unwrap(),
+            sent: row.try_get("sent").unwrap()
+        };
+        return AdminDownMsgs::GetMessage(m);
+    }
+    return AdminDownMsgs::Empty
 }

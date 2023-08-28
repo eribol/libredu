@@ -1,11 +1,31 @@
+use moon::AuthToken;
 use shared::models::class::{AddClass, Class};
 use shared::msgs::classes::*;
 use shared::DownMsg;
 use sqlx::Row;
 
+use crate::connection::get_user;
+
 use super::auth::POSTGRES;
 use moon::tokio_stream::StreamExt;
 
+pub async fn classes_msgs(msg: ClassUpMsgs, auth_token: Option<AuthToken>)-> DownMsg{
+    if let Some(auth) = auth_token {
+        let manager = get_user(&auth.into_string()).await;
+        let school_msg = crate::up_msg_handler::school::get_school(manager.unwrap()).await;
+        if let DownMsg::GetSchool { id, .. } = school_msg {
+            match msg {
+                ClassUpMsgs::GetClasses => get_classes(id).await,
+                ClassUpMsgs::AddClass(form) => add_class(id, form).await,
+                ClassUpMsgs::DelClass(class_id) => del_class(class_id, id).await,
+            }
+        } else {
+            school_msg
+        }
+    } else {
+        DownMsg::AuthError("Not Auth".to_string())
+    }
+}
 pub async fn add_class(id: i32, form: AddClass) -> DownMsg {
     let db = POSTGRES.read().await;
     let mut school_group =

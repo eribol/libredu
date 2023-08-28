@@ -14,7 +14,7 @@ use shared::{
     *,
 };
 
-use self::admin::admin_msgs;
+use self::{admin::admin_msgs, classes::classes_msgs};
 pub mod auth;
 pub mod classes;
 pub mod lectures;
@@ -22,6 +22,7 @@ pub mod school;
 pub mod teachers;
 pub mod timetables;
 pub mod admin;
+pub mod messages;
 
 pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
     let UpMsgRequest {
@@ -107,21 +108,7 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
         }
         UpMsg::UpdateSchool(form) => update_school(auth_token, &form).await,
         UpMsg::Classes(class_msg) => {
-            if let Some(auth) = auth_token {
-                let manager = get_user(&auth.into_string()).await;
-                let school_msg = crate::up_msg_handler::school::get_school(manager.unwrap()).await;
-                if let DownMsg::GetSchool { id, .. } = school_msg {
-                    match class_msg {
-                        ClassUpMsgs::GetClasses => classes::get_classes(id).await,
-                        ClassUpMsgs::AddClass(form) => classes::add_class(id, form).await,
-                        ClassUpMsgs::DelClass(class_id) => classes::del_class(class_id, id).await,
-                    }
-                } else {
-                    school_msg
-                }
-            } else {
-                DownMsg::AuthError("Not Auth".to_string())
-            }
+            classes_msgs(class_msg, auth_token).await
         }
         UpMsg::Teachers(t_msg) => {
             if let Some(auth) = auth_token {
@@ -185,6 +172,9 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
         }
         UpMsg::Admin(a_msg)=>{
             admin_msgs(a_msg, auth_token).await
+        }
+        UpMsg::Messages(msg)=>{
+            messages::message(msg, auth_token).await
         }
     };
     if let Some(session) = sessions::by_session_id().wait_for(session_id).await {

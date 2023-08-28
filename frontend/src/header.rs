@@ -1,5 +1,5 @@
 use zoon::*;
-use crate::{i18n::{t, lang, self}, app::{self, school::school, is_admin}, router::Route};
+use crate::{i18n::{t, lang, self}, app::{self, school::school, is_admin, is_user_admin}, router::Route};
 
 pub fn root() -> impl Element {
     Row::new()
@@ -23,7 +23,7 @@ fn left_nav()-> impl Element{
             Link::new().to("https://timetabling.libredu.org").new_tab(NewTab::new()).label("Timetabling")
         )
     ).item_signal(
-        is_admin().map_true(|| 
+        is_user_admin().map_true(|| 
             Link::new()
             .label("Admin")
             .to(Route::Admin).on_click(||{
