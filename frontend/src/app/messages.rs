@@ -1,7 +1,7 @@
 use shared::{msgs::messages::{MessagesUpMsgs, Message}, UpMsg};
 use zoon::{named_color::*, *};
 
-use crate::{elements::text_inputs, connection::send_msg};
+use crate::{elements::text_inputs, connection::send_msg, i18n::t};
 
 use super::{login_user, school::school};
 pub fn help_nav()->impl Element{
@@ -9,7 +9,7 @@ pub fn help_nav()->impl Element{
     .id("message")
     .s(Padding::new().right(20))
     .item(
-        Button::new().label("Help")
+        Button::new().label_signal(t!("help"))
         .on_click(||{
             help_message().set(!help_message().get())
         })
@@ -32,7 +32,7 @@ fn messaging_view()->impl Element{
     .item(texts())
     .item(
         text_inputs::default().id("text")
-        .placeholder(Placeholder::new("Write something"))
+        .placeholder(Placeholder::with_signal(t!("write-something")))
         .s(Align::new().bottom())
         .on_change(|s| message().set(s))
         .text_signal(message().signal_cloned())

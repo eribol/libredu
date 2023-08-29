@@ -61,12 +61,19 @@ lecture-name = Lecture Name
 lecture-shortname = Lecture Sortname
 
 #Timetables
+timetabling = Timetabling
+generate = generate
+generator = generator
 timetable = Timetable
 end-times = End Time
 start-times = Start Times
 new-timetable = New Timetable
 timetable-name = Timetable Name
 hour-of-day = Hour of the Day
+
+#Messaging
+help = Help
+write-help = Tell us what you need for help
 
 #Days
 monday = Monday

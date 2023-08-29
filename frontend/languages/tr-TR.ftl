@@ -61,12 +61,20 @@ lecture-name = Ders Adı
 lecture-shortname = Ders Kısa Adı
 
 #Timetables
+timetabling = Ders Dağıtım
+generate = dağıt
+generator = Dağıtıcı
 timetable = Ders Programı
 end-times = Bitiş Saatleri
 start-times = Giriş Saatleri
 new-timetable = Yeni Ders Programı
 timetable-name = Ders Programı Adı
 hour-of-day = Günlük Ders Sayısı
+
+#Messaging
+help = Help
+write-help = Tell us what you need for help
+
 #Günler
 monday = Pazartesi
 tuesday = Salı

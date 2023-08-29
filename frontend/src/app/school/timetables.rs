@@ -126,7 +126,7 @@ fn schedules_view(s: TimetableSchedules)->impl Element{
     .item(
         Column::new()
         //.s(AlignContent::center())
-        .s(Width::exact(50))
+        .s(Width::exact(150))
         .item(
             Label::new()
             .s(Borders::all(Border::new().width(1).color(BLUE_2)))
@@ -134,7 +134,7 @@ fn schedules_view(s: TimetableSchedules)->impl Element{
             .label_signal(t!("hours"))
         )
         .items((0..7).map(|i|{
-            Label::new().label(i)
+            Label::new().label(i+1)
             .s(Height::exact(25))
             .s(Borders::all(Border::new().width(1).color(BLUE_2)))
         }))
@@ -173,7 +173,7 @@ fn schedules_view(s: TimetableSchedules)->impl Element{
             Label::new()
             .s(Borders::all(Border::new().width(1).color(BLUE_2)))
             .s(Height::exact(25))
-            .label("Ends Time")
+            .label_signal(t!("ends_time"))
         )
         .items(
             s.ends.iter().enumerate().map(|ss|{
