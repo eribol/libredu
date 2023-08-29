@@ -72,8 +72,8 @@ timetable-name = Ders Programı Adı
 hour-of-day = Günlük Ders Sayısı
 
 #Messaging
-help = Help
-write-help = Tell us what you need for help
+help = Yardım
+write-help = Yardıma mı ihtiyacınız var?
 
 #Günler
 monday = Pazartesi

@@ -173,7 +173,7 @@ fn schedules_view(s: TimetableSchedules)->impl Element{
             Label::new()
             .s(Borders::all(Border::new().width(1).color(BLUE_2)))
             .s(Height::exact(25))
-            .label_signal(t!("ends_time"))
+            .label_signal(t!("end-times"))
         )
         .items(
             s.ends.iter().enumerate().map(|ss|{

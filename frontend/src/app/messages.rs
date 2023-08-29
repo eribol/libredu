@@ -32,7 +32,7 @@ fn messaging_view()->impl Element{
     .item(texts())
     .item(
         text_inputs::default().id("text")
-        .placeholder(Placeholder::with_signal(t!("write-something")))
+        .placeholder(Placeholder::with_signal(t!("write-help")))
         .s(Align::new().bottom())
         .on_change(|s| message().set(s))
         .text_signal(message().signal_cloned())

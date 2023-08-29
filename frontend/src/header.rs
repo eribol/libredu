@@ -20,7 +20,7 @@ fn left_nav()-> impl Element{
     )
     .item_signal(
         school().signal_cloned().map_some(|_|
-            Link::new().to("https://timetabling.libredu.org").new_tab(NewTab::new()).label("Timetabling")
+            Link::new().to("https://timetabling.libredu.org").new_tab(NewTab::new()).label_signal(t!("timetabling"))
         )
     ).item_signal(
         is_user_admin().map_true(|| 
