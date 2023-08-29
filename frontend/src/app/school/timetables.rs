@@ -1,4 +1,4 @@
-use super::classes::timetables;
+use super::classes::{timetables, selected_timetable_hour};
 use shared::{models::timetables::{AddTimetable, TimetableSchedules, Timetable}, UpMsg};
 use zoon::{named_color::*, *};
 use crate::{i18n::t, elements::{text_inputs, buttons}, connection::send_msg};
@@ -121,6 +121,7 @@ fn update() -> impl Element {
     
 }
 fn schedules_view(s: TimetableSchedules)->impl Element{
+    let h = selected_timetable_hour().lock_mut().len();
     Row::new()
     .s(Align::center())
     .item(
@@ -133,7 +134,7 @@ fn schedules_view(s: TimetableSchedules)->impl Element{
             .s(Height::exact(25))
             .label_signal(t!("hours"))
         )
-        .items((0..7).map(|i|{
+        .items((0..h).map(|i|{
             Label::new().label(i+1)
             .s(Height::exact(25))
             .s(Borders::all(Border::new().width(1).color(BLUE_2)))
