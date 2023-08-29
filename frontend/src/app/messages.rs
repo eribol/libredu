@@ -8,6 +8,7 @@ pub fn help_nav()->impl Element{
     Column::new()
     .id("message")
     .s(Padding::new().right(20))
+    .s(Background::new().color(GRAY_1))
     .item(
         Button::new().label_signal(t!("help"))
         .on_click(||{
@@ -15,9 +16,9 @@ pub fn help_nav()->impl Element{
         })
     )
     .update_raw_el(|raw|
-         raw.style("background-color", "#333")
+         raw//.style("background-color", "#222")
         .style("position", "fixed")
-        .style("width", "25%")
+        .style_signal("width", help_message().signal().map_bool(|| "25%", || "15%"))
         .style("right", "20px")
         .style("bottom", "20px")
     ).element_above_signal(help_message().signal().map_true(messaging_view))

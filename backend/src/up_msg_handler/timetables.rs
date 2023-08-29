@@ -65,14 +65,16 @@ pub async fn get_schedules(group_id: i32) -> DownMsg {
     )
         .bind(group_id)
         .fetch(&*db);
-    if let Some(_g) = groups_query.try_next().await.unwrap() {
-        let schedules = TimetableSchedules{
-            group_id,
-            starts: _g.try_get("starts").unwrap(),
-            ends: _g.try_get("ends").unwrap(),
-        };
-        return DownMsg::Timetables(TimetablesDownMsgs::GetSchedules(schedules))
-    }
+    if let Ok(query) = groups_query.try_next().await{
+        if let Some(_g) = query{
+            let schedules = TimetableSchedules{
+                group_id,
+                starts: _g.try_get("starts").unwrap(),
+                ends: _g.try_get("ends").unwrap(),
+            };
+            return DownMsg::Timetables(TimetablesDownMsgs::GetSchedules(schedules))
+        }
+    } 
     DownMsg::Timetables(
         TimetablesDownMsgs::GetSchedules(
             TimetableSchedules{group_id, starts: vec![], ends: vec![]}
