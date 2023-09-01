@@ -17,7 +17,7 @@ pub struct LoginUser {
 pub async fn login(email: String, password: String) -> sqlx::Result<LoginUser> {
     let db = connection::sql::POSTGRES.read().await;
     let user: sqlx::Result<LoginUser> =
-        sqlx::query_as(r#"select id, first_name, password, is_active, is_admin from users where email = $1"#)
+        sqlx::query_as(r#"select id, first_name, password, is_active, is_admin from users where email = $1 and email is not null"#)
             .bind(&email)
             //.bind(verify(password, ))
             .fetch_one(&*db)
