@@ -15,27 +15,33 @@ pub struct LoginUser {
 }
 
 pub async fn login(email: String, password: String) -> sqlx::Result<LoginUser> {
+    use common_regex_rs::is_email;
     let db = connection::sql::POSTGRES.read().await;
-    let user: sqlx::Result<LoginUser> =
+    if is_email(&email){
+        let user: sqlx::Result<LoginUser> =
         sqlx::query_as(r#"select id, first_name, password, is_active, is_admin from users where email = $1 and email is not null"#)
             .bind(&email)
             //.bind(verify(password, ))
             .fetch_one(&*db)
             .await;
-    match user {
-        Ok(u) => {
-            if verify(&password, &u.password).unwrap() {
-                let _ = sqlx::query(r#"update users set last_login = $1 where email = $2"#)
-                .bind(Utc::now().naive_utc())
-                .bind(&email)
-                //.bind(verify(password, ))
-                .execute(&*db).await;
-                Ok(u)
-            } else {
-                Err(sqlx::Error::RowNotFound)
+        match user {
+            Ok(u) => {
+                if verify(&password, &u.password).unwrap() {
+                    let _ = sqlx::query(r#"update users set last_login = $1 where email = $2"#)
+                    .bind(Utc::now().naive_utc())
+                    .bind(&email)
+                    //.bind(verify(password, ))
+                    .execute(&*db).await;
+                    Ok(u)
+                } else {
+                    Err(sqlx::Error::RowNotFound)
+                }
             }
+            Err(_e) => Err(sqlx::Error::RowNotFound)
         }
-        Err(_e) => Err(sqlx::Error::RowNotFound),
+    }
+    else{
+        return sqlx::Result::Err(sqlx::Error::RowNotFound)
     }
     //user
 }
