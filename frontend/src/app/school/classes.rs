@@ -69,7 +69,14 @@ fn groups_view() -> impl Element {
 fn grade_view() -> impl Element {
     Column::new()
         .s(Align::center())
-        .item(Label::new().label_signal(t!("grade")).s(Align::center()))
+        .item(Column::new()
+            .item(Label::new().label_signal(t!("grade")).s(Align::center()))
+            .item(Label::new()
+                .s(Align::center())
+                .s(Font::new().weight(FontWeight::ExtraLight))
+                .label("Boşluk kullanarak birden çok kademe ekleyebilirsiniz")
+            )
+        )
         .item(
             text_inputs::default()
                 .id("grade")
@@ -80,7 +87,15 @@ fn grade_view() -> impl Element {
 fn branch_view() -> impl Element {
     Column::new()
         .s(Align::center())
-        .item(Label::new().label_signal(t!("branch")).s(Align::center()))
+        .item(
+            Column::new()
+            .item(Label::new().label_signal(t!("branch")).s(Align::center()))
+            .item(Label::new()
+                .s(Align::center())
+                .s(Font::new().weight(FontWeight::ExtraLight))
+                .label("Boşluk kullanarak birden çok sınıf şubesi ekleyebilirsiniz")
+            )
+        )
         .item(text_inputs::default().on_change(change_branch).id("sube"))
 }
 fn update() -> impl Element {
@@ -211,11 +226,20 @@ fn add_class() {
     use crate::connection::*;
     use shared::*;
     let form = class_form();
+    let group_id = form.group_id;
     if let Ok(_) = form.is_valid(){
-        let msg = UpMsg::Classes(
-            ClassUpMsgs::AddClass(form)
-        );
-        send_msg(msg);
+        form.kademe.split(" ").for_each(|k|{
+            form.sube.split(" ").for_each(|s|{
+                let f = AddClass{
+                    group_id,
+                    sube: s.to_string(),
+                    kademe: k.to_string()
+                };
+                let msg = UpMsg::Classes(ClassUpMsgs::AddClass(f));
+                send_msg(msg);
+            })
+        })
+        
     }
     
 }

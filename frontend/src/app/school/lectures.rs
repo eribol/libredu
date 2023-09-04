@@ -64,7 +64,14 @@ fn form() -> impl Element {
 fn grade_view() -> impl Element {
     Column::new()
     .s(Align::center())
-    .item(Label::new().label_signal(t!("lecture-grade")).s(Align::center()))
+    .item(Column::new()
+        .item(Label::new().label_signal(t!("lecture-grade")).s(Align::center()))
+        .item(Label::new()
+            .s(Align::center())
+            .s(Font::new().weight(FontWeight::ExtraLight))
+            .label("Boşluk kullanarak birden çok kademe türünde ekleyebilirsiniz")
+        )
+    )
     .item(text_inputs::default().id("grade").on_change(change_grade).text(grade().get_cloned()))
     .item_signal(
         grade_error().signal_cloned().map_some(|s|
@@ -308,9 +315,13 @@ fn add_lecture() {
     use crate::connection::*;
     use shared::*;
     if validate_form(){
-        let form = lecture_form();
-        let msg = LecturesUpMsg::AddLecture(form);
-        send_msg(UpMsg::Lectures(msg));
+        let kademe = lecture_form().kademe;
+        kademe.split(" ").for_each(|k|{
+            let mut form = lecture_form();
+            form.kademe = k.to_string();
+            let msg = LecturesUpMsg::AddLecture(form);
+            send_msg(UpMsg::Lectures(msg));
+        })  
     }
 }
 fn update_lecture() {

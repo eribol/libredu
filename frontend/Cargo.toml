@@ -10,5 +10,5 @@ serde = {version = "1.0.147", features = ["derive"]}
 unic-langid = {version = "0.9.1", features = ["unic-langid-macros"]}
 zoon.workspace = true
 shared = { path = "../shared", features = ["frontend"] }
-web-sys = {version = "*", features = ["HtmlSelectElement", "Screen"]}
+web-sys = {version = "*", features = ["HtmlSelectElement", "Screen", "Document"]}
 js-sys = "*"
