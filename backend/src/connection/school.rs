@@ -34,7 +34,7 @@ pub async fn add_school(auth_token: Option<AuthToken>, name: String) -> DownMsg 
             )
             .bind(&name)
             .bind(manager)
-            .fetch_one(&*POSTGRES.write().await)
+            .fetch_one(&*POSTGRES.read().await)
             .await;
             match school {
                 Ok(school) => {
@@ -69,7 +69,7 @@ pub async fn update_school(auth_token: Option<AuthToken>, form: &FullSchool) -> 
         .bind(form.manager)
         .bind(&form.phone)
         //.bind(&form.location)
-        .fetch_one(&*POSTGRES.write().await)
+        .fetch_one(&*POSTGRES.read().await)
         .await;
             match school {
                 Ok(school) => {

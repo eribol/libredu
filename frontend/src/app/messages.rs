@@ -1,4 +1,4 @@
-use shared::{msgs::messages::{MessagesUpMsgs, Message}, UpMsg};
+use shared::{msgs::messages::{MessagesUpMsgs, Message, NewMessage}, UpMsg};
 use zoon::{named_color::*, *};
 
 use crate::{elements::text_inputs, connection::send_msg, i18n::t};
@@ -57,20 +57,25 @@ fn messaging_view()->impl Element{
 
 fn texts()->impl Element{
     Column::new()
+    .id("texts")
+    .s(Height::exact(480))
     .s(Align::new().bottom())
     .s(Scrollbars::both())
     .s(Padding::new().bottom(40))
     .s(Gap::new().y(5))
     //.s(Height::exact(1000))
     .items_signal_vec(msgs().signal_vec_cloned().map(|m|{
-        if m.receiver_id == login_user().get_cloned().unwrap().id{
+        message_visible().get();
+        if m.to_school{
             Label::new().label(m.body).s(Align::new().left())
-            .s(Font::new().color(GREEN_5).weight(FontWeight::SemiBold))
+            .s(Padding::new().left(5).right(10))
             .s(RoundedCorners::all(10))
         }
         else{
             Label::new().label(m.body).s(Align::new().right())
-            .s(Background::new().color(GRAY_4))
+            .s(Padding::new().left(5).right(10))
+            .s(Font::new().color(GREEN_5).weight(FontWeight::SemiBold))
+            //.s(Background::new().color(GRAY_4))
         }
     }))
 }
@@ -89,19 +94,29 @@ pub fn msgs()->&'static MutableVec<Message>{
     get_messages();
     MutableVec::new()
 }
-
+#[static_ref]
+pub fn last_message()->&'static Mutable<Option<i32>>{
+    Mutable::new(None)
+}
+#[static_ref]
+fn message_visible()->&'static Mutable<bool>{
+    let visible = window().document().unwrap().get_element_by_id("texts").unwrap().client_height();
+    use zoon::println;
+    println!("{visible}");
+    Mutable::new(false)
+}
 fn send(){
     let b = message().get_cloned();
     let schol = school().get_cloned();
     if let Some(s) = schol{
-        let messaging = Message{
+        let messaging = NewMessage{
             sender_id: login_user().get_cloned().unwrap().id,
-            receiver_id: 1,
             school_id: Some(s.id),
             school_name: s.name,
             body: b.clone(),
             send_time: Utc::now().naive_utc(),
-            sent: 1
+            to_school: false,
+            read: false
         };
         let m_msg =  MessagesUpMsgs::SendMessage(messaging);
         if b.len() > 2{
@@ -112,17 +127,19 @@ fn send(){
 }
 
 fn get_messages(){
-    let m_msg =  MessagesUpMsgs::GetMessages;
+    let s = school().get_cloned().unwrap().id;
+    let m_msg =  MessagesUpMsgs::GetMessages(s);
     send_msg(UpMsg::Messages(m_msg));
-    streaming_messages();
 }
 
-fn streaming_messages(){
+pub fn streaming_messages(){
+    let s = school().get_cloned().unwrap().id;
     Task::start(async move {
         loop{
-            let m_msg =  MessagesUpMsgs::GetMessages;
+            let last_m = last_message().get().unwrap();
+            let m_msg =  MessagesUpMsgs::GetNewMessages(s, last_m);
             send_msg(UpMsg::Messages(m_msg));
-            Timer::sleep(10000).await;    
+            Timer::sleep(5000).await;
         }
     })
 }

@@ -2,7 +2,7 @@ use moonlight::*;
 
 use crate::{School, User, models::{class::{Class, ClassLimitation}, timetables::{Timetable, Activity}, teacher::{Teacher, TeacherLimitation}}};
 
-use super::messages::Message;
+use super::messages::{Message, NewMessage};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(crate = "serde")]
@@ -19,7 +19,7 @@ pub enum AdminUpMsgs{
     UpdateTeacherLimitations(Vec<TeacherLimitation>),
     DelAct(i32),
     GetSchoolMessages(i32),
-    SendMessage(Message)
+    SendMessage(NewMessage)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

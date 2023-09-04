@@ -1,5 +1,5 @@
 use moon::{*, tokio_stream::StreamExt};
-use shared::{models::{school::FullSchool, timetables::{AddTimetable, Timetable, Activity}, class::{Class, ClassLimitation}, teacher::{Teacher, TeacherLimitation}}, DownMsg, msgs::{admin::{AdminDownMsgs, SchoolManager, AdminSchool}, messages::Message}, School};
+use shared::{models::{school::FullSchool, timetables::{AddTimetable, Timetable, Activity}, class::{Class, ClassLimitation}, teacher::{Teacher, TeacherLimitation}}, DownMsg, msgs::{admin::{AdminDownMsgs, SchoolManager, AdminSchool}, messages::{Message, NewMessage}}, School};
 use sqlx::{FromRow, Row};
 
 use super::{sql::POSTGRES, school::get_school};
@@ -269,41 +269,44 @@ pub async fn get_school_messages(id: i32)-> AdminDownMsgs{
     let mut msgs = vec![];
     while let Some(row) = query.try_next().await.unwrap(){
         let m = Message{
+            id: row.try_get("id").unwrap(),
             sender_id: row.try_get("sender_id").unwrap(),
-            receiver_id: row.try_get("receiver_id").unwrap_or(1),
             school_id: row.try_get("school_id").unwrap(),
             school_name: row.try_get("school_name").unwrap(),
             body: row.try_get("body").unwrap(),
             send_time: row.try_get("send_time").unwrap(),
-            sent: row.try_get("sent").unwrap()
+            to_school: row.try_get("to_school").unwrap(),
+            read: row.try_get("read").unwrap()
         };
         msgs.push(m);
     }
     AdminDownMsgs::GetSchoolMessages(msgs)
 }
 
-pub async fn new_message(form: Message)-> AdminDownMsgs{
+pub async fn new_message(form: NewMessage)-> AdminDownMsgs{
     let db = POSTGRES.read().await;
-    let mut a = sqlx::query(r#"insert into help_messages(sender_id, school_name,school_id, body, sent, send_time, receiver_id) 
-        values($1, $2, $3, $4, $5, $6, $7) returning sender_id, school_name,school_id, body, sent, send_time, receiver_id"#,
+    let mut a = sqlx::query(r#"insert into help_messages(sender_id, school_name,school_id, body, send_time, to_school, read) 
+        values($1, $2, $3, $4, $5, $6, $7) returning sender_id, school_name,school_id, body, send_time, to_school, read, id"#,
     )
     .bind(&1)
     .bind(&form.school_name)
     .bind(&form.school_id)
     .bind(&form.body)
-    .bind(&form.sent)
     .bind(&form.send_time)
-    .bind(&form.receiver_id)
+    .bind(&form.to_school)
+    .bind(&form.read)
     .fetch(&*db);
     if let Some(row) = a.try_next().await.unwrap(){
+        println!("messages");
         let m = Message{
+            id: row.try_get("id").unwrap(),
             sender_id: row.try_get("sender_id").unwrap(),
-            receiver_id: row.try_get("receiver_id").unwrap(),
             school_id: row.try_get("school_id").unwrap(),
             school_name: row.try_get("school_name").unwrap(),
             body: row.try_get("body").unwrap(),
             send_time: row.try_get("send_time").unwrap(),
-            sent: row.try_get("sent").unwrap()
+            to_school: row.try_get("to_school").unwrap(),
+            read: row.try_get("read").unwrap(),
         };
         return AdminDownMsgs::GetMessage(m);
     }

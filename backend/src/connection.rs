@@ -10,7 +10,6 @@ pub mod school;
 pub mod sql;
 pub mod forget_password;
 pub mod reset_password;
-pub mod sessions;
 pub mod admin;
 
 static REDISDB: Lazy<RwLock<redis::Client>> =

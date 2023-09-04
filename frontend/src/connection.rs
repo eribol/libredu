@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::{app::{login::get_school, signin::server_error, forget_password, school::classes::{add_class_error, selected_timetable_hour}, login_user, admin}, *};
+use crate::{app::{login::get_school, signin::server_error, forget_password, school::classes::{add_class_error, selected_timetable_hour}, login_user, admin, messages::{last_message, streaming_messages}}, *};
 use shared::{msgs::{classes::ClassDownMsgs, teachers::TeacherDownMsgs, lectures::LecturesDownMsg, timetables::{TimetablesDownMsgs, TimetablesUpMsgs}, messages::MessagesDownMsgs}, DownMsg, UpMsg};
 use zoon::println;
 
@@ -149,7 +149,23 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
             DownMsg::Messages(msg) =>{
                 match msg{
                     MessagesDownMsgs::GetMessages(msgs) =>{
-                        super::app::messages::msgs().lock_mut().replace_cloned(msgs);
+                        super::app::messages::msgs().lock_mut().replace_cloned(msgs.clone());
+                        let last_m = msgs.last();
+                        if let Some(m) = last_m{
+                            last_message().set(Some(m.id));
+                            streaming_messages();
+                        }
+                    }
+                    MessagesDownMsgs::GetNewMessages(msgs) =>{
+                        let last_m = msgs.last();
+                        if let Some(m) = last_m{
+                            use zoon::println;
+                            println!("{}", m.id);
+                            last_message().set(Some(m.id));    
+                        }
+                        for m in msgs{
+                            super::app::messages::msgs().lock_mut().push_cloned(m); 
+                        }
                     }
                     MessagesDownMsgs::SentMessage(msg) =>{
                         super::app::messages::msgs().lock_mut().push_cloned(msg);

@@ -1,4 +1,4 @@
-use shared::{msgs::{messages::{Message, MessagesUpMsgs}, admin::AdminUpMsgs}, UpMsg, School};
+use shared::{msgs::{messages::{Message, MessagesUpMsgs, NewMessage}, admin::AdminUpMsgs}, UpMsg, School};
 use zoon::{Element, Row, *, named_color::{GRAY_3, BLUE_3}};
 
 use crate::{connection::send_msg, app::login_user};
@@ -126,17 +126,19 @@ fn border(f: impl Signal<Item = bool>)->impl Signal<Item=Border>
 }
 
 fn send(){
+    use zoon::println;
+    println!("aa");
     let b = message().get_cloned();
     let schol = selected_school().get_cloned();
     if let Some(s) = schol{
-        let messaging = Message{
+        let messaging = NewMessage{
             sender_id: login_user().get_cloned().unwrap().id,
-            receiver_id: receiver().get_cloned().unwrap(),
             school_id: Some(s.id),
             school_name: s.name,
             body: b.clone(),
             send_time: Utc::now().naive_utc(),
-            sent: 1
+            to_school: true,
+            read: false
         };
         let m_msg =  AdminUpMsgs::SendMessage(messaging);
         if b.len() > 2{
