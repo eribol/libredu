@@ -58,11 +58,7 @@ fn groups_view() -> impl Element {
                         })
                         .child(group.name)
                 },
-            )).event_handler(move |_event: events::Click| {
-                let form = _event.target().unwrap().dyn_ref::<web_sys::HtmlSelectElement>().unwrap().clone();
-                //println!("{:?}", form.value());
-                change_timetable(form.value())
-            })
+            ))
         )
 }
 
@@ -108,6 +104,7 @@ fn classes_view() -> impl Element {
     .multiline()
     .items_signal_vec(
         classes().signal_vec_cloned()
+        .filter_signal_cloned(|c| is_timetable_selected(c.group_id))
         .map(|row| {
         let a = Mutable::new(false);
         Column::new()
@@ -121,7 +118,7 @@ fn classes_view() -> impl Element {
         .s(Align::new().center_y())
         .on_hovered_change(move |b| a.set(b))
         .item(
-            Button::new().label(format!("{} {}", row.kademe, row.sube))
+            Button::new().label(format!("{} {} {}", row.kademe, row.sube, row.group_id))
         )
         .item_signal(
             del_signal(row.id)
@@ -179,6 +176,10 @@ pub fn selected_timetable_hour() -> &'static MutableVec<i32> {
 pub fn timetables() -> &'static MutableVec<Timetable> {
     get_timetables();
     MutableVec::new_with_values(vec![])
+}
+
+fn is_timetable_selected(group_id: i32)->impl Signal<Item=bool>{
+    selected_timetable().signal_ref(move|t| t==&group_id).dedupe()
 }
 
 fn change_branch(value: String) {
