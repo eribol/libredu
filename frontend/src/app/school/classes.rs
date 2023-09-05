@@ -118,7 +118,7 @@ fn classes_view() -> impl Element {
         .s(Align::new().center_y())
         .on_hovered_change(move |b| a.set(b))
         .item(
-            Button::new().label(format!("{} {} {}", row.kademe, row.sube, row.group_id))
+            Button::new().label(format!("{} {}", row.kademe, row.sube))
         )
         .item_signal(
             del_signal(row.id)
