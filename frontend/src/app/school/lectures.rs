@@ -165,12 +165,7 @@ fn lectures_view() -> impl Element {
             Button::new()
             .s(Align::new().center_y())
             .s(Font::new().weight(FontWeight::Light))
-            .label(
-                format!("{} ({})", if !r.short_name.is_empty(){
-                    &r.name
-                }else{
-                    &r.short_name
-                }, &r.kademe))
+            .label(format!("{} ({})", r.short_name, r.kademe))
         )
         .item_signal(
             del_signal(r.id)

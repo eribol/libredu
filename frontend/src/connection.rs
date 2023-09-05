@@ -45,15 +45,17 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
             DownMsg::Teachers(t_dmsg) => {
                 match t_dmsg{
                     TeacherDownMsgs::GetTeachers(tchrs) => {
-                        println!("teachers");
                         crate::app::school::teachers::teachers()
                             .lock_mut()
                             .replace_cloned(tchrs.clone());
                     },
                     TeacherDownMsgs::AddedTeacher(teacher) => {
-                        crate::app::school::teachers::teachers()
-                        .lock_mut()
-                        .push_cloned(teacher);
+                        let thcrs = crate::app::school::teachers::teachers().lock_mut().to_vec();
+                        let index = thcrs.iter().enumerate().find(|t| t.1.id == teacher.id);
+                        match index{
+                            Some(i) => crate::app::school::teachers::teachers().lock_mut().set_cloned(i.0, teacher),
+                            None => crate::app::school::teachers::teachers().lock_mut().push_cloned(teacher)
+                        }
                     },
                     TeacherDownMsgs::DeletedTeacher(id) => {
                         if id != login_user().get_cloned().unwrap().id{
@@ -72,9 +74,13 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
                             .replace_cloned(lectures);
                     },
                     LecturesDownMsg::AddedLecture(lecture) => {
-                        crate::app::school::lectures::lectures()
-                            .lock_mut()
-                            .push_cloned(lecture);
+                        let lecs = crate::app::school::lectures::lectures().lock_mut().to_vec();
+                        let index = lecs.iter().enumerate().find(|l| l.1.id == lecture.id);
+                        match index{
+                            Some(i) => crate::app::school::lectures::lectures().lock_mut().set_cloned(i.0, lecture),
+                            None => crate::app::school::lectures::lectures().lock_mut().push_cloned(lecture)
+                        }
+                        
                     },
                     LecturesDownMsg::DeletedLecture(id) => {
                         crate::app::school::lectures::lectures()

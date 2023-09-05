@@ -186,7 +186,7 @@ fn teachers_view() -> impl Element {
         .s(Align::new().center_y())
         .s(Background::new()
             .color_signal(
-                is_selected(teacher.id).map_true(|| RED_3)
+                is_selected(teacher.id).map_true(|| BLUE_3)
             )
         )
         .s(Borders::all_signal(a.signal().map_bool(
