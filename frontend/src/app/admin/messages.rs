@@ -59,12 +59,19 @@ fn messages_schools()->impl Element{
         .map(|school|{
             let name = school.school.name.clone();
             let sch = school.school.clone();
-            Button::new()
+            Column::new()
             .on_click(move ||{
                 select_school(sch.clone());
-                receiver().set(Some(school.principle.id))
             })
-            .label(name)
+            .item(
+                Button::new()
+                .label(name)
+            )
+            .item(
+                Button::new()
+                .label(format!("{} {}", school.principle.first_name, school.principle.last_name))
+                .s(Font::new().weight(FontWeight::ExtraLight))
+            )
         })
     )
 }
@@ -126,8 +133,6 @@ fn border(f: impl Signal<Item = bool>)->impl Signal<Item=Border>
 }
 
 fn send(){
-    use zoon::println;
-    println!("aa");
     let b = message().get_cloned();
     let schol = selected_school().get_cloned();
     if let Some(s) = schol{
