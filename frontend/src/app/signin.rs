@@ -125,7 +125,7 @@ pub fn register_view() -> impl Element {
     .item(
         Label::new()
         .s(Align::center())
-        .label_signal(i18n::t!("login"))
+        .label_signal(i18n::t!("signin"))
         .s(Font::new().weight(FontWeight::SemiBold)),
     )
     .item(
@@ -151,6 +151,7 @@ pub fn register_view() -> impl Element {
     )
     .item(
         TextInput::new()
+        .s(Width::fill())
         .s(Align::center())
         .s(Height::exact(30))
         .s(Borders::all(Border::new().solid().color(BLUE_5)))
@@ -171,6 +172,7 @@ pub fn register_view() -> impl Element {
     )
     .item(
         TextInput::new()
+        .s(Width::fill())
         .s(Align::center())
         .s(Height::exact(30))
         .s(Borders::all(Border::new().solid().color(BLUE_5)))
@@ -179,82 +181,85 @@ pub fn register_view() -> impl Element {
         .input_type(InputType::text())
         .on_change(change_email)
         .update_raw_el(|raw_el|
-                    raw_el.event_handler(|_event: events::FocusOut| email_validate())
-                )
-        ).item_signal(
-            email_error().signal_cloned().map_some(|e| 
-                Label::new()
-                .s(Font::new().weight(FontWeight::Number(10)).color(RED_6))
-                .label(e)
-            )
+            raw_el.event_handler(|_event: events::FocusOut| email_validate())
         )
-        .item(
-            TextInput::new()
-                .s(Align::center())
-                .s(Height::exact(30))
-                .s(Borders::all(Border::new().solid().color(BLUE_5)))
-                .id("short_name")
-                .placeholder(Placeholder::with_signal(i18n::t!("short_name")))
-                .input_type(InputType::text())
-                .on_change(change_short_name)
-                .update_raw_el(|raw_el|
-                    raw_el.event_handler(|_event: events::FocusOut| short_name_validate())
-                )
-        ).item_signal(
-            short_name_error().signal_cloned().map_some(|e| 
-                Label::new()
-                .s(Font::new().weight(FontWeight::Number(10)).color(RED_6))
-                .label(e)
-            )
+    ).item_signal(
+        email_error().signal_cloned().map_some(|e| 
+            Label::new()
+            .s(Font::new().weight(FontWeight::Number(10)).color(RED_6))
+            .label(e)
         )
-        .item(
-            TextInput::new()
-                .s(Align::center())
-                .s(Height::exact(30))
-                .s(Borders::all(Border::new().solid().color(BLUE_5)))
-                .id("password")
-                .placeholder(Placeholder::with_signal(i18n::t!("password")))
-                .input_type(InputType::password())
-                .on_change(change_password)
-                .update_raw_el(|raw_el|
-                    raw_el.event_handler(|_event: events::FocusOut| password_validate())
-                )
+    )
+    .item(
+        TextInput::new()
+        .s(Width::fill())
+        .s(Align::center())
+        .s(Height::exact(30))
+        .s(Borders::all(Border::new().solid().color(BLUE_5)))
+        .id("short_name")
+        .placeholder(Placeholder::with_signal(i18n::t!("short_name")))
+        .input_type(InputType::text())
+        .on_change(change_short_name)
+        .update_raw_el(|raw_el|
+            raw_el.event_handler(|_event: events::FocusOut| short_name_validate())
         )
-        .item(
-            TextInput::new()
-                .s(Align::center())
-                .s(Height::exact(30))
-                .s(Borders::all(Border::new().solid().color(BLUE_5)))
-                .id("password2")
-                .placeholder(Placeholder::with_signal(i18n::t!("password_again")))
-                .input_type(InputType::password())
-                .on_change(change_password2)
-                .update_raw_el(|raw_el|
-                    raw_el.event_handler(|_event: events::FocusOut| password_validate())
-                )
+    ).item_signal(
+        short_name_error().signal_cloned().map_some(|e| 
+            Label::new()
+            .s(Font::new().weight(FontWeight::Number(10)).color(RED_6))
+            .label(e)
         )
-        .item_signal(
-            password_error().signal_cloned().map_some(|e| 
-                Label::new()
-                .s(Font::new().weight(FontWeight::Number(10)).color(RED_6))
-                .label(e)
-            )
+    )
+    .item(
+        TextInput::new()
+        .s(Width::fill())
+        .s(Align::center())
+        .s(Height::exact(30))
+        .s(Borders::all(Border::new().solid().color(BLUE_5)))
+        .id("password")
+        .placeholder(Placeholder::with_signal(i18n::t!("password")))
+        .input_type(InputType::password())
+        .on_change(change_password)
+        .update_raw_el(|raw_el|
+            raw_el.event_handler(|_event: events::FocusOut| password_validate())
         )
-        .item(
-            Button::new()
-                .s(Height::exact(35))
-                .s(RoundedCorners::all(10))
-                .s(Borders::all(Border::new().solid().color(BLUE_5)))
-                .label(El::new().s(Align::center()).child_signal(i18n::t!("login")))
-                .on_click(signin),
+    )
+    .item(
+        TextInput::new()
+        .s(Width::fill())
+        .s(Align::center())
+        .s(Height::exact(30))
+        .s(Borders::all(Border::new().solid().color(BLUE_5)))
+        .id("password2")
+        .placeholder(Placeholder::with_signal(i18n::t!("password_again")))
+        .input_type(InputType::password())
+        .on_change(change_password2)
+        .update_raw_el(|raw_el|
+            raw_el.event_handler(|_event: events::FocusOut| password_validate())
         )
-        .item_signal(
-            server_error().signal_cloned().map_some(|e| 
-                Label::new()
-                .s(Font::new().weight(FontWeight::Number(10)).color(RED_6))
-                .label(e)
-            )
+    )
+    .item_signal(
+        password_error().signal_cloned().map_some(|e| 
+            Label::new()
+            .s(Font::new().weight(FontWeight::Number(10)).color(RED_6))
+            .label(e)
         )
+    )
+    .item(
+        Button::new()
+        .s(Height::exact(35))
+        .s(RoundedCorners::all(10))
+        .s(Borders::all(Border::new().solid().color(BLUE_5)))
+        .label(El::new().s(Align::center()).child_signal(i18n::t!("login")))
+        .on_click(signin),
+    )
+    .item_signal(
+        server_error().signal_cloned().map_some(|e| 
+            Label::new()
+            .s(Font::new().weight(FontWeight::Number(10)).color(RED_6))
+            .label(e)
+        )
+    )
 }
 
 use crate::connection::*;
