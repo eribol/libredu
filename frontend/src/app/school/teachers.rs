@@ -47,11 +47,6 @@ fn role_view() -> impl Element {
                         .event_handler(move |_event: events::Click| {
                             change_role(0)
                         })
-                        .child_signal(t!("principal")),
-                    RawHtmlEl::new("option")
-                        .event_handler(move |_event: events::Click| {
-                            change_role(1)
-                        })
                         .child_signal(t!("vice-principal")),
                     RawHtmlEl::new("option")
                         .event_handler(move |_event: events::Click| {
