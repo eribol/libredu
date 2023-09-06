@@ -1,5 +1,5 @@
 use crate::connection::send_msg;
-use crate::elements::text_inputs;
+use crate::elements::{text_inputs, buttons};
 use crate::i18n::t;
 use shared::msgs::teachers::TeacherUpMsgs;
 use shared::{
@@ -145,14 +145,27 @@ fn buttons()->impl Element{
     .item(add())
 }
 fn add() -> impl Element {
+    let (a, _b) = Mutable::new_and_signal_cloned(false);
     Button::new()
-    .label_signal(
-        selected_teacher()
-        .signal()
-        .map_option(|_| Label::new().label_signal(t!("update")).on_click(update_teacher),||
-            Label::new().label_signal(t!("add")).on_click(add_teacher)
+        .s(Borders::all_signal(a.signal().map_bool(
+            || Border::new().width(1).color(BLUE_5).solid(),
+            || Border::new().width(1).color(BLUE_1).solid(),
+        )))
+        .s(Height::exact(50))
+        .s(RoundedCorners::all(2))
+        .label_signal(
+            selected_teacher()
+            .signal()
+            .map_option(|_| 
+                Label::new()
+                .s(Cursor::new(CursorIcon::Pointer))
+                .label_signal(t!("update")).on_click(update_teacher),||
+                Label::new()
+                .s(Cursor::new(CursorIcon::Pointer))
+                .label_signal(t!("add")).on_click(add_teacher)
+            )
         )
-    )
+        .on_hovered_change(move |hovered| a.set(hovered))
 }
 
 fn hide_and_seek()->impl Element{

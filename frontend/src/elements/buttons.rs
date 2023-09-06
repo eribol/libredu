@@ -15,7 +15,10 @@ pub fn default_with_signal<'a>(
         )))
         .s(Height::exact(50))
         .s(RoundedCorners::all(2))
-        .label(Label::new().label_signal(label).s(Align::center()))
+        .label(
+            Label::new().label_signal(label).s(Align::center())
+            .s(Cursor::new(CursorIcon::Pointer))
+        )
         .on_hovered_change(move |hovered| a.set(hovered))
 }
 

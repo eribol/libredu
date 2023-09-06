@@ -253,22 +253,18 @@ fn change_end_schedules(index: usize){
     change_string("".to_string())
 }
 fn select_timetable(id: i32){
-    
-    if let Some(_id) = selected_timetable().get_cloned(){
-        if id == _id{
+    let tt = timetables().lock_mut().to_vec();
+    let tt = tt.into_iter().find(|t| t.id == id).unwrap();
+    if let Some(id2) = selected_timetable().get_cloned(){
+        if id == id2{
             clear_data();    
         }
         else{
-            let tt = timetables().lock_mut().to_vec();
-            let tt = tt.into_iter().find(|t| t.id == id).unwrap();
             create_selected(tt);
         }
     }
     else{
-        let tt = timetables().lock_mut().to_vec();
-        let tt = tt.into_iter().find(|t| t.id == id).unwrap();
         create_selected(tt);
-        get_schedules(id);
     }
 }
 fn create_selected(tt: Timetable){
@@ -276,6 +272,7 @@ fn create_selected(tt: Timetable){
     name().set(tt.name);
     hour().set(tt.hour);
     selected_timetable().set(Some(tt.id));
+    get_schedules(tt.id);
 }
 fn clear_data(){
     hide().set(false);

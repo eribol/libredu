@@ -122,9 +122,15 @@ fn buttons()->impl Element{
     .item(add())
 }
 fn add() -> impl Element {
+    let (a, _b) = Mutable::new_and_signal_cloned(false);
     Button::new()
     .s(Width::fill())
-    .s(Borders::all(Border::new().width(1).color(BLUE_3).solid()))
+    .s(Height::exact(50))
+    .s(Cursor::new(CursorIcon::Pointer))
+    .s(Borders::all_signal(a.signal().map_bool(
+        || Border::new().width(1).color(BLUE_5).solid(),
+        || Border::new().width(1).color(BLUE_1).solid(),
+    )))
     .label_signal(
         selected_lecture()
         .signal()
@@ -156,8 +162,8 @@ fn lectures_view() -> impl Element {
             || Border::new().width(1).color(BLUE_1).solid(),
         )))
         .s(RoundedCorners::all(2))
-        .s(Width::exact(140))
-        .s(Height::exact(150))
+        .s(Width::exact(100))
+        .s(Height::exact(50))
         .s(Background::new().color_signal(is_selected(r.id).map_true(|| BLUE_3)))
         .on_hovered_change(move |b| a.set(b))
         .on_click(move ||select_lecture(r.id))
@@ -268,12 +274,15 @@ fn is_selected(id: i32)->impl Signal<Item = bool>{
     selected_lecture().signal().map_option(move |s| s == id, || false).dedupe()
 }
 fn change_name(value: String) {
+    name_error().set(None);
     name().set(value)
 }
 fn change_short_name(value: String) {
+    short_name_error().set(None);
     short_name().set(value)
 }
 fn change_grade(value: String) {
+    grade_error().set(None);
     grade().set(value)
 }
 
