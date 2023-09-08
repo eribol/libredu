@@ -21,18 +21,17 @@ pub fn root() -> impl Element {
 
 fn home() -> impl Element {
     Column::new()
-        //.s(Align::center())
-        .item_signal(logged_user().map(|user| {
-            match user {
-                Some(_) => super::school::school_page().into_raw_element(),
-                None => Column::new()
-                    .item(Label::new().s(Align::new().center_x()).label("Libredu"))
-                    .item(
-                        Label::new()
-                            .s(Padding::new().top(10))
-                            .label_signal(i18n::t!("libredu-information")),
-                    )
-                    .into_raw_element(),
-            }
-        }))
+    .item_signal(logged_user().map(|user| {
+        match user {
+            Some(_) => super::school::school_page().into_raw_element(),
+            None => Column::new()
+                .item(Label::new().s(Align::new().center_x()).label("Libredu"))
+                .item(
+                    Label::new()
+                    .s(Padding::new().top(10))
+                    .label_signal(i18n::t!("libredu-information")),
+                )
+                .into_raw_element(),
+        }
+    }))
 }

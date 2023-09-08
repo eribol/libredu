@@ -119,6 +119,14 @@ fn short_name_view() -> impl Element {
 fn buttons()->impl Element{
     Column::new()
     .s(Gap::new().y(5))
+    .on_click(||{
+        if selected_lecture().get_cloned().is_some(){
+            update_lecture()
+        }
+        else{
+            add_lecture()
+        }
+    })
     .item(add())
 }
 fn add() -> impl Element {
@@ -139,14 +147,6 @@ fn add() -> impl Element {
             t_s!("add")
         )
     )
-    .on_click(||{
-        if selected_lecture().get_cloned().is_some(){
-            update_lecture()
-        }
-        else{
-            add_lecture()
-        }
-    })
 }
 
 fn lectures_view() -> impl Element {

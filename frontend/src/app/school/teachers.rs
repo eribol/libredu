@@ -135,34 +135,31 @@ fn short_name_view() -> impl Element {
 }
 
 fn buttons()->impl Element{
+    let (a, _b) = Mutable::new_and_signal_cloned(false);
     Column::new()
     .s(Gap::new().y(5))
-    .item(add())
-}
-fn add() -> impl Element {
-    let (a, _b) = Mutable::new_and_signal_cloned(false);
-    Button::new()
-        .s(Borders::all_signal(a.signal().map_bool(
-            || Border::new().width(1).color(BLUE_5).solid(),
-            || Border::new().width(1).color(BLUE_1).solid(),
-        )))
-        .s(Height::exact(50))
-        .s(RoundedCorners::all(2))
-        .label_signal(
-            selected_teacher()
-            .signal()
-            .map_option(|_| 
-                Label::new()
-                .s(Cursor::new(CursorIcon::Pointer))
-                .label_signal(t!("update")).on_click(update_teacher),||
-                Label::new()
-                .s(Cursor::new(CursorIcon::Pointer))
-                .label_signal(t!("add")).on_click(add_teacher)
-            )
+    .s(Borders::all_signal(a.signal().map_bool(
+        || Border::new().width(1).color(BLUE_5).solid(),
+        || Border::new().width(1).color(BLUE_1).solid(),
+    )))
+    .s(Height::exact(50))
+    .s(RoundedCorners::all(2))
+    .s(Cursor::new(CursorIcon::Pointer))
+    .item_signal(
+        selected_teacher()
+        .signal()
+        .map_option(|_| 
+            Label::new()
+            .s(Align::center())
+            .s(Cursor::new(CursorIcon::Pointer))
+            .label_signal(t!("update")).on_click(update_teacher),||
+            Label::new()
+            .s(Cursor::new(CursorIcon::Pointer))
+            .s(Align::center())
+            .label_signal(t!("add")).on_click(add_teacher)
         )
-        .on_hovered_change(move |hovered| a.set(hovered))
+    ).on_hovered_change(move |hovered| a.set(hovered))
 }
-
 fn hide_and_seek()->impl Element{
     let (a, _b) = Mutable::new_and_signal(false);
     Button::new()

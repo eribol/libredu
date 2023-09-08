@@ -22,7 +22,7 @@ pub fn root() -> impl Element {
     .s(Padding::new().top(10).right(10).left(10))
     .item(header::root())
     .item(view::root())
-    .item_signal(logged_user().map_some(|u| help_nav()))
+    .item_signal(is_user_not_admin().map_true(|| help_nav()))
     .on_viewport_size_change(|width, _height| change_screen_width(width))
 }
 
