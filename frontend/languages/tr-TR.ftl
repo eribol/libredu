@@ -26,7 +26,7 @@ login-request-failed = Giriş Hatalı
 #Signin Page
 first_name = Adınız
 last_name = Soyadınız
-password_again = Şifreniz(Tekrar),
+password_again = Şifreniz(Tekrar)
 short_name = Kısa Ad
 
 # Okul Ekleme Sayfası
