@@ -44,7 +44,8 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
                 .expect("Yüklenemedi"),
             DownMsg::Teachers(t_dmsg) => {
                 match t_dmsg{
-                    TeacherDownMsgs::GetTeachers(tchrs) => {
+                    TeacherDownMsgs::GetTeachers(mut tchrs) => {
+                        tchrs.sort_by(|a, b| a.first_name.cmp(&b.first_name));
                         crate::app::school::teachers::teachers()
                             .lock_mut()
                             .replace_cloned(tchrs.clone());
@@ -68,7 +69,8 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
             }
             DownMsg::Lectures(l_msg) => {
                 match l_msg{
-                    LecturesDownMsg::GetLectures(lectures) => {
+                    LecturesDownMsg::GetLectures(mut lectures) => {
+                        lectures.sort_by(|a, b| a.short_name.cmp(&b.short_name));
                         crate::app::school::lectures::lectures()
                             .lock_mut()
                             .replace_cloned(lectures);
@@ -91,9 +93,12 @@ pub fn connection() -> &'static Connection<UpMsg, DownMsg> {
             },
             DownMsg::Classes(msg) => {
                 match msg {
-                    ClassDownMsgs::GetClasses(classes) => crate::app::school::classes::classes()
+                    ClassDownMsgs::GetClasses(mut classes) =>{
+                        classes.sort_by(|a, b| a.label().cmp(&b.label())); 
+                        crate::app::school::classes::classes()
                         .lock_mut()
-                        .replace_cloned(classes.clone()),
+                        .replace_cloned(classes.clone())
+                    },
                     ClassDownMsgs::AddedClass(class) => app::school::classes::classes()
                         .lock_mut()
                         .push_cloned(class.clone()),
