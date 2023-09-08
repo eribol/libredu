@@ -228,19 +228,18 @@ fn add_class() {
     use shared::*;
     let form = class_form();
     let group_id = form.group_id;
-    if let Ok(_) = form.is_valid(){
-        form.kademe.split(" ").for_each(|k|{
-            form.sube.split(" ").for_each(|s|{
-                let f = AddClass{
-                    group_id,
-                    sube: s.to_string(),
-                    kademe: k.to_string()
-                };
+    form.kademe.split(" ").for_each(|k|{
+        form.sube.split(" ").for_each(|s|{
+            let f = AddClass{
+                group_id,
+                sube: s.to_string(),
+                kademe: k.to_string()
+            };
+            if let Ok(_) = f.is_valid(){
                 let msg = UpMsg::Classes(ClassUpMsgs::AddClass(f));
                 send_msg(msg);
-            })
+            }
         })
-        
-    }
+    })
     
 }
