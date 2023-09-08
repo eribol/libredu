@@ -36,3 +36,10 @@ pub struct ClassLimitation {
     pub day: i32,
     pub hours: Vec<bool>,
 }
+
+impl Class{
+    pub fn label(&self)->String{
+        let label = self.kademe.clone() + &self.sube;
+        label
+    }
+}
