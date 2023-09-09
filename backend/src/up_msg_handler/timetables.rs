@@ -23,6 +23,22 @@ pub async fn add_timetable(form: AddTimetable, school_id: i32) -> DownMsg {
     DownMsg::Timetables(TimetablesDownMsgs::AddTimetableError("Add timetable sql error".to_string()))
 }
 
+pub async fn update_timetable(form: Timetable, school_id: i32) -> DownMsg {
+    let db = POSTGRES.read().await;
+    let name = form.name.clone();          
+    let mut timetable_query = sqlx::query(r#"update class_groups set school = $1, name = $2, hour = $3 where id = $4 returning id, name, hour"#)
+        .bind(school_id)
+        .bind(&name)
+        .bind(form.hour)
+        .bind(&form.id)
+        .fetch(&*db);
+    if let Some(_) = timetable_query.try_next().await.unwrap() {
+        let tt_msg = TimetablesDownMsgs::UpdatedTimetable(form.clone());
+        return DownMsg::Timetables(tt_msg);
+    }
+    DownMsg::Timetables(TimetablesDownMsgs::UpdatedTimetableError("Update timetable sql error".to_string()))
+}
+
 pub async fn get_class_groups(auth: i32) -> DownMsg {
     let db = POSTGRES.read().await;
     let mut groups_query = sqlx::query(

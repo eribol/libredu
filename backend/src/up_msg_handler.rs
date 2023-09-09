@@ -140,6 +140,7 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
                         TimetablesUpMsgs::DelTimetable(group_id) => timetables::del_timetable(id, group_id).await,
                         TimetablesUpMsgs::GetSchedules(group_id) => timetables::get_schedules(group_id).await,
                         TimetablesUpMsgs::UpdateSchedules(schedules) => timetables::update_schedules(schedules).await,
+                        TimetablesUpMsgs::UpdateTimetable(form) => timetables::update_timetable(form, id).await,
                         //TeacherUpMsgs::DelTeacher(user_id) => del_teacher(user_id, id).await
                     }
                 } else {

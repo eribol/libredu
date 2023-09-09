@@ -6,6 +6,7 @@ use moonlight::*;
 pub enum TimetablesUpMsgs {
     GetTimetable,
     AddTimetable(AddTimetable),
+    UpdateTimetable(Timetable),
     DelTimetable(i32),
     GetSchedules(i32),
     UpdateSchedules(TimetableSchedules)
@@ -18,6 +19,8 @@ pub enum TimetablesDownMsgs {
     GetTimetablesError(String),
     AddedTimetable(Timetable),
     AddTimetableError(String),
+    UpdatedTimetable(Timetable),
+    UpdatedTimetableError(String),
     DeletedTimetable(i32),
     DeleteTimetableError(String),
     GetSchedules(TimetableSchedules)

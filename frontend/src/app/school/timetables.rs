@@ -6,12 +6,12 @@ use shared::msgs::timetables::*;
 
 pub fn home() -> impl Element {
     Column::new()
-        .s(Padding::new().top(10))
-        .s(Gap::new().y(20))
-        .item(form())
-        .item(timetables_view())
-        .item_signal(timetable_schedules().signal_cloned().map_some(|s|{
-            Column::new()
+    .s(Padding::new().top(10))
+    .s(Gap::new().y(20))
+    .item(form())
+    .item(timetables_view())
+    .item_signal(timetable_schedules().signal_cloned().map_some(|s|{
+        Column::new()
             .s(Gap::new().y(20))
             .item(
                 schedules_view(s)    
@@ -106,19 +106,33 @@ fn form()->impl Element{
 }
 fn name_view() -> impl Element {
     Column::new()
-        .item(Label::new().label_signal(t!("timetable-name")).s(Align::center()))
-        .item(text_inputs::default().id("name").on_change(change_name).s(Align::center()))
+    .item(Label::new().label_signal(t!("timetable-name")).s(Align::center()))
+    .item(
+        text_inputs::default()
+        .id("name")
+        .on_change(change_name)
+        .text_signal(selected_timetable().signal_cloned().map_some(|tt| tt.name))
+        .s(Align::center())
+    )
 }
 
 fn hour_view() -> impl Element {
     Column::new()
-        .item(Label::new().label_signal(t!("hour-of-day")).s(Align::center()))
-        .item(text_inputs::default().id("hour").on_change(change_hour))
+    .item(Label::new().label_signal(t!("hour-of-day")).s(Align::center()))
+    .item(
+        text_inputs::default().id("hour")
+        .text_signal(selected_timetable().signal_cloned().map_some(|tt| tt.hour))
+        .on_change(change_hour)
+    )
 }
 
 fn update() -> impl Element {
-    buttons::default_with_signal(t!("update")).on_click(add_timetable)
-    
+    buttons::default_with_signal(t!("update")).on_click(||{
+        match selected_timetable().get_cloned(){
+            Some(_tt) => update_timetable(),
+            None => add_timetable()
+        }
+    })
 }
 fn schedules_view(s: TimetableSchedules)->impl Element{
     let h = selected_timetable_hour().lock_mut().len();
@@ -205,7 +219,7 @@ fn name() -> &'static Mutable<String> {
     Mutable::new("".to_string())
 }
 #[static_ref]
-fn selected_timetable() -> &'static Mutable<Option<i32>> {
+fn selected_timetable() -> &'static Mutable<Option<Timetable>> {
     Mutable::new(None)
 }
 
@@ -222,7 +236,7 @@ fn hide() -> &'static Mutable<bool> {
     Mutable::new(false)
 }
 fn is_selected(id: i32)->impl Signal<Item = bool>{
-    selected_timetable().signal().map_option(move |s| s == id, || false).dedupe()
+    selected_timetable().signal_cloned().map_option(move |s| s.id == id, || false).dedupe()
 }
 fn change_string(s: String){
     date_string().set(s);
@@ -256,7 +270,7 @@ fn select_timetable(id: i32){
     let tt = timetables().lock_mut().to_vec();
     let tt = tt.into_iter().find(|t| t.id == id).unwrap();
     if let Some(id2) = selected_timetable().get_cloned(){
-        if id == id2{
+        if id == id2.id{
             clear_data();    
         }
         else{
@@ -269,9 +283,10 @@ fn select_timetable(id: i32){
 }
 fn create_selected(tt: Timetable){
     hide().set(false);
-    name().set(tt.name);
+    name().set(tt.name.clone());
     hour().set(tt.hour);
-    selected_timetable().set(Some(tt.id));
+    selected_timetable().set(Some(tt.clone()));
+    selected_timetable_hour().lock_mut().replace(vec![0; tt.hour as usize]);
     get_schedules(tt.id);
 }
 fn clear_data(){
@@ -308,5 +323,17 @@ fn add_timetable() {
             hour: hour().get(),
         };
     let msg = UpMsg::Timetables(TimetablesUpMsgs::AddTimetable(form));
+    send_msg(msg)
+}
+
+fn update_timetable() {
+    use crate::connection::*;
+    use shared::*;
+    let form = Timetable {
+        id: selected_timetable().get_cloned().unwrap().id,
+        name: name().get_cloned(),
+        hour: hour().get(),
+    };
+    let msg = UpMsg::Timetables(TimetablesUpMsgs::UpdateTimetable(form));
     send_msg(msg)
 }
