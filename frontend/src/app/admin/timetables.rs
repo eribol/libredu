@@ -1,8 +1,22 @@
+use std::default;
+
 use shared::{msgs::admin::{AdminSchool, AdminUpMsgs}, models::{timetables::{Timetable, Activity}, class::{Class, ClassLimitation}, teacher::{TeacherLimitation, Teacher}}, DownMsg, UpMsg};
 use zoon::{*, named_color::{RED_5, GREEN_5}};
 
 use crate::{elements::buttons, connection::send_msg};
 
+#[derive(Default, Clone)]
+enum AdminPage{
+    #[default]
+    Classes,
+    Teachers,
+    Activities
+}
+
+#[static_ref]
+fn admin_page()->&'static Mutable<AdminPage>{
+    Mutable::new(AdminPage::default())
+}
 #[static_ref]
 pub fn timetable()->&'static Mutable<Option<Timetable>>{
     Mutable::new(None)
@@ -82,10 +96,6 @@ fn get_classes(){
     }
 }
 
-fn class_len()->impl Signal<Item = usize>{
-    classes().signal_vec_cloned().to_signal_map(|c| c.len()).dedupe()
-}
-
 fn get_teachers_limitations(){
     let tt = timetable().get_cloned();
     if let Some(tt) = tt{
@@ -118,14 +128,39 @@ pub fn root()-> impl Element{
     .s(Padding::new().left(20).top(50))
     .s(Gap::new().x(50))
     .s(Align::new().left())
-    .item(timetable_view())
-    .item(fixes_view())
+    .item(page())
+    .item_signal(admin_page().signal_cloned().map(|page|{
+        match page{
+            AdminPage::Classes => classes_page().into_raw_element(),
+            AdminPage::Teachers => teachers_page().into_raw_element(),
+            AdminPage::Activities => acts_page().into_raw_element()
+        }
+    }))
 }
-
-fn fixes_view()->impl Element{
+fn page()->impl Element{
     Column::new()
     .item(
-        Column::new()
+        buttons::_default("Sınıf Kısıtlamalar").on_click(||{
+            classes_lim_check();
+            admin_page().set(AdminPage::Classes);
+        })
+    )
+    .item(
+        buttons::_default("Öğretmen Kısıtlamalar").on_click(||{
+            teachers_lim_check();
+            admin_page().set(AdminPage::Teachers);
+        })
+    )
+    .item(
+        buttons::_default("Aktiviteler").on_click(||{
+            acts_check();
+            admin_page().set(AdminPage::Activities);
+        })
+    )
+}
+
+fn classes_page()->impl Element{
+    Column::new()
         .item(Label::new()
         .label_signal(
             fix_class_lim()
@@ -148,9 +183,9 @@ fn fixes_view()->impl Element{
                 Label::new().label(format!("{:?}", lim))
             })
         )
-    )
-    .item(
-        Label::new()
+}
+fn teachers_page()->impl Element{
+    Label::new()
         .label_signal(
             fix_teach_lim()
             .signal()
@@ -168,9 +203,9 @@ fn fixes_view()->impl Element{
                 .map_bool(|| GREEN_5, || RED_5)
             )
         )
-    )
-    .item(
-        Label::new()
+}
+fn acts_page()->impl Element{
+    Label::new()
         .label_signal(
             fix_acts()
             .signal()
@@ -188,20 +223,6 @@ fn fixes_view()->impl Element{
                 .map_bool(|| GREEN_5, || RED_5)
             )
         )
-    )
-}
-fn timetable_view()-> impl Element{
-    Column::new()
-    //.s(Align::new().left())
-    .item(
-        buttons::_default("Sınıf Kısıtlamalar").on_click(classes_lim_check)
-    )
-    .item(
-        buttons::_default("Öğretmen Kısıtlamalar").on_click(teachers_lim_check)
-    )
-    .item(
-        buttons::_default("Aktiviteler").on_click(acts_check)
-    )
 }
 
 fn class_lim_check(class: Class)-> bool{
