@@ -138,22 +138,25 @@ fn buttons()->impl Element{
     let (a, _b) = Mutable::new_and_signal_cloned(false);
     Column::new()
     .s(Gap::new().y(5))
+    .s(Height::exact(50))
+    .s(RoundedCorners::all(2))
     .s(Borders::all_signal(a.signal().map_bool(
         || Border::new().width(1).color(BLUE_5).solid(),
         || Border::new().width(1).color(BLUE_1).solid(),
     )))
-    .s(Height::exact(50))
-    .s(RoundedCorners::all(2))
-    .s(Cursor::new(CursorIcon::Pointer))
     .item_signal(
         selected_teacher()
         .signal()
-        .map_option(|_| 
-            Label::new()
+        .map_option(move |_| 
+            Button::new()
+            .s(Width::fill())
             .s(Align::center())
             .s(Cursor::new(CursorIcon::Pointer))
-            .label_signal(t!("update")).on_click(update_teacher),||
-            Label::new()
+            
+            .label_signal(t!("update")).on_click(update_teacher),move||
+            Button::new()
+            
+            .s(Width::fill())
             .s(Cursor::new(CursorIcon::Pointer))
             .s(Align::center())
             .label_signal(t!("add")).on_click(add_teacher)
