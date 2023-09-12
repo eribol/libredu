@@ -27,7 +27,10 @@ fn page()->&'static Mutable<RootPage>{
 }
 
 fn change_page(p: RootPage){
-    page().set(p)
+    page().set(p.clone());
+    if let RootPage::Schools = p{
+        self::school::school().set(None);
+    }
 }
 
 pub fn root()->impl Element{
