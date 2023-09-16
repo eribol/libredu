@@ -66,7 +66,7 @@ pub async fn get_schools() -> AdminDownMsgs {
     let db = POSTGRES.read().await;
     let mut schools =
         sqlx::query(r#"select school.id as school_id, school.name, users.id as user_id, users.first_name, users.last_name, users.last_login from school 
-            inner join users on users.id = school.manager
+            inner join users on users.id = school.manager where users.last_login is not null
             order by users.last_login desc limit 10"#)
             .fetch(&*db);
     let mut schs = vec![];
