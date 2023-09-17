@@ -1,7 +1,7 @@
-use crate::{header, elements::text_inputs};
+use crate::header;
 use std::collections::BTreeSet;
-use web_sys::Event;
-use zoon::{*, named_color::RED_4};
+
+use zoon::*;
 
 pub mod login;
 pub mod forget_password;
@@ -104,8 +104,12 @@ pub fn set_page_id(page: Pages) {
 }
 
 pub fn load_logged_user() {
-    if let Some(Ok(user)) = local_storage().get("user") {
-        login_user().set(Some(user));
+    if let Some(Ok(user)) = local_storage().get::<User>("user") {
+        login_user().set(Some(user.clone()));
         crate::app::login::get_school();
+        let window = web_sys::window().unwrap();
+        let document = window.document().unwrap();
+        let html_document = document.dyn_into::<web_sys::HtmlDocument>().unwrap();
+        html_document.set_cookie("user=Mehmet; path=/; expires=Thu, 16 December 2023 00:00:00 GMT").unwrap();
     }
 }
