@@ -62,17 +62,24 @@ pub async fn update_school(auth_token: Option<AuthToken>, form: &FullSchool) -> 
     match auth(auth_token.clone()).await {
         Ok(token) => {
             let school: sqlx::Result<School> = sqlx::query_as(
-            "update school set name = $2, manager = $3, tel = $4 where manager = $1 returning id, name",
-        )
-        .bind(token)
-        .bind(&form.name)
-        .bind(form.manager)
-        .bind(&form.phone)
-        //.bind(&form.location)
-        .fetch_one(&*POSTGRES.read().await)
-        .await;
+                "update school set name = $2, manager = $3, tel = $4 where id = $1 and manager = $5 returning id, name",
+            )
+            .bind(&form.id)
+            .bind(&form.name)
+            .bind(form.manager)
+            .bind(&form.phone)
+            .bind(token)
+            //.bind(&form.location)
+            .fetch_one(&*POSTGRES.read().await).await;
             match school {
                 Ok(school) => {
+                    let _ = sqlx::query(
+                        "update school_users set role = 1 inner join users on users.id = school_users.user_id 
+                        where school_users.school_id = $1 and school_users.user_id = $2 and users.is_active and users.email is not null",
+                    )
+                    .bind(&form.id)
+                    .bind(&token)
+                    .execute(&*POSTGRES.read().await).await;
                     DownMsg::AddedSchool(shared::School {
                         id: school.id,
                         name: school.name,

@@ -154,6 +154,7 @@ fn update_school() {
     use shared::*;
     Task::start(async {
         let update_school = FullSchool {
+            id: school().get_cloned().unwrap().id,
             manager: manager().get(),
             phone: phone().get_cloned(),
             name: name().get_cloned(),
