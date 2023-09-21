@@ -61,8 +61,12 @@ pub async fn add_school(auth_token: Option<AuthToken>, name: String) -> DownMsg 
 pub async fn update_school(auth_token: Option<AuthToken>, form: &FullSchool) -> DownMsg {
     match auth(auth_token.clone()).await {
         Ok(token) => {
+            println!("{:?}", form.clone());
             let school: sqlx::Result<School> = sqlx::query_as(
-                "update school set name = $2, manager = $3, tel = $4 where id = $1 and manager = $5 returning id, name",
+                "update school inner join users on users.id = school_users.user_id 
+                set school.name = $2, school.manager = $3, school.tel = $4
+                school_users.role = 1  
+                where school.id = $1 and school.manager = $5 school_users.school_id = $1 and school_users.user_id = $3 and users.id = $3 and users.is_active and users.email is not null",
             )
             .bind(&form.id)
             .bind(&form.name)
