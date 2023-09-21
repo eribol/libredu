@@ -63,7 +63,8 @@ pub fn login_page() -> impl Element {
         .id("email")
         .input_type(InputType::text())
         .placeholder(Placeholder::with_signal(i18n::t!("email")))
-        .on_change(set_email),
+        .on_change(set_email)
+        .on_key_down_event(|event| event.if_key(Key::Enter, login))
     )
     .item(
         TextInput::new()
@@ -74,7 +75,8 @@ pub fn login_page() -> impl Element {
         .id("password")
         .input_type(InputType::password())
         .placeholder(Placeholder::with_signal(i18n::t!("password")))
-        .on_change(set_password),
+        .on_change(set_password)
+        .on_key_down_event(|event| event.if_key(Key::Enter, login))
     )
     .item(
         Button::new()
