@@ -38,9 +38,15 @@ pub fn set_and_store_logged_user(user: shared::User) {
         return set_login_error(error.to_string());
     }
     password().take();
-    login_user().set(Some(user));
+    login_user().set(Some(user.clone()));
     crate::router::router()
     .go(crate::router::previous_route().unwrap_or(crate::router::Route::Home));
+    let expires = Utc::now();
+    let gmt = expires.with_timezone(&chrono::FixedOffset::east(0));
+    let window = web_sys::window().unwrap();
+    let document = window.document().unwrap();
+    let html_document = document.dyn_into::<web_sys::HtmlDocument>().unwrap();
+    html_document.set_cookie(&format!("user={:?}; path=/; expires={:?}", &user, gmt)).unwrap();
 }
 
 pub fn login_page() -> impl Element {
