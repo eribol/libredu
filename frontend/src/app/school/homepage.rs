@@ -79,6 +79,9 @@ fn manager_view() -> impl Element {
                             .child(format!("{} {}", teacher.first_name, teacher.last_name))
                     } else {
                         RawHtmlEl::new("option")
+                            .event_handler(move |_event: events::Click| {
+                                change_manager(teacher.id.to_string())
+                            })
                             .child(format!(r#"{} {}"#, teacher.first_name, teacher.last_name))
                     }
                 },
