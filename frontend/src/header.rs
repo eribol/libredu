@@ -39,36 +39,30 @@ fn right_nav()-> impl Element{
     .s(Gap::new().x(20))
     .item(lang_label())
     .item_signal(
-        app::login_user().signal_ref(|user| 
-            match user{
-                Some(u) => {
-                    Row::new()
-                        .s(Gap::new().x(5))
-                        .item(
-                            Link::new().label(&u.first_name).to(Route::User)
-                        ).item(
-                            Column::new()
-                            .s(Cursor::new(CursorIcon::Pointer))
-                            .item(
-                                Link::new().label("").update_raw_el(|raw_el|
-                                    raw_el.attr("class", "fa-solid fa-arrow-right-from-bracket")
-                                )
-                                .to(Route::Logout)
-                            )
-                            
-                        )
-                },
-                None => {
-                    Row::new()
-                        .s(Gap::new().x(10))
-                        .s(Align::new().right())
-                        .item(
-                            Link::new().label_signal(t!("signin")).to(Route::Signin)
-                        )
-                        .item(Link::new().label_signal(t!("login")).to(Route::Login))
-                }
-            })
+        app::login_user().signal_cloned().map_option(|u| 
+            Row::new()
+            .s(Gap::new().x(5))
+            .item(
+                Link::new().label(&u.first_name).to(Route::User)
+            ).item(
+                Column::new()
+                .s(Cursor::new(CursorIcon::Pointer))
+                .item(
+                    Link::new().label("").update_raw_el(|raw_el|
+                        raw_el.attr("class", "fa-solid fa-arrow-right-from-bracket")
+                    )
+                    .to(Route::Logout)
+                    )                        
+                ),
+            || Row::new()
+            .s(Gap::new().x(10))
+            .s(Align::new().right())
+            .item(
+                Link::new().label_signal(t!("signin")).to(Route::Signin)
+            )
+            .item(Link::new().label_signal(t!("login")).to(Route::Login))
         )
+    )
 }
 
 fn lang_label() -> impl Element{
