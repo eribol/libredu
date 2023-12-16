@@ -42,6 +42,12 @@ pub async fn add_school(auth_token: Option<AuthToken>, name: String) -> DownMsg 
                         name: "Default".to_string(),
                         hour: 8
                     };
+                    let _ = sqlx::query(
+                        "insert into school_users(school_id, user_id, role) values($1, $2, 1)",
+                    ).bind(&school.id)
+                    .bind(manager)
+                    .execute(&*POSTGRES.read().await).await;
+                    
                     crate::up_msg_handler::timetables::add_timetable(
                         tt,
                         school.id

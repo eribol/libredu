@@ -176,8 +176,8 @@ fn lectures_view() -> impl Element {
         .item_signal(
             del_signal(r.id)
             .map_bool(move || 
-                crate::modals::del_modal_all(&r.id.to_string(), UpMsg::Lectures(LecturesUpMsg::DelLecture(r.id))).into_raw_element(), 
-                move || delete_view(r.id).into_raw_element()
+                crate::modals::del_modal_all(&r.id.to_string(), UpMsg::Lectures(LecturesUpMsg::DelLecture(r.id))).into_raw(), 
+                move || delete_view(r.id).into_raw()
             )
         )
     }))

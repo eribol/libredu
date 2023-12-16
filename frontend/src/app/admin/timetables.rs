@@ -131,9 +131,9 @@ pub fn root()-> impl Element{
     .item(page())
     .item_signal(admin_page().signal_cloned().map(|page|{
         match page{
-            AdminPage::Classes => classes_page().into_raw_element(),
-            AdminPage::Teachers => teachers_page().into_raw_element(),
-            AdminPage::Activities => acts_page().into_raw_element()
+            AdminPage::Classes => classes_page().into_raw(),
+            AdminPage::Teachers => teachers_page().into_raw(),
+            AdminPage::Activities => acts_page().into_raw()
         }
     }))
 }

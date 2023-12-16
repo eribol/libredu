@@ -123,8 +123,8 @@ fn classes_view() -> impl Element {
         .item_signal(
             del_signal(row.id)
             .map_bool(move||
-                crate::modals::del_modal_all(&row.id.to_string(), UpMsg::Classes(ClassUpMsgs::DelClass(row.id))).into_raw_element(),move||
-                delete_view(row.id).into_raw_element()
+                crate::modals::del_modal_all(&row.id.to_string(), UpMsg::Classes(ClassUpMsgs::DelClass(row.id))).into_raw(),move||
+                delete_view(row.id).into_raw()
             )
         )
     }))

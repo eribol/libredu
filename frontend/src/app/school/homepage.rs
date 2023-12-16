@@ -171,7 +171,3 @@ fn update_school() {
         }
     });
 }
-trait NewIntoIterator {
-    type Item;
-    fn into_iter(self) -> &'static dyn Element<Item = Self::Item, IntoIter = Self::Item>;
-}

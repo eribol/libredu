@@ -108,7 +108,7 @@ pub fn signin_page()->impl Element{
     .item_signal(
         register()
         .signal()
-        .map_bool(|| registered().into_raw_element(), || register_view().into_raw_element())
+        .map_bool(|| registered().into_raw(), || register_view().into_raw())
     )
 }
 pub fn registered()->impl Element{

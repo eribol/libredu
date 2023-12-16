@@ -14,7 +14,7 @@ pub mod timetables;
 #[static_ref]
 pub fn school() -> &'static Mutable<Option<School>> {
     if let Some(Ok(school)) = local_storage().get("school") {
-        return Box::new(Mutable::new(Some(school)));
+        return Mutable::new(Some(school));
     };
     get_school();
     Mutable::new(None)

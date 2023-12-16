@@ -42,8 +42,8 @@ pub fn root()->impl Element{
     .item_signal(
         page().signal_cloned().map(|p|{
             match p{
-                RootPage::Schools=>schools_view().into_raw_element(),
-                RootPage::Message=>messages::messages_view().into_raw_element()
+                RootPage::Schools=>schools_view().into_raw(),
+                RootPage::Message=>messages::messages_view().into_raw()
             }
         })
     )
@@ -67,8 +67,8 @@ pub fn schools_view() -> impl Element {
         self::school::school()
         .signal_cloned()
         .map_option(|school|
-            self::school::school_view(school).into_raw_element(),|| 
-            schools().into_raw_element()
+            self::school::school_view(school).into_raw(),|| 
+            schools().into_raw()
         )
     )
 }

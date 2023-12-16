@@ -31,7 +31,7 @@ pub fn school_view(school: AdminSchool)-> impl Element{
     .item_signal(
         super::timetables::timetable()
         .signal_cloned()
-        .map_option(|_tt| super::timetables::root().into_raw_element(), || timetables_view().into_raw_element())
+        .map_option(|_tt| super::timetables::root().into_raw(), || timetables_view().into_raw())
     )
 }
 

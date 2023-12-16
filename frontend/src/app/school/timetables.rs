@@ -71,8 +71,8 @@ fn timetables_view() -> impl Element {
         )
         .item_signal(
             crate::modals::del_signal(tt.id).map_bool(move ||
-            crate::modals::del_modal_all(&tt.id.to_string(), UpMsg::Timetables(TimetablesUpMsgs::DelTimetable(tt.id))).into_raw_element(), move ||
-            delete_view(tt.id).into_raw_element())
+            crate::modals::del_modal_all(&tt.id.to_string(), UpMsg::Timetables(TimetablesUpMsgs::DelTimetable(tt.id))).into_raw(), move ||
+            delete_view(tt.id).into_raw())
         )
     }))
 }

@@ -215,8 +215,8 @@ fn teachers_view() -> impl Element {
         )
         .item_signal(
             crate::modals::del_signal(teacher.id).map_bool(move ||
-            crate::modals::del_modal_all(&teacher.id.to_string(), UpMsg::Teachers(TeacherUpMsgs::DelTeacher(teacher.id))).into_raw_element(), move ||
-            delete_view(teacher.id).into_raw_element())
+            crate::modals::del_modal_all(&teacher.id.to_string(), UpMsg::Teachers(TeacherUpMsgs::DelTeacher(teacher.id))).into_raw(), move ||
+            delete_view(teacher.id).into_raw())
         )
     }))
 }
