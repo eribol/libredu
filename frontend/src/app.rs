@@ -26,6 +26,16 @@ pub fn root() -> impl Element {
     .on_viewport_size_change(|width, _height| change_screen_width(width))
 }
 
+pub fn factoring() -> impl Element {
+    Column::new()
+    .s(Padding::new().top(10).right(10).left(10))
+    .item(Label::new().label("Sistem şu an bakımdadır. Anlayışınız için teşekkürler."))
+    //.item(header::root())
+    //.item(view::root())
+    //.item_signal(is_user_not_admin().map_true(|| help_nav()))
+    //.on_viewport_size_change(|width, _height| change_screen_width(width))
+}
+
 #[derive(Debug, Clone)]
 pub enum Pages {
     Home,
