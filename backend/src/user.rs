@@ -26,7 +26,9 @@ pub async fn login(email: String, password: String) -> sqlx::Result<LoginUser> {
             .await;
         match user {
             Ok(u) => {
+                println!("find user");
                 if verify(&password, &u.password).unwrap() {
+                    println!("matched");
                     let _ = sqlx::query(r#"update users set last_login = $1 where email = $2"#)
                     .bind(Utc::now().naive_utc())
                     .bind(&email)
@@ -34,6 +36,7 @@ pub async fn login(email: String, password: String) -> sqlx::Result<LoginUser> {
                     .execute(&*db).await;
                     Ok(u)
                 } else {
+                    println!("not found user");
                     Err(sqlx::Error::RowNotFound)
                 }
             }
