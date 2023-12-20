@@ -22,7 +22,7 @@ fn main() {
     if let Some(width) = w {
         app::change_screen_width(width.parse::<u32>().unwrap());
     }
-    start_app("app", app::factoring);
+    start_app("app", app::root);
     connection::connection();
     router::router();
 }
