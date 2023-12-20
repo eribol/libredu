@@ -36,14 +36,15 @@ pub async fn login(email: String, password: String) -> sqlx::Result<LoginUser> {
                     .execute(&*db).await;
                     Ok(u)
                 } else {
-                    println!("not found user");
+                    println!("not matched");
                     Err(sqlx::Error::RowNotFound)
                 }
             }
-            Err(_e) => Err(sqlx::Error::RowNotFound)
+            Err(_e) => Err(_e)
         }
     }
     else{
+        println!("email not verified");
         return sqlx::Result::Err(sqlx::Error::RowNotFound)
     }
     //user
