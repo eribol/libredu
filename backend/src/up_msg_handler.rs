@@ -53,7 +53,10 @@ pub async fn up_msg_handler(req: UpMsgRequest<UpMsg>) {
 
                     DownMsg::LoggedIn(user2)
                 }
-                Err(_e) => DownMsg::LoginError("Sorry, invalid name or password.".to_owned()),
+                Err(_e) => {
+                    println!("{_e}");
+                    DownMsg::LoginError("Sorry, invalid name or password.".to_owned())
+                },
             }
         }
         UpMsg::Logout => {
