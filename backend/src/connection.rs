@@ -81,11 +81,14 @@ pub async fn register(user: SigninForm, auth_token: &AuthToken) -> DownMsg{
     redis::cmd("expire")
         .arg(auth_token.clone().into_string())
         .arg(60*60);
-    let d = dotenvy::var("DOMAIN_NAME").unwrap();
-    
-    let html = create_html(d, user.email.clone(),  auth_token.clone().into_string().trim().to_string());
-    
-    send_mail(user.email, html, String::from("Üyelik Onayla")).await
+    let d = dotenvy::var("DOMAIN_NAME");
+    match d{
+        Ok(domain) => {
+            let html = create_html(domain, user.email.clone(),  auth_token.clone().into_string().trim().to_string());
+            send_mail(user.email, html, String::from("Üyelik Onayla")).await
+        }
+        Err(e) => DownMsg::SigninError("e posta yok".to_string())
+    }
 }
 
 fn create_html(d: String, email: String, token: String)->String{

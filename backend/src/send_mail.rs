@@ -29,6 +29,6 @@ pub async fn send_mail(email: String, body: String, subject: String)->DownMsg{
     //let sender = AsyncSendmailTransport::<Tokio1Executor>::new();
     match mailer.send(email).await{
         Ok(_)=> DownMsg::Signin,
-        Err(_)=>DownMsg::SigninError("Signin Error".to_string())
+        Err(e)=>DownMsg::SigninError(e.to_string())
     }
 }
