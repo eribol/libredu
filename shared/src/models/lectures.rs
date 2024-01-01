@@ -6,7 +6,6 @@ use validator::{Validate, ValidationErrors};
 pub struct AddLecture {
     #[validate(length(min = 3, max = 50))]
     pub name: String,
-    pub kademe: String,
     #[validate(length(min = 2, max = 8))]
     pub short_name: String,
 }
@@ -23,6 +22,5 @@ impl AddLecture{
 pub struct Lecture {
     pub id: i32,
     pub name: String,
-    pub kademe: String,
     pub short_name: String,
 }

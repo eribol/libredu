@@ -5,7 +5,7 @@ use lettre::{
 use shared::DownMsg;
 use dotenvy;
 
-pub async fn send_mail(email: String, body: String, subject: String)->DownMsg{
+pub async fn send_mail(email: String, body: String, _subject: String)->DownMsg{
     dotenvy::dotenv().unwrap();
     let gmail_user = std::env::var("GMAIL_USERNAME").unwrap();
     let gmail_password = std::env::var("GMAIL_PASSWORD").unwrap();
@@ -14,7 +14,7 @@ pub async fn send_mail(email: String, body: String, subject: String)->DownMsg{
             r#"info@libredu.org"#.to_string().parse().unwrap()
         )
         .to(email.parse().unwrap())
-        .subject(subject)
+        .subject("Libredu Hesap Etkinleştirme")
         .header(ContentType::TEXT_HTML)
         .body(body)
         .unwrap();

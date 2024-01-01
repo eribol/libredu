@@ -171,7 +171,7 @@ fn lectures_view() -> impl Element {
             Button::new()
             .s(Align::new().center_y())
             .s(Font::new().weight(FontWeight::Light))
-            .label(format!("{} ({})", r.short_name, r.kademe))
+            .label(format!("{}", r.short_name))
         )
         .item_signal(
             del_signal(r.id)
@@ -260,7 +260,6 @@ fn create_selected(lecture: Lecture){
     hide().set(false);
     name().set(lecture.name);
     short_name().set(lecture.short_name);
-    grade().set(lecture.kademe);
     selected_lecture().set(Some(lecture.id));
 }
 fn clear_data(){
@@ -293,7 +292,6 @@ pub fn get_lectures() {
 }
 fn lecture_form()->AddLecture{
     let form = AddLecture {
-            kademe: grade().get_cloned(),
             name: name().get_cloned(),
             short_name: short_name().get_cloned(),
     };
@@ -319,13 +317,10 @@ fn add_lecture() {
     use crate::connection::*;
     use shared::*;
     if validate_form(){
-        let kademe = lecture_form().kademe;
-        kademe.split(" ").for_each(|k|{
-            let mut form = lecture_form();
-            form.kademe = k.to_string();
-            let msg = LecturesUpMsg::AddLecture(form);
+        
+            let msg = LecturesUpMsg::AddLecture(lecture_form());
             send_msg(UpMsg::Lectures(msg));
-        })  
+        
     }
 }
 fn update_lecture() {
@@ -337,9 +332,8 @@ fn update_lecture() {
             id: selected_lecture().get().unwrap(),
             name: form.name,
             short_name: form.short_name,
-            kademe: form.kademe
+            
         };
-        println!("update lecture");
         let t_msg = LecturesUpMsg::UpdateLecture(f);
         let msg = UpMsg::Lectures(t_msg);
         send_msg(msg)

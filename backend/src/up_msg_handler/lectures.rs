@@ -10,10 +10,10 @@ use moon::tokio_stream::StreamExt;
 pub async fn add_lecture(id: i32, lecture_form: AddLecture) -> DownMsg {
     let db = POSTGRES.read().await;
     let mut row = sqlx::query(
-        r#"insert into subjects(kademe, name, school, short_name) 
-        values($1, $2, $3, $4) returning id, kademe, name, short_name"#,
+        r#"insert into subjects(name, school, short_name) 
+        values($1, $2, $3) returning id, name, short_name"#,
     )
-        .bind(&lecture_form.kademe)
+        //.bind(&lecture_form.kademe)
         .bind(&lecture_form.name)
         .bind(id)
         .bind(&lecture_form.short_name)
@@ -21,7 +21,6 @@ pub async fn add_lecture(id: i32, lecture_form: AddLecture) -> DownMsg {
         if let Some(lec) = row.try_next().await.unwrap() {
             let l = Lecture {
                 id: lec.try_get("id").unwrap(),
-                kademe: lec.try_get("kademe").unwrap(),
                 name: lec.try_get("name").unwrap(),
                 short_name: lec.try_get("short_name").unwrap(),
             };
@@ -37,11 +36,10 @@ pub async fn add_lecture(id: i32, lecture_form: AddLecture) -> DownMsg {
 pub async fn update_lecture(school_id: i32,lecture_form: Lecture) -> DownMsg {
     let db = POSTGRES.read().await;
     let _row = sqlx::query(
-        r#"update subjects set kademe = $1, name = $2, short_name = $3
-        where id = $4 and school = $5
-        returning id, kademe, name, short_name"#,
+        r#"update subjects set name = $1, short_name = $2
+        where id = $3 and school = $4
+        returning id, name, short_name"#,
     )
-    .bind(&lecture_form.kademe)
     .bind(&lecture_form.name)
     .bind(&lecture_form.short_name)
     .bind(lecture_form.id)
@@ -55,7 +53,7 @@ pub async fn get_lectures(id: i32) -> DownMsg {
     let db = POSTGRES.read().await;
     let mut lectures: Vec<Lecture> = vec![];
     let mut row = sqlx::query(
-        r#"select id, kademe, name, short_name from subjects
+        r#"select id, name, short_name from subjects
         where school = $1"#,
     )
         .bind(id)
@@ -63,7 +61,6 @@ pub async fn get_lectures(id: i32) -> DownMsg {
     while let Some(lec) = row.try_next().await.unwrap() {
         lectures.push(Lecture {
             id: lec.try_get("id").unwrap(),
-            kademe: lec.try_get("kademe").unwrap(),
             name: lec.try_get("name").unwrap(),
             short_name: lec.try_get("short_name").unwrap(),
         })
