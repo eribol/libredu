@@ -55,32 +55,11 @@ fn form() -> impl Element {
             Shadow::new().y(25).blur(50).color(hsluv!(0, 0, 0, 10)),
         ]))
         .s(Gap::new().y(20))
-        .item(grade_view())
         .item(name_view())
         .item(short_name_view())
         .item(buttons())
 }
 
-fn grade_view() -> impl Element {
-    Column::new()
-    .s(Align::center())
-    .item(Column::new()
-        .item(Label::new().label_signal(t!("lecture-grade")).s(Align::center()))
-        .item(Label::new()
-            .s(Align::center())
-            .s(Font::new().weight(FontWeight::ExtraLight))
-            .label("Boşluk kullanarak birden çok kademe türünde ekleyebilirsiniz")
-        )
-    )
-    .item(text_inputs::default().id("grade").on_change(change_grade).text(grade().get_cloned()))
-    .item_signal(
-        grade_error().signal_cloned().map_some(|s|
-            Label::new().label(s)
-            .s(Align::center())
-            .s(Font::new().weight(FontWeight::Light).color(RED_5))   
-        )
-    )
-}
 fn name_view() -> impl Element {
     Column::new()
     .item(Label::new().label_signal(t!("lecture-name")).s(Align::center()))
@@ -216,10 +195,7 @@ fn name() -> &'static Mutable<String> {
 fn short_name() -> &'static Mutable<String> {
     Mutable::new("".to_string())
 }
-#[static_ref]
-fn grade_error() -> &'static Mutable<Option<String>> {
-    Mutable::new(None)
-}
+
 
 #[static_ref]
 fn name_error() -> &'static Mutable<Option<String>> {
@@ -280,10 +256,7 @@ fn change_short_name(value: String) {
     short_name_error().set(None);
     short_name().set(value)
 }
-fn change_grade(value: String) {
-    grade_error().set(None);
-    grade().set(value)
-}
+
 
 pub fn get_lectures() {
     use shared::*;
@@ -306,9 +279,7 @@ fn validate_form()->bool{
         if form.has_error("short_name"){
             short_name_error().set(Some(" Shortname is not valid".to_string()));
         }
-        if form.has_error("grade"){
-            grade_error().set(Some("Grade is not valid".to_string()));
-        }
+        
         return false
     }
     true
