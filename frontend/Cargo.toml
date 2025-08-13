@@ -3,12 +3,14 @@ name = "frontend"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
-
+# resolver= "2"
+[dev-dependencies]
+wasm-bindgen-test = "0.3.19"
 [dependencies]
 fluent = {version = "0.16.0", features =["fluent-pseudo"]}
 serde = {version = "1.0.147", features = ["derive"]}
 unic-langid = {version = "0.9.1", features = ["unic-langid-macros"]}
 zoon.workspace = true
 shared = { path = "../shared", features = ["frontend"] }
-web-sys = {version = "*", features = ["HtmlSelectElement", "Screen", "Document"]}
-js-sys = "*"
+web-sys = {version = "*", features = ["HtmlSelectElement", "Screen", "HtmlDocument"]}
+js-sys = "0.3.69"

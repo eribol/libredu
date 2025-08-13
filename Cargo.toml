@@ -5,12 +5,16 @@ members = [
     "shared",
 ]
 
+# resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
 publish = false
-
 [workspace.dependencies]
+# moon = { git = "https://github.com/MoonZoon/MoonZoon",  rev = "f8fc310" }
+# zoon = { git = "https://github.com/MoonZoon/MoonZoon",  rev = "f8fc310" }
+# moonlight = { git = "https://github.com/MoonZoon/MoonZoon",  rev="f8fc310" }
+# [workspace.dependencies]
 moon = { git = "https://github.com/MoonZoon/MoonZoon", branch = "main" }
 zoon = { git = "https://github.com/MoonZoon/MoonZoon", branch = "main" }
 moonlight = { git = "https://github.com/MoonZoon/MoonZoon", branch = "main" }

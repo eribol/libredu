@@ -3,15 +3,16 @@ name = "backend"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
-
+# resolver = "2"
 [dependencies]
 bcrypt = "0.13.0"
 dotenvy = "0.15.6"
 moon.workspace = true
 shared = { path = "../shared", features = ["backend"] }
-sqlx = {version = "0.6.2", features = ["postgres", "runtime-tokio-rustls","chrono"] }
+sqlx = {version = "0.8.4", features = ["postgres", "runtime-tokio-rustls","chrono"] }
 redis = { version = "0.22.1", features = ["tokio-native-tls-comp"] }
 lettre = {version = "0.10.4", features =["sendmail-transport", "tokio1", "tokio1-native-tls"]}
 common_regex_rs = "*"
-
-
+serde = "*"
+uuid = { version = "1.2", features = ["v4"] }
+futures-util = { version = "0.3.17", default-features = false, features = ["std"] }
