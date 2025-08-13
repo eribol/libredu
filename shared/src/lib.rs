@@ -1,11 +1,12 @@
-use models::{
-    school::FullSchool,
-    users::ResetForm,
-};
+use models::{school::FullSchool, users::ResetForm};
 use moonlight::*;
 use msgs::{
+    admin::{AdminDownMsgs, AdminUpMsgs},
     classes::{ClassDownMsgs, ClassUpMsgs},
-    teachers::{TeacherDownMsgs, TeacherUpMsgs}, lectures::{LecturesUpMsg, LecturesDownMsg}, timetables::{TimetablesUpMsgs, TimetablesDownMsgs}, admin::{AdminDownMsgs, AdminUpMsgs}, messages::{MessagesUpMsgs, MessagesDownMsgs},
+    lectures::{LecturesDownMsg, LecturesUpMsg},
+    messages::{MessagesDownMsgs, MessagesUpMsgs},
+    teachers::{TeacherDownMsgs, TeacherUpMsgs},
+    timetables::{TimetablesDownMsgs, TimetablesUpMsgs},
 };
 pub mod models;
 pub mod msgs;
@@ -19,7 +20,7 @@ pub struct User {
     pub first_name: String,
     pub auth_token: AuthToken,
     pub is_active: bool,
-    pub is_admin: bool
+    pub is_admin: bool,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(crate = "serde")]
@@ -33,7 +34,7 @@ pub struct School {
 pub enum UpMsg {
     // ------ Auth ------
     Login { email: String, password: String },
-    ForgetPassword{email: String},
+    ForgetPassword { email: String },
     ResetPassword(ResetForm),
     Signin { form: signin::SigninForm },
     Logout,
@@ -41,12 +42,13 @@ pub enum UpMsg {
     Register(String, String),
     UpdateSchool(FullSchool),
     GetSchool,
+    GetSchoolApi(i32),
     Classes(ClassUpMsgs),
     Teachers(TeacherUpMsgs),
     Lectures(LecturesUpMsg),
     Timetables(TimetablesUpMsgs),
     Messages(MessagesUpMsgs),
-    Admin(AdminUpMsgs)
+    Admin(AdminUpMsgs),
 }
 
 impl UpMsg {
@@ -73,6 +75,7 @@ pub enum DownMsg {
     Registered(User),
     ResgiterErrors,
     GetSchool { id: i32, name: String },
+    GetSchoolApi(String),
     AddedSchool(School),
     AddSchoolError(String),
     UpdateSchool,
@@ -83,5 +86,5 @@ pub enum DownMsg {
     Lectures(LecturesDownMsg),
     Timetables(TimetablesDownMsgs),
     Messages(MessagesDownMsgs),
-    Admin(AdminDownMsgs)
+    Admin(AdminDownMsgs),
 }
