@@ -1,6 +1,10 @@
 use moon::*;
-use shared::{models::{school::FullSchool, timetables::AddTimetable}, DownMsg};
-use sqlx::FromRow;
+use shared::{
+    models::{school::FullSchool, timetables::AddTimetable},
+    DownMsg,
+};
+use sqlx::{FromRow, Row};
+use uuid::Uuid;
 
 use super::sql::POSTGRES;
 
@@ -38,20 +42,19 @@ pub async fn add_school(auth_token: Option<AuthToken>, name: String) -> DownMsg 
             .await;
             match school {
                 Ok(school) => {
-                    let tt = AddTimetable{
+                    let tt = AddTimetable {
                         name: "Default".to_string(),
-                        hour: 8
+                        hour: 8,
                     };
                     let _ = sqlx::query(
                         "insert into school_users(school_id, user_id, role) values($1, $2, 1)",
-                    ).bind(&school.id)
+                    )
+                    .bind(&school.id)
                     .bind(manager)
-                    .execute(&*POSTGRES.read().await).await;
-                    
-                    crate::up_msg_handler::timetables::add_timetable(
-                        tt,
-                        school.id
-                    ).await;
+                    .execute(&*POSTGRES.read().await)
+                    .await;
+
+                    crate::up_msg_handler::timetables::add_timetable(tt, school.id).await;
                     DownMsg::GetSchool {
                         id: school.id,
                         name: school.name,
@@ -110,6 +113,40 @@ pub async fn get_school(manager: i32) -> sqlx::Result<School> {
             .fetch_one(&*db)
             .await;
     school
+}
+async fn create_api(school_id: i32) -> String {
+    let db = POSTGRES.read().await;
+    let now: DateTime<Utc> = Utc::now();
+    // Bir yıl sonrası için tarihi hesapla
+    let one_year_later = now + chrono::Duration::days(365);
+    let rows = sqlx::query(
+        r#"INSERT INTO school_apis(school_id, api_key, created_at) 
+        VALUES ($1, $2, $3)"#,
+    )
+    .bind(school_id)
+    .bind(Uuid::new_v4().into_bytes())
+    .bind(one_year_later)
+    .fetch_all(&*db)
+    .await
+    .unwrap();
+    for r in rows {
+        let api: String = r.try_get("api_key").unwrap();
+        return api[4..].to_string();
+    }
+    "".to_string()
+}
+pub async fn get_school_api(id: i32) -> String {
+    let db = POSTGRES.read().await;
+    let rows = sqlx::query(r#"SELECT api_key FROM school_apis WHERE school_id = $1"#)
+        .bind(id)
+        .fetch_all(&*db)
+        .await
+        .unwrap();
+    for r in rows {
+        let s2: String = r.try_get("api_key").unwrap();
+        return s2[4..].to_string();
+    }
+    create_api(id).await
 }
 
 pub async fn auth(auth_token: Option<AuthToken>) -> Result<i32, String> {

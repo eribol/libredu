@@ -1,3 +1,5 @@
+use actix_web::web;
+use api_middleware::school_api;
 use config::CONFIG;
 use moon::{
     actix_cors::Cors,
@@ -8,11 +10,12 @@ use moon::{
     },
     *,
 };
+pub mod api_middleware;
 mod connection;
 mod frontend;
+pub mod send_mail;
 mod up_msg_handler;
 mod user;
-pub mod send_mail;
 
 #[moon::main]
 async fn main() -> std::io::Result<()> {
@@ -48,6 +51,12 @@ async fn main() -> std::io::Result<()> {
                     )
                     .handler(StatusCode::NOT_FOUND, error_handler::not_found),
             )
+            .service(web::resource("/lapis_api").route(web::post().to(
+                |param: web::Json<MyUp>| async {
+                    let pl = param.into_inner();
+                    school_api(&pl).await
+                },
+            )))
     };
     start_with_app(
         frontend::frontend,
@@ -56,4 +65,20 @@ async fn main() -> std::io::Result<()> {
         |_| {},
     )
     .await
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct MyUp {
+    id: i32,
+    api_key: String,
+    msg: MyMsg,
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub enum MyMsg {
+    GetSchool,
+    GetTimetables,
+    GetTeachers,
+    GetClasses,
+    GetLectures,
+    GetActivities(i32),
 }

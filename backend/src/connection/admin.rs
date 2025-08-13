@@ -1,8 +1,18 @@
 use moon::{*, tokio_stream::StreamExt};
-use shared::{models::{school::FullSchool, timetables::{AddTimetable, Timetable, Activity}, class::{Class, ClassLimitation}, teacher::{Teacher, TeacherLimitation}}, DownMsg, msgs::{admin::{AdminDownMsgs, SchoolManager, AdminSchool}, messages::{Message, NewMessage}}, School};
-use sqlx::{FromRow, Row};
+use shared::{
+    models::{timetables::{ Timetable, Activity},
+        class::{Class, ClassLimitation},
+        teacher::{Teacher, TeacherLimitation}
+    },
+    msgs::{
+        admin::{AdminDownMsgs, SchoolManager, AdminSchool},
+        messages::{Message, NewMessage}
+    },
+    School
+};
+use sqlx::Row;
 
-use super::{sql::POSTGRES, school::get_school};
+use super::sql::POSTGRES;
 
 pub async fn get_classes(group_id: i32)-> AdminDownMsgs{
     let db = POSTGRES.read().await;
@@ -14,8 +24,10 @@ pub async fn get_classes(group_id: i32)-> AdminDownMsgs{
     while let Some(class) = classes.try_next().await.unwrap(){
         let c = Class{
             id: class.try_get("id").unwrap(),
-            kademe: class.try_get("kademe").unwrap(),
-            sube: class.try_get("sube").unwrap(),
+            name: "".to_string(),
+            short_name: "".to_string(),
+            grade: class.try_get("grade").unwrap(),
+            branch: class.try_get("branch").unwrap(),
             group_id
         };
         clss.push(c);
@@ -23,7 +35,7 @@ pub async fn get_classes(group_id: i32)-> AdminDownMsgs{
     AdminDownMsgs::GetClasses(clss)
 }
 
-pub async fn get_groups(school_id: i32)-> AdminDownMsgs{
+pub async fn _get_groups(school_id: i32)-> AdminDownMsgs{
     let db = POSTGRES.read().await;
     let mut timetables =
         sqlx::query(r#"select * from class_groups where school_id = $1"#)
@@ -111,8 +123,16 @@ pub async fn get_timetables(school_id: i32)-> AdminDownMsgs{
 
 pub async fn get_activities(group_id: i32) -> AdminDownMsgs {
     let db = POSTGRES.read().await;
+    println!("{group_id}");
     let mut groups_query = 
-    sqlx::query(r#"select activities.id, activities.subject, activities.hour, activities.teachers, activities.partner_activity, activities.classes
+    sqlx::query(r#"select activities.id,
+        activities.lecture,
+        activities.hour,
+        activities.no_limit,
+        activities.teachers,
+        activities.partners,
+        activities.classes,
+        activities.classrooms
         from activities inner join school_acts on school_acts.act_id = activities.id where school_acts.group_id = $1"#)
     .bind(&group_id)
     .fetch(&*db);
@@ -120,12 +140,15 @@ pub async fn get_activities(group_id: i32) -> AdminDownMsgs {
     while let Some(g) = groups_query.try_next().await.unwrap() {
         let act = Activity {
             id: g.try_get("id").unwrap(),
-            subject: g.try_get("subject").unwrap(),
+            lecture: g.try_get("lecture").unwrap(),
             hour: g.try_get("hour").unwrap(),
+            no_limit: g.try_get("no_limit").unwrap(),
             classes: g.try_get("classes").unwrap(),
+            classrooms: g.try_get("classrooms").unwrap(),
             teachers: g.try_get("teachers").unwrap(),
-            blocks: None,
-            partner_activity: None
+            partners: g.try_get("partners").unwrap(),
+            // blocks: None,
+            // partner_activity: None
         };
         activities.push(act)
     }
@@ -140,10 +163,13 @@ pub async fn get_classes_limitations(group_id: i32) -> AdminDownMsgs {
         .fetch(&*db);
     let mut limitations = vec![];
     while let Some(class) = row.try_next().await.unwrap() {
+        let lims: String = class.try_get("limitations").unwrap();
+        let lims: Vec<Vec<bool>> = serde_json::from_str(&lims).unwrap();
         let c = ClassLimitation {
             class_id: class.try_get("class_id").unwrap(),
-            day: class.try_get("day").unwrap(),
-            hours: class.try_get("hours").unwrap(),
+            // day: class.try_get("day").unwrap(),
+            // hours: class.try_get("hours").unwrap(),
+            limitations: lims
         };
         limitations.push(c);
     }
@@ -171,46 +197,54 @@ pub async fn get_teachers_limitations(group_id: i32) -> AdminDownMsgs {
     AdminDownMsgs::GetTeachersLimitations(limitations)
 }
 
-pub async fn update_class_limitations(mut form: Vec<ClassLimitation>) -> AdminDownMsgs {
+pub async fn update_class_limitations(mut form: ClassLimitation) -> AdminDownMsgs {
     let db = POSTGRES.read().await;
-    form.sort_by(|a,b| a.day.cmp(&b.day));
-    let class_id = form[0].class_id;
-    if form.len() != 7{
+    if form.limitations.len() != 7{
         let c_msg = AdminDownMsgs::UpdateClassLimitationsError("No valid form".to_string());
         return c_msg
     }
-    if !form.iter().enumerate().all(|l| l.1.class_id == class_id && l.0+1==l.1.day as usize){
-        let c_msg = AdminDownMsgs::UpdateClassLimitationsError("No valid form".to_string());
-        return c_msg
-    }
-    let mut lims: Vec<ClassLimitation> = Vec::new();
-    for l in form{
+    // let limitations = form.clone().limitations.clone();
+    let lims: Vec<Vec<u8>> = form.limitations.iter().map(|l| booleans_to_bytea(&l)).collect();
         let mut insert = sqlx::query(
-            r#"insert into class_available(class_id, day, hours) values($1, $2, $3) 
-                on conflict(class_id, day) where class_id = $1 and  day = $2 do update set hours = $3
-                returning class_id, day, hours"#)
-            .bind(&class_id)
-            .bind(&l.day)
-            .bind(&l.hours)
+            r#"insert into class_available(class_id, limitations) values($1, $2) 
+                on conflict(class_id, day) where class_id = $1 do update set limitations= $2
+                returning class_id, limitations"#)
+            .bind(&form.class_id)
+            .bind(&lims)
             .fetch(&*db);
         while let Some(row) = insert.try_next().await.unwrap(){
-            let new_lim = ClassLimitation{
+            let _new_lim = ClassLimitation{
                 class_id: row.try_get("class_id").unwrap(),
-                day: row.try_get("day").unwrap(),
-                hours: row.try_get("hours").unwrap()
+                // day: row.try_get("day").unwrap(),
+                // hours: row.try_get("hours").unwrap()
+                limitations: vec![]
             };
-            lims.push(new_lim);
         }
 
-    }
     let c_msg = AdminDownMsgs::UpdatedClassLimitations;
     c_msg
+}
+fn booleans_to_bytea(booleans: &[bool]) -> Vec<u8> {
+    let mut byte_array = Vec::new();
+    let mut byte = 0u8;
+
+    for (i, &value) in booleans.iter().enumerate() {
+        if value {
+            byte |= 1 << (i % 8); // Set the bit
+        }
+        if (i + 1) % 8 == 0 || i == booleans.len() - 1 {
+            byte_array.push(byte);
+            byte = 0; // Reset for the next byte
+        }
+    }
+
+    byte_array
 }
 
 pub async fn update_teacher_limitations(mut form: Vec<TeacherLimitation>) -> AdminDownMsgs {
     let db = POSTGRES.read().await;
     form.sort_by(|a,b| a.day.cmp(&b.day));
-    let teacher_id = form[0].user_id;
+    let _teacher_id = form[0].user_id;
     let school_id = form[0].school_id;
     let group_id = form[0].group_id;
     if form.len() != 7{

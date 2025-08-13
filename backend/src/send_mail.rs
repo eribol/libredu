@@ -1,18 +1,17 @@
+use dotenvy;
 use lettre::message::header::ContentType;
 use lettre::{
-    AsyncSendmailTransport, AsyncTransport, Message, Tokio1Executor, AsyncSmtpTransport, transport::smtp::authentication::Credentials
+    transport::smtp::authentication::Credentials, AsyncSmtpTransport, AsyncTransport, Message,
+    Tokio1Executor,
 };
 use shared::DownMsg;
-use dotenvy;
 
-pub async fn send_mail(email: String, body: String, _subject: String)->DownMsg{
+pub async fn send_mail(email: String, body: String, _subject: String) -> DownMsg {
     dotenvy::dotenv().unwrap();
     let gmail_user = std::env::var("GMAIL_USERNAME").unwrap();
     let gmail_password = std::env::var("GMAIL_PASSWORD").unwrap();
     let email = Message::builder()
-        .from(
-            r#"info@libredu.org"#.to_string().parse().unwrap()
-        )
+        .from(r#"info@libredu.org"#.to_string().parse().unwrap())
         .to(email.parse().unwrap())
         .subject("Libredu Hesap Etkinleştirme")
         .header(ContentType::TEXT_HTML)
@@ -27,8 +26,8 @@ pub async fn send_mail(email: String, body: String, _subject: String)->DownMsg{
             .credentials(creds)
             .build();
     //let sender = AsyncSendmailTransport::<Tokio1Executor>::new();
-    match mailer.send(email).await{
-        Ok(_)=> DownMsg::Signin,
-        Err(e)=>DownMsg::SigninError(e.to_string())
+    match mailer.send(email).await {
+        Ok(_) => DownMsg::Signin,
+        Err(e) => DownMsg::SigninError(e.to_string()),
     }
 }
