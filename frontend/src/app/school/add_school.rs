@@ -1,5 +1,5 @@
 use crate::i18n;
-use zoon::{eprintln, named_color::*, *};
+use zoon::{eprintln, *};
 
 #[static_ref]
 fn school_name() -> &'static Mutable<String> {
@@ -30,7 +30,7 @@ pub fn add_school_page() -> impl Element {
             TextInput::new()
                 .s(Align::center())
                 .s(Height::exact(30))
-                .s(Borders::all(Border::new().solid().color(BLUE_5)))
+                .s(Borders::all(Border::new().solid().color(color!("blue"))))
                 .id("school_name")
                 .placeholder(Placeholder::with_signal(i18n::t!("school-name")))
                 .input_type(InputType::text())
@@ -40,7 +40,7 @@ pub fn add_school_page() -> impl Element {
             Button::new()
                 .s(Height::exact(35))
                 .s(RoundedCorners::all(10))
-                .s(Borders::all(Border::new().solid().color(BLUE_5)))
+                .s(Borders::all(Border::new().solid().color(color!("blue"))))
                 .label(
                     El::new()
                         .s(Align::center())
@@ -53,7 +53,7 @@ pub fn add_school_page() -> impl Element {
 fn add() {
     Task::start(async {
         use crate::connection::connection;
-        if school_name().get_cloned().len() > 5{
+        if school_name().get_cloned().len() > 5 {
             let msg = shared::UpMsg::AddSchool {
                 name: school_name().get_cloned(),
             };
@@ -66,6 +66,5 @@ fn add() {
                 Ok(_) => (),
             }
         }
-        
     });
 }

@@ -1,7 +1,7 @@
 use crate::app::login::get_school;
 use crate::i18n::t;
 use zoon::strum::{EnumIter, IntoEnumIterator, IntoStaticStr};
-use zoon::{named_color::*, *};
+use zoon::*;
 
 pub mod add_school;
 //pub mod class;
@@ -39,11 +39,7 @@ pub fn school_page() -> impl Element {
         match schl {
             Some(_s) => Column::new()
                 .s(Gap::new().y(10))
-                .item(
-                    Label::new()
-                    .s(Align::new().center_x())
-                    .label(&_s.name)
-                )
+                .item(Label::new().s(Align::new().center_x()).label(&_s.name))
                 .item(school_tabs())
                 .item_signal(selected_page().signal_ref(|page| match page {
                     SchoolPages::Home => El::new().child(homepage::home()),
@@ -60,23 +56,23 @@ pub fn school_page() -> impl Element {
 
 fn school_tabs() -> impl Element {
     Row::new()
-    .s(Gap::new().x(50))
-    .s(Align::center())
-    .s(Font::new().weight(FontWeight::Medium))
-    .items(SchoolPages::iter().map(|page| {
-        Button::new()
-        .s(
-            Borders::new().bottom_signal(selected_page().signal_ref(move |p| {
-                if p == &page {
-                    Border::new().width(2).solid().color(BLUE_5)
-                } else {
-                    Border::new().width(0).solid().color(GRAY_0)
-                }
-            })),
-        )
-        .on_click(move || change_page(page))
-        .label_signal(t!(format!("{}", page.label())))
-    }))
+        .s(Gap::new().x(50))
+        .s(Align::center())
+        .s(Font::new().weight(FontWeight::Medium))
+        .items(SchoolPages::iter().map(|page| {
+            Button::new()
+                .s(
+                    Borders::new().bottom_signal(selected_page().signal_ref(move |p| {
+                        if p == &page {
+                            Border::new().width(2).solid().color(color!("blue"))
+                        } else {
+                            Border::new().width(0).solid().color(color!("gray"))
+                        }
+                    })),
+                )
+                .on_click(move || change_page(page))
+                .label_signal(t!(format!("{}", page.label())))
+        }))
 }
 #[derive(Clone, Copy, IntoStaticStr, EnumIter, Debug, Default, PartialEq)]
 #[strum(crate = "strum")]

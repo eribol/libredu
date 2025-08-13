@@ -1,6 +1,7 @@
 use crate::{
     elements::{buttons, text_inputs},
-    i18n::t, modals::del_signal,
+    i18n::t,
+    modals::del_signal,
 };
 use shared::{
     models::{
@@ -10,7 +11,6 @@ use shared::{
     msgs::{classes::ClassUpMsgs, timetables::TimetablesUpMsgs},
     UpMsg,
 };
-use zoon::named_color::*;
 use zoon::*;
 
 pub fn home() -> impl Element {
@@ -33,15 +33,13 @@ fn form() -> impl Element {
         .item(grade_view())
         .item(branch_view())
         .item(update())
-        .item_signal(
-            add_class_error().signal_cloned().map_some(|e| 
-                Label::new()
+        .item_signal(add_class_error().signal_cloned().map_some(|e| {
+            Label::new()
                 .s(Font::new().weight(FontWeight::Light))
-                .s(Font::new().color(RED_5))
+                .s(Font::new().color(color!("red")))
                 .s(Align::new().center_x())
                 .label(e)
-            )
-        )
+        }))
 }
 fn groups_view() -> impl Element {
     Column::new()
@@ -58,20 +56,22 @@ fn groups_view() -> impl Element {
                         })
                         .child(group.name)
                 },
-            ))
+            )),
         )
 }
 
 fn grade_view() -> impl Element {
     Column::new()
         .s(Align::center())
-        .item(Column::new()
-            .item(Label::new().label_signal(t!("grade")).s(Align::center()))
-            .item(Label::new()
-                .s(Align::center())
-                .s(Font::new().weight(FontWeight::ExtraLight))
-                .label("Boşluk kullanarak birden çok kademe ekleyebilirsiniz")
-            )
+        .item(
+            Column::new()
+                .item(Label::new().label_signal(t!("grade")).s(Align::center()))
+                .item(
+                    Label::new()
+                        .s(Align::center())
+                        .s(Font::new().weight(FontWeight::ExtraLight))
+                        .label("Boşluk kullanarak birden çok grade ekleyebilirsiniz"),
+                ),
         )
         .item(
             text_inputs::default()
@@ -85,61 +85,65 @@ fn branch_view() -> impl Element {
         .s(Align::center())
         .item(
             Column::new()
-            .item(Label::new().label_signal(t!("branch")).s(Align::center()))
-            .item(Label::new()
-                .s(Align::center())
-                .s(Font::new().weight(FontWeight::ExtraLight))
-                .label("Boşluk kullanarak birden çok sınıf şubesi ekleyebilirsiniz")
-            )
+                .item(Label::new().label_signal(t!("branch")).s(Align::center()))
+                .item(
+                    Label::new()
+                        .s(Align::center())
+                        .s(Font::new().weight(FontWeight::ExtraLight))
+                        .label("Boşluk kullanarak birden çok sınıf şubesi ekleyebilirsiniz"),
+                ),
         )
-        .item(text_inputs::default().on_change(change_branch).id("sube"))
+        .item(text_inputs::default().on_change(change_branch).id("branch"))
 }
 fn update() -> impl Element {
     buttons::default_with_signal(t!("add")).on_click(add_class)
 }
 
 fn classes_view() -> impl Element {
-    Row::new()
-    .s(Gap::new().x(2))
-    .multiline()
-    .items_signal_vec(
-        classes().signal_vec_cloned()
-        .filter_signal_cloned(|c| is_timetable_selected(c.group_id))
-        .map(|row| {
-        let a = Mutable::new(false);
-        Column::new()
-        .s(Borders::all_signal(a.signal().map_bool(
-            || Border::new().width(1).color(BLUE_3).solid(),
-            || Border::new().width(1).color(BLUE_1).solid(),
-        )))
-        .s(RoundedCorners::all(2))
-        .s(Width::exact(140))
-        .s(Height::exact(75))
-        .s(Align::new().center_y())
-        .on_hovered_change(move |b| a.set(b))
-        .item(
-            Button::new().label(format!("{} {}", row.kademe, row.sube))
-        )
-        .item_signal(
-            del_signal(row.id)
-            .map_bool(move||
-                crate::modals::del_modal_all(&row.id.to_string(), UpMsg::Classes(ClassUpMsgs::DelClass(row.id))).into_raw(),move||
-                delete_view(row.id).into_raw()
-            )
-        )
-    }))
+    Row::new().s(Gap::new().x(2)).multiline().items_signal_vec(
+        classes()
+            .signal_vec_cloned()
+            .filter_signal_cloned(|c| is_timetable_selected(c.group_id))
+            .map(|row| {
+                let a = Mutable::new(false);
+                Column::new()
+                    .s(Borders::all_signal(a.signal().map_bool(
+                        || Border::new().width(1).color(color!("blue")).solid(),
+                        || Border::new().width(1).color(color!("blue")).solid(),
+                    )))
+                    .s(RoundedCorners::all(2))
+                    .s(Width::exact(140))
+                    .s(Height::exact(75))
+                    .s(Align::new().center_y())
+                    .on_hovered_change(move |b| a.set(b))
+                    .item(Button::new().label(format!("{} {}", row.grade, row.branch)))
+                    .item_signal(del_signal(row.id).map_bool(
+                        move || {
+                            crate::modals::del_modal_all(
+                                &row.id.to_string(),
+                                UpMsg::Classes(ClassUpMsgs::DelClass(row.id)),
+                            )
+                            .into_raw()
+                        },
+                        move || delete_view(row.id).into_raw(),
+                    ))
+            }),
+    )
 }
 
-fn delete_view(id: i32)->impl Element{
+fn delete_view(id: i32) -> impl Element {
     let a = Mutable::new_and_signal(false);
     Button::new()
-    .s(Font::new()
-        .weight_signal(a.0.signal().map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight))
-        .color_signal(a.0.signal().map_bool(|| RED_8, || RED_4)))
-    .s(Align::new().bottom())
-    .label_signal(t!("delete")).on_press(move || crate::modals::del_modal().set(Some(id)))
-    .on_hovered_change(move|h| a.0.set_neq(h))
-        
+        .s(Font::new()
+            .weight_signal(
+                a.0.signal()
+                    .map_bool(|| FontWeight::Regular, || FontWeight::ExtraLight),
+            )
+            .color_signal(a.0.signal().map_bool(|| color!("red"), || color!("red"))))
+        .s(Align::new().bottom())
+        .label_signal(t!("delete"))
+        .on_press(move || crate::modals::del_modal().set(Some(id)))
+        .on_hovered_change(move |h| a.0.set_neq(h))
 }
 
 #[static_ref]
@@ -178,8 +182,10 @@ pub fn timetables() -> &'static MutableVec<Timetable> {
     MutableVec::new_with_values(vec![])
 }
 
-fn is_timetable_selected(group_id: i32)->impl Signal<Item=bool>{
-    selected_timetable().signal_ref(move|t| t==&group_id).dedupe()
+fn is_timetable_selected(group_id: i32) -> impl Signal<Item = bool> {
+    selected_timetable()
+        .signal_ref(move |t| t == &group_id)
+        .dedupe()
 }
 
 fn change_branch(value: String) {
@@ -217,8 +223,8 @@ fn get_classes() {
 
 fn class_form() -> AddClass {
     AddClass {
-        kademe: grade().get_cloned(),
-        sube: branch().get_cloned(),
+        grade: grade().get_cloned(),
+        branch: branch().get_cloned(),
         group_id: selected_timetable().get(),
     }
 }
@@ -228,18 +234,17 @@ fn add_class() {
     use shared::*;
     let form = class_form();
     let group_id = form.group_id;
-    form.kademe.split(" ").for_each(|k|{
-        form.sube.split(" ").for_each(|s|{
-            let f = AddClass{
+    form.grade.split(" ").for_each(|k| {
+        form.branch.split(" ").for_each(|s| {
+            let f = AddClass {
                 group_id,
-                sube: s.to_string(),
-                kademe: k.to_string()
+                branch: s.to_string(),
+                grade: k.to_string(),
             };
-            if let Ok(_) = f.is_valid(){
+            if let Ok(_) = f.is_valid() {
                 let msg = UpMsg::Classes(ClassUpMsgs::AddClass(f));
                 send_msg(msg);
             }
         })
     })
-    
 }

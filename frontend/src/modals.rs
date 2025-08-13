@@ -1,8 +1,7 @@
 use shared::UpMsg;
-use zoon::{*, named_color::RED_7};
+use zoon::*;
 
-pub fn del_modal_all(modal_id: &str, msg: UpMsg) -> impl zoon::Element
-{
+pub fn del_modal_all(modal_id: &str, msg: UpMsg) -> impl zoon::Element {
     zoon::Row::new()
         .id(modal_id)
         //.s(Background::new().color(hsluv!(200,100,100)))
@@ -12,32 +11,33 @@ pub fn del_modal_all(modal_id: &str, msg: UpMsg) -> impl zoon::Element
         .s(Gap::new().x(10))
         .item(
             Button::new()
-            .s(Font::new().color(RED_7).weight(FontWeight::Bold))
-            .update_raw_el(|raw| 
-                raw
-                .event_handler(move |event: events::Click|{
-                    event.prevent_default();
-                    event.stop_propagation();
+                .s(Font::new().color(color!("red")).weight(FontWeight::Bold))
+                .update_raw_el(|raw| {
+                    raw.event_handler(move |event: events::Click| {
+                        event.prevent_default();
+                        event.stop_propagation();
+                    })
                 })
-            )
-            .label("Sil").on_click(move || send_msg(msg.clone()))
+                .label("Sil")
+                .on_click(move || send_msg(msg.clone())),
         )
         .item(
             Button::new()
-            .update_raw_el(|raw| 
-                raw.event_handler(move |event: events::Click|{
-                    event.prevent_default();
-                    event.stop_propagation();
-            })
-        ).label("İptal").on_click(move || del_modal().set(None))
+                .update_raw_el(|raw| {
+                    raw.event_handler(move |event: events::Click| {
+                        event.prevent_default();
+                        event.stop_propagation();
+                    })
+                })
+                .label("İptal")
+                .on_click(move || del_modal().set(None)),
         )
-        .update_raw_el(|raw| 
-            raw
-            .event_handler(move |event: events::Click|{
+        .update_raw_el(|raw| {
+            raw.event_handler(move |event: events::Click| {
                 event.prevent_default();
                 event.stop_propagation();
             })
-        )
+        })
 }
 
 #[static_ref]
@@ -45,8 +45,11 @@ pub fn del_modal() -> &'static Mutable<Option<i32>> {
     Mutable::new(None)
 }
 
-pub fn del_signal(id: i32)-> impl Signal<Item = bool>{
-    del_modal().signal().map_option(move |s| s == id, || false).dedupe()
+pub fn del_signal(id: i32) -> impl Signal<Item = bool> {
+    del_modal()
+        .signal()
+        .map_option(move |s| s == id, || false)
+        .dedupe()
 }
 
 fn send_msg(msg: UpMsg) {

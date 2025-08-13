@@ -2,7 +2,7 @@ use shared::{
     models::teacher::{Teacher, TeacherLimitation},
     models::timetables::Activity,
 };
-use zoon::{named_color::*, *};
+use zoon::*;
 
 use super::{classes::selected_timetable_hour, lectures::lectures};
 use crate::i18n::t;
@@ -189,7 +189,7 @@ fn lecture_name(act: Activity) -> impl Signal<Item = String> {
     let tchrs = lectures().lock_mut().to_vec();
     tchrs
         .iter()
-        .filter(|t1| t1.id == act.subject)
+        .filter(|t1| t1.id == act.lecture)
         .for_each(|t| name.push_str(&format!("{}", t.name)));
     Mutable::new_and_signal_cloned(name).1
 }

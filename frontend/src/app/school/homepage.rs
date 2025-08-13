@@ -6,15 +6,46 @@ use crate::{
     i18n::t,
 };
 use shared::models::school::FullSchool;
-use zoon::{*, named_color::RED_6};
+use zoon::*;
 
 use super::{school, teachers::teachers};
 
+#[static_ref]
+pub fn school_api() -> &'static Mutable<Option<String>> {
+    Mutable::new(Default::default())
+}
 pub fn home() -> impl Element {
     Column::new()
         //
         .s(Padding::new().top(10))
         .item(form())
+        .item(api_form())
+}
+fn api_form() -> impl Element {
+    Column::new()
+        .s(Gap::new().y(2))
+        .s(Shadows::new([
+            Shadow::new().y(2).blur(4).color(hsluv!(0, 0, 0, 20)),
+            Shadow::new().y(25).blur(50).color(hsluv!(0, 0, 0, 10)),
+        ]))
+        .s(Align::center())
+        .s(Width::exact(750))
+        .item(
+            Row::new()
+                .item(Label::new().label("Okul Id Numarası:"))
+                .item_signal(
+                    school()
+                        .signal_cloned()
+                        .map_option(|s| s.id.to_string(), || "".to_string()),
+                ),
+        )
+        .item(
+            Row::new().item("Api Key: ").item_signal(
+                school_api()
+                    .signal_cloned()
+                    .map_option(|s| s, || "".to_string()),
+            ),
+        )
 }
 fn form() -> impl Element {
     Column::new()
@@ -29,19 +60,23 @@ fn form() -> impl Element {
         .item(name_view())
         .item(phone_view())
         .item(update())
-        .item_signal(error().signal_cloned().map_some(|e| 
-            Label::new().label(e)
-            .s(
-                Font::new()
-                .weight(FontWeight::Number(10))
-                .color(RED_6)
-            ).s(Align::center())
-        ))
+        .item_signal(error().signal_cloned().map_some(|e| {
+            Label::new()
+                .label(e)
+                .s(Font::new()
+                    .weight(FontWeight::Number(10))
+                    .color(color!("red")))
+                .s(Align::center())
+        }))
 }
 fn name_view() -> impl Element {
     Column::new()
         //.s(Padding::new().x(150))
-        .item(Label::new().label_signal(t!("school-name")).s(Align::center()))
+        .item(
+            Label::new()
+                .label_signal(t!("school-name"))
+                .s(Align::center()),
+        )
         .s(Align::center())
         .item(
             text_inputs::default()
@@ -66,7 +101,11 @@ fn manager_view() -> impl Element {
     Column::new()
         //.s(Padding::new().x(150))
         .s(Align::center())
-        .item(Label::new().label_signal(t!("school-principle")).s(Align::center()))
+        .item(
+            Label::new()
+                .label_signal(t!("school-principle"))
+                .s(Align::center()),
+        )
         .item(
             RawHtmlEl::new("select").children_signal_vec(teachers().signal_vec_cloned().map(
                 |teacher| {
@@ -92,25 +131,25 @@ fn manager_view() -> impl Element {
 fn phone_view() -> impl Element {
     Column::new()
         //.s(Padding::new().x(150))
-        
         .s(Align::center())
         .s(Width::exact(500))
-        .item(Label::new().label_signal(t!("phone-number")).s(Align::center()))
+        .item(
+            Label::new()
+                .label_signal(t!("phone-number"))
+                .s(Align::center()),
+        )
         .item(
             text_inputs::default()
                 .s(Width::exact(300))
                 .id("phone")
-                .on_change(change_phone)
+                .on_change(change_phone),
         )
-        .update_raw_el(|raw_el|
-            raw_el.attr("title", "input phone number with country code")
-        )
+        .update_raw_el(|raw_el| raw_el.attr("title", "input phone number with country code"))
 }
 
 fn update() -> impl Element {
-    buttons::default_with_signal(t!("update"))
-        .on_click(update_school)
-        //.s(Align::center())
+    buttons::default_with_signal(t!("update")).on_click(update_school)
+    //.s(Align::center())
 }
 
 #[static_ref]
@@ -162,11 +201,10 @@ fn update_school() {
             phone: phone().get_cloned(),
             name: name().get_cloned(),
         };
-        if let Ok(_) = update_school.is_valid(){
+        if let Ok(_) = update_school.is_valid() {
             let msg = UpMsg::UpdateSchool(update_school);
             connection().send_up_msg(msg).await.unwrap();
-        }
-        else{
+        } else {
             error().set(Some(Cow::from("Form is not valid")))
         }
     });

@@ -1,5 +1,4 @@
 use zoon::{
-    named_color::*,
     text_input::{
         IdFlagNotSet, InputTypeFlagNotSet, LabelFlagNotSet, OnChangeFlagNotSet,
         PlaceholderFlagNotSet, ReadOnlyFlagNotSet, TextFlagNotSet,
@@ -24,21 +23,21 @@ pub fn default() -> TextInput<
         .s(Height::exact(30))
         //.s(Borders::all(Border::new().solid().color(BLUE_5)))
         .s(Borders::all_signal(a.signal().map_bool(
-            || Border::new().width(1).color(BLUE_3).solid(),
-            || Border::new().width(1).color(GRAY_1).solid(),
+            || Border::new().width(1).color(color!("blue")).solid(),
+            || Border::new().width(1).color(color!("gray")).solid(),
         )))
         .s(RoundedCorners::all(5))
         .s(Shadows::with_signal(b.map_bool(
             || {
                 [
-                    Shadow::new().color(BLUE_3).y(1).blur(3),
-                    Shadow::new().color(BLUE_3).y(-1).blur(3),
+                    Shadow::new().color(color!("blue")).y(1).blur(3),
+                    Shadow::new().color(color!("blue")).y(-1).blur(3),
                 ]
             },
             || {
                 [
-                    Shadow::new().color(GRAY_2).y(1).blur(1),
-                    Shadow::new().color(GRAY_2).y(-1).blur(1),
+                    Shadow::new().color(color!("gray")).y(1).blur(1),
+                    Shadow::new().color(color!("gray")).y(-1).blur(1),
                 ]
             },
         )))

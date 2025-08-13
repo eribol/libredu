@@ -2,7 +2,7 @@ use shared::{
     models::class::{Class, ClassLimitation},
     models::timetables::Activity,
 };
-use zoon::{named_color::*, *};
+use zoon::*;
 
 use super::{classes::selected_timetable_hour, lectures::lectures};
 use crate::i18n::t;
